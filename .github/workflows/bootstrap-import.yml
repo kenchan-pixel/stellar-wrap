@@ -4,12 +4,15 @@ on:
   push:
     paths:
       - '.bootstrap/READY'
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
 
 jobs:
   import:
+    if: github.event_name == 'push' || github.event.issue.title == '[bootstrap] Import V4 stable'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
