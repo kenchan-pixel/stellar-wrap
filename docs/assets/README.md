@@ -12,4 +12,6 @@ These compressed WebP previews document the approved visual direction and histor
 | `v3-flight-state-machine.webp` | Earlier flight-state-machine visual reference |
 | `earth-render-study.webp` | Procedural Earth material study |
 
+All previews use WebP compression; the Tau and Vega portrait references use compact review thumbnails to keep the repository lightweight.
+
 The executable V4 code remains the source of truth for current behaviour. These previews are compressed and may not match later rendering changes pixel-for-pixel.
