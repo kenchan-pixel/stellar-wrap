@@ -1,0 +1,43 @@
+name: Feature request
+about: Propose an exploration or travel improvement without reopening approved baselines
+labels: [enhancement]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: User goal
+      description: What should the traveller be able to experience or accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: baseline
+    attributes:
+      label: Existing behaviour and SOT
+      description: Which approved behaviour must remain unchanged?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed experience
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Primary layer
+      options:
+        - Product experience
+        - Navigation／flight model
+        - Star-system data／scene
+        - Mobile interface
+        - Performance
+        - Deployment／maintenance
+    validations:
+      required: true

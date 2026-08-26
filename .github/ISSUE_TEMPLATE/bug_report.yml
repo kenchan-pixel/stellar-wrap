@@ -1,0 +1,37 @@
+name: Bug report
+about: Report a reproducible regression or incorrect travel behaviour
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened and what should have happened?
+    validations:
+      required: true
+  - type: input
+    id: route
+    attributes:
+      label: Route and phase
+      placeholder: SOL → ORION; warp exit → approach
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: iPhone 13, iOS Safari
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshot, recording or diagnostics
+  - type: checkboxes
+    id: baseline
+    attributes:
+      label: Baseline comparison
+      options:
+        - label: I compared the behaviour with `releases/v4.0-stable.html` where applicable.

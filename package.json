@@ -1,0 +1,14 @@
+{
+  "name": "stellar-wrap",
+  "version": "4.0.0",
+  "private": true,
+  "description": "Mobile-first immersive 3D interstellar travel simulator with multi-leg warp navigation.",
+  "type": "module",
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "check": "node scripts/validate.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

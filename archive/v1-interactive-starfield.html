@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#02040b" />
+  <title>曲速星海｜互動 3D 星空</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --panel-bg: rgba(8, 12, 25, 0.72);
+      --panel-border: rgba(170, 205, 255, 0.18);
+      --text: rgba(244, 248, 255, 0.96);
+      --muted: rgba(207, 220, 245, 0.66);
+      --accent: #9fc4ff;
+      --accent-strong: #d8e7ff;
+      --safe-top: max(14px, env(safe-area-inset-top));
+      --safe-right: max(14px, env(safe-area-inset-right));
+      --safe-bottom: max(14px, env(safe-area-inset-bottom));
+      --safe-left: max(14px, env(safe-area-inset-left));
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 48%, rgba(42, 74, 132, 0.17), transparent 24%),
+        radial-gradient(circle at 22% 16%, rgba(53, 42, 104, 0.13), transparent 34%),
+        linear-gradient(180deg, #02040a 0%, #030714 56%, #010207 100%);
+      color: var(--text);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans HK", "PingFang HK", sans-serif;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    button,
+    input { font: inherit; }
+
+    button { color: inherit; }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      isolation: isolate;
+      background: transparent;
+    }
+
+    #starfield {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+      outline: none;
+    }
+
+    #vignette,
+    #boost-glow,
+    #scanline {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    #vignette {
+      z-index: 2;
+      background:
+        radial-gradient(circle at 50% 50%, transparent 42%, rgba(0, 0, 0, 0.18) 72%, rgba(0, 0, 0, 0.55) 100%),
+        linear-gradient(180deg, rgba(2, 5, 14, 0.16), transparent 24%, transparent 76%, rgba(1, 2, 7, 0.22));
+    }
+
+    #boost-glow {
+      z-index: 1;
+      opacity: 0;
+      transform: scale(0.9);
+      background:
+        radial-gradient(circle at 50% 50%, rgba(180, 221, 255, 0.12) 0%, rgba(76, 126, 255, 0.08) 18%, transparent 47%);
+      transition: opacity 180ms ease, transform 360ms cubic-bezier(.2,.8,.2,1);
+      mix-blend-mode: screen;
+    }
+
+    #boost-glow.active {
+      opacity: 1;
+      transform: scale(1.18);
+    }
+
+    #scanline {
+      z-index: 3;
+      opacity: 0.16;
+      background: repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.008) 0,
+        rgba(255, 255, 255, 0.008) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 6;
+      top: var(--safe-top);
+      left: var(--safe-left);
+      display: grid;
+      gap: 5px;
+      pointer-events: none;
+      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
+      transition: opacity 300ms ease;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(226, 237, 255, 0.86);
+    }
+
+    .brand-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #b7d4ff;
+      box-shadow: 0 0 14px rgba(156, 200, 255, 0.9);
+    }
+
+    #status {
+      min-height: 14px;
+      font-variant-numeric: tabular-nums;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: rgba(207, 222, 248, 0.58);
+    }
+
+    #hint {
+      position: absolute;
+      z-index: 7;
+      left: 50%;
+      bottom: calc(var(--safe-bottom) + 12px);
+      transform: translateX(-50%);
+      max-width: calc(100vw - 32px);
+      padding: 9px 13px;
+      border: 1px solid rgba(178, 207, 255, 0.13);
+      border-radius: 999px;
+      background: rgba(5, 9, 20, 0.48);
+      backdrop-filter: blur(12px) saturate(120%);
+      -webkit-backdrop-filter: blur(12px) saturate(120%);
+      color: rgba(225, 235, 252, 0.72);
+      font-size: 12px;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 600ms ease, transform 600ms ease;
+    }
+
+    #hint.hidden {
+      opacity: 0;
+      transform: translate(-50%, 8px);
+    }
+
+    #controls-toggle {
+      position: absolute;
+      z-index: 10;
+      right: var(--safe-right);
+      bottom: var(--safe-bottom);
+      min-width: 84px;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      background: rgba(7, 11, 23, 0.62);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      backdrop-filter: blur(14px) saturate(130%);
+      -webkit-backdrop-filter: blur(14px) saturate(130%);
+      color: rgba(231, 240, 255, 0.9);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    #controls-toggle:hover,
+    #controls-toggle:focus-visible {
+      transform: translateY(-1px);
+      background: rgba(15, 23, 43, 0.78);
+      border-color: rgba(183, 211, 255, 0.28);
+      outline: none;
+    }
+
+    #controls {
+      position: absolute;
+      z-index: 9;
+      right: var(--safe-right);
+      bottom: calc(var(--safe-bottom) + 52px);
+      width: min(320px, calc(100vw - 28px));
+      padding: 14px;
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      background: var(--panel-bg);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      backdrop-filter: blur(22px) saturate(135%);
+      -webkit-backdrop-filter: blur(22px) saturate(135%);
+      transform: translateY(12px) scale(0.98);
+      transform-origin: bottom right;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 220ms cubic-bezier(.2,.8,.2,1), visibility 180ms;
+    }
+
+    #controls.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 13px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 720;
+      letter-spacing: 0.03em;
+    }
+
+    .panel-subtitle {
+      margin: 4px 0 0;
+      font-size: 11px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .close-button {
+      flex: 0 0 32px;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(183, 211, 255, 0.12);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
+      color: rgba(221, 232, 251, 0.75);
+      cursor: pointer;
+    }
+
+    .control-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .control-row {
+      display: grid;
+      gap: 7px;
+    }
+
+    .control-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(231, 238, 252, 0.82);
+      font-size: 12px;
+    }
+
+    .control-value {
+      min-width: 48px;
+      text-align: right;
+      color: var(--accent-strong);
+      font-variant-numeric: tabular-nums;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 22px;
+      margin: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(163, 203, 255, 0.78), rgba(144, 120, 255, 0.45));
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 17px;
+      height: 17px;
+      margin-top: -6.5px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      appearance: none;
+      -webkit-appearance: none;
+      background: #e6efff;
+      box-shadow: 0 0 0 4px rgba(154, 194, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.28);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 4px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(163, 203, 255, 0.78), rgba(144, 120, 255, 0.45));
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 17px;
+      height: 17px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      background: #e6efff;
+      box-shadow: 0 0 0 4px rgba(154, 194, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.28);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .action-button {
+      min-height: 40px;
+      padding: 0 10px;
+      border: 1px solid rgba(180, 209, 255, 0.14);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.035);
+      color: rgba(229, 238, 253, 0.86);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: 0.025em;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .action-button:hover,
+    .action-button:focus-visible {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(183, 212, 255, 0.28);
+      outline: none;
+    }
+
+    .action-button.primary {
+      background: linear-gradient(135deg, rgba(91, 140, 255, 0.25), rgba(141, 99, 255, 0.18));
+      border-color: rgba(164, 199, 255, 0.28);
+    }
+
+    .action-button.primary.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(91, 148, 255, 0.46), rgba(132, 89, 255, 0.34));
+      box-shadow: 0 0 24px rgba(84, 134, 255, 0.12);
+    }
+
+    .panel-foot {
+      margin: 11px 2px 0;
+      color: rgba(197, 211, 237, 0.48);
+      font-size: 10px;
+      line-height: 1.45;
+    }
+
+    #error-card {
+      position: absolute;
+      z-index: 20;
+      left: 50%;
+      top: 50%;
+      width: min(420px, calc(100vw - 34px));
+      padding: 20px;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(255, 195, 195, 0.18);
+      border-radius: 18px;
+      background: rgba(20, 8, 14, 0.82);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      text-align: center;
+    }
+
+    #error-card[hidden] { display: none; }
+
+    #error-card h2 { margin: 0 0 8px; font-size: 17px; }
+    #error-card p { margin: 0; color: rgba(245, 224, 231, 0.72); font-size: 13px; line-height: 1.6; }
+
+    @media (max-width: 640px) {
+      #hint {
+        bottom: calc(var(--safe-bottom) + 56px);
+        font-size: 11px;
+      }
+
+      .hud { max-width: calc(100vw - 120px); }
+      .brand { font-size: 10px; }
+      #status { font-size: 10px; }
+
+      #controls {
+        right: 12px;
+        bottom: calc(var(--safe-bottom) + 50px);
+        width: calc(100vw - 24px);
+      }
+
+      #controls-toggle {
+        right: 12px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #boost-glow,
+      #hint,
+      #controls,
+      #controls-toggle { transition-duration: 0.01ms !important; }
+      #scanline { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main id="app">
+    <canvas id="starfield" tabindex="0" aria-label="可用滑鼠、觸控或鍵盤操控的曲速 3D 星空"></canvas>
+    <div id="boost-glow"></div>
+    <div id="vignette"></div>
+    <div id="scanline"></div>
+
+    <header class="hud" aria-live="polite">
+      <div class="brand"><span class="brand-dot"></span>WARP / 曲速星海</div>
+      <div id="status">正在初始化星場…</div>
+    </header>
+
+    <div id="hint">移動指標改變航向 · 按住畫面或空白鍵加速</div>
+
+    <button id="controls-toggle" type="button" aria-controls="controls" aria-expanded="false">控制</button>
+
+    <section id="controls" aria-label="星空控制面板">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">飛行控制</h1>
+          <p class="panel-subtitle">即時調整曲速、星體密度與拖尾長度。</p>
+        </div>
+        <button id="controls-close" class="close-button" type="button" aria-label="關閉控制面板">×</button>
+      </div>
+
+      <div class="control-list">
+        <label class="control-row" for="speed">
+          <span class="control-label"><span>巡航速度</span><output id="speed-value" class="control-value">1.4×</output></span>
+          <input id="speed" type="range" min="0.25" max="5" value="1.4" step="0.05" />
+        </label>
+
+        <label class="control-row" for="density">
+          <span class="control-label"><span>星體密度</span><output id="density-value" class="control-value">64%</output></span>
+          <input id="density" type="range" min="10" max="100" value="64" step="1" />
+        </label>
+
+        <label class="control-row" for="trail">
+          <span class="control-label"><span>流星拖尾</span><output id="trail-value" class="control-value">48%</output></span>
+          <input id="trail" type="range" min="0" max="100" value="48" step="1" />
+        </label>
+      </div>
+
+      <div class="button-grid">
+        <button id="boost" class="action-button primary" type="button" aria-pressed="false">加速模式</button>
+        <button id="pause" class="action-button" type="button">暫停</button>
+        <button id="center" class="action-button" type="button">置中</button>
+        <button id="fullscreen" class="action-button" type="button">全螢幕</button>
+      </div>
+
+      <p class="panel-foot">鍵盤：Space 加速、P 暫停、R 置中、H 控制、F 全螢幕。系統會按裝置效能自動調整解析度及星數。</p>
+    </section>
+
+    <section id="error-card" hidden>
+      <h2>未能啟動 3D 星場</h2>
+      <p>瀏覽器未提供 WebGL 2 或 Canvas 2D。請改用較新的 Safari、Chrome、Edge 或 Firefox。</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('starfield');
+      const statusEl = document.getElementById('status');
+      const hintEl = document.getElementById('hint');
+      const panel = document.getElementById('controls');
+      const panelToggle = document.getElementById('controls-toggle');
+      const panelClose = document.getElementById('controls-close');
+      const boostButton = document.getElementById('boost');
+      const pauseButton = document.getElementById('pause');
+      const centerButton = document.getElementById('center');
+      const fullscreenButton = document.getElementById('fullscreen');
+      const boostGlow = document.getElementById('boost-glow');
+      const errorCard = document.getElementById('error-card');
+
+      const speedInput = document.getElementById('speed');
+      const densityInput = document.getElementById('density');
+      const trailInput = document.getElementById('trail');
+      const speedValue = document.getElementById('speed-value');
+      const densityValue = document.getElementById('density-value');
+      const trailValue = document.getElementById('trail-value');
+
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      const isMobile = coarsePointer || Math.min(window.innerWidth, window.innerHeight) < 720;
+
+      const defaults = reducedMotion
+        ? { speed: 0.65, density: 34, trail: 18 }
+        : { speed: 1.4, density: 64, trail: 48 };
+
+      const storageKey = 'warp-starfield-settings-v1';
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { saved = {}; }
+
+      const settings = {
+        speed: clamp(numberOr(saved.speed, defaults.speed), 0.25, 5),
+        density: clamp(numberOr(saved.density, defaults.density), 10, 100),
+        trail: clamp(numberOr(saved.trail, defaults.trail), 0, 100)
+      };
+
+      speedInput.value = String(settings.speed);
+      densityInput.value = String(settings.density);
+      trailInput.value = String(settings.trail);
+
+      let renderer = null;
+      let panelOpen = false;
+      let panelTimer = 0;
+      let hintTimer = 0;
+      let pausedByUser = false;
+      let boostLatched = false;
+      let boostHeld = false;
+      let pointerDown = false;
+      let lastPointerAt = performance.now();
+      let lookTargetX = 0;
+      let lookTargetY = 0;
+      let lookX = 0;
+      let lookY = 0;
+      let previousLookX = 0;
+      let previousLookY = 0;
+      let fps = 60;
+      let visibleStarCount = 0;
+      let qualityPercent = 100;
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function numberOr(value, fallback) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : fallback;
+      }
+
+      function persistSettings() {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(settings));
+        } catch (_) { /* storage is optional */ }
+      }
+
+      function updateLabels() {
+        speedValue.value = `${settings.speed.toFixed(settings.speed < 1 ? 2 : 1)}×`;
+        speedValue.textContent = speedValue.value;
+        densityValue.value = `${Math.round(settings.density)}%`;
+        densityValue.textContent = densityValue.value;
+        trailValue.value = `${Math.round(settings.trail)}%`;
+        trailValue.textContent = trailValue.value;
+      }
+
+      function updateStatus() {
+        const mode = boostLatched || boostHeld ? '曲速' : (pausedByUser ? '暫停' : '巡航');
+        statusEl.textContent = `${mode} · ${visibleStarCount.toLocaleString('zh-HK')} 星 · ${Math.round(fps)} FPS · 品質 ${qualityPercent}%`;
+      }
+
+      function setPanel(open, autoClose = false) {
+        panelOpen = open;
+        panel.classList.toggle('open', open);
+        panelToggle.setAttribute('aria-expanded', String(open));
+        panelToggle.textContent = open ? '收起' : '控制';
+        window.clearTimeout(panelTimer);
+        if (open && autoClose && !coarsePointer) {
+          panelTimer = window.setTimeout(() => {
+            if (!panel.matches(':hover') && !panel.contains(document.activeElement)) setPanel(false);
+          }, 6500);
+        }
+      }
+
+      function hideHintSoon(delay = 4200) {
+        window.clearTimeout(hintTimer);
+        hintTimer = window.setTimeout(() => hintEl.classList.add('hidden'), delay);
+      }
+
+      function setBoostLatched(active) {
+        boostLatched = active;
+        boostButton.classList.toggle('active', active);
+        boostButton.setAttribute('aria-pressed', String(active));
+        boostButton.textContent = active ? '加速中' : '加速模式';
+      }
+
+      function setPaused(active) {
+        pausedByUser = active;
+        pauseButton.textContent = active ? '繼續' : '暫停';
+        if (renderer) renderer.setPaused(active);
+      }
+
+      function centerView() {
+        lookTargetX = 0;
+        lookTargetY = 0;
+        if (renderer) renderer.centerView();
+      }
+
+      function fullscreenToggle() {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+
+      function updatePointer(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const nx = ((clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1;
+        const ny = ((clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1;
+        const edgeCurveX = Math.sign(nx) * Math.pow(Math.abs(nx), 1.22);
+        const edgeCurveY = Math.sign(ny) * Math.pow(Math.abs(ny), 1.22);
+        lookTargetX = clamp(edgeCurveX, -1, 1);
+        lookTargetY = clamp(-edgeCurveY, -1, 1);
+        lastPointerAt = performance.now();
+        hintEl.classList.add('hidden');
+      }
+
+      speedInput.addEventListener('input', () => {
+        settings.speed = Number(speedInput.value);
+        updateLabels();
+        persistSettings();
+      });
+
+      densityInput.addEventListener('input', () => {
+        settings.density = Number(densityInput.value);
+        updateLabels();
+        persistSettings();
+      });
+
+      trailInput.addEventListener('input', () => {
+        settings.trail = Number(trailInput.value);
+        updateLabels();
+        persistSettings();
+      });
+
+      panelToggle.addEventListener('click', () => setPanel(!panelOpen));
+      panelClose.addEventListener('click', () => setPanel(false));
+      boostButton.addEventListener('click', () => setBoostLatched(!boostLatched));
+      pauseButton.addEventListener('click', () => setPaused(!pausedByUser));
+      centerButton.addEventListener('click', centerView);
+      fullscreenButton.addEventListener('click', fullscreenToggle);
+
+      canvas.addEventListener('pointermove', (event) => updatePointer(event.clientX, event.clientY), { passive: true });
+      canvas.addEventListener('pointerdown', (event) => {
+        pointerDown = true;
+        boostHeld = true;
+        updatePointer(event.clientX, event.clientY);
+        canvas.setPointerCapture?.(event.pointerId);
+      });
+      canvas.addEventListener('pointerup', (event) => {
+        pointerDown = false;
+        boostHeld = false;
+        canvas.releasePointerCapture?.(event.pointerId);
+      });
+      canvas.addEventListener('pointercancel', () => {
+        pointerDown = false;
+        boostHeld = false;
+      });
+      canvas.addEventListener('pointerleave', () => {
+        if (!pointerDown) lastPointerAt = performance.now() - 4000;
+      });
+      canvas.addEventListener('dblclick', fullscreenToggle);
+
+      window.addEventListener('keydown', (event) => {
+        if (event.target instanceof HTMLInputElement) return;
+        if (event.code === 'Space') {
+          event.preventDefault();
+          boostHeld = true;
+        } else if (event.key === 'p' || event.key === 'P') {
+          setPaused(!pausedByUser);
+        } else if (event.key === 'r' || event.key === 'R') {
+          centerView();
+        } else if (event.key === 'h' || event.key === 'H') {
+          setPanel(!panelOpen);
+        } else if (event.key === 'f' || event.key === 'F') {
+          fullscreenToggle();
+        }
+      });
+
+      window.addEventListener('keyup', (event) => {
+        if (event.code === 'Space') boostHeld = false;
+      });
+
+      window.addEventListener('blur', () => {
+        boostHeld = false;
+        pointerDown = false;
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (renderer) renderer.setDocumentHidden(document.hidden);
+      });
+
+      function commonFrameState(dt) {
+        if (!pointerDown && performance.now() - lastPointerAt > 2800) {
+          const settle = 1 - Math.exp(-dt * 0.62);
+          lookTargetX += (0 - lookTargetX) * settle;
+          lookTargetY += (0 - lookTargetY) * settle;
+        }
+
+        previousLookX = lookX;
+        previousLookY = lookY;
+        const steeringResponse = 1 - Math.exp(-dt * (boostLatched || boostHeld ? 4.7 : 3.7));
+        lookX += (lookTargetX - lookX) * steeringResponse;
+        lookY += (lookTargetY - lookY) * steeringResponse;
+
+        const boosting = boostLatched || boostHeld;
+        boostGlow.classList.toggle('active', boosting && !pausedByUser);
+
+        return {
+          boosting,
+          lookX,
+          lookY,
+          previousLookX,
+          previousLookY
+        };
+      }
+
+      class WebGLStarfield {
+        constructor() {
+          this.gl = canvas.getContext('webgl2', {
+            alpha: true,
+            antialias: false,
+            depth: false,
+            stencil: false,
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            powerPreference: 'high-performance'
+          });
+          if (!this.gl) throw new Error('WebGL 2 unavailable');
+
+          this.maxStars = isMobile ? 10000 : 16000;
+          this.minStars = isMobile ? 650 : 900;
+          this.distance = 0;
+          this.currentSpeed = settings.speed;
+          this.boostAmount = 0;
+          this.userPaused = false;
+          this.documentHidden = false;
+          this.lastTime = performance.now();
+          this.frameCounter = 0;
+          this.fpsWindowStart = this.lastTime;
+          this.qualityScale = 1;
+          this.renderScale = 1;
+          this.baseDpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.45 : 1.9);
+          this.lastQualityChange = 0;
+          this.highFpsWindows = 0;
+          this.program = this.createProgram();
+          this.seedBuffer = this.createSeedBuffer();
+          this.locations = this.getLocations();
+          this.bindState();
+          this.resize = this.resize.bind(this);
+          this.frame = this.frame.bind(this);
+          window.addEventListener('resize', this.resize, { passive: true });
+          window.visualViewport?.addEventListener('resize', this.resize, { passive: true });
+          this.resize();
+
+          canvas.addEventListener('webglcontextlost', (event) => {
+            event.preventDefault();
+            this.userPaused = true;
+            statusEl.textContent = '3D 圖形內容已暫停，請重新載入頁面。';
+          });
+
+          requestAnimationFrame(this.frame);
+        }
+
+        createShader(type, source) {
+          const gl = this.gl;
+          const shader = gl.createShader(type);
+          gl.shaderSource(shader, source);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            const log = gl.getShaderInfoLog(shader) || 'Unknown shader error';
+            gl.deleteShader(shader);
+            throw new Error(log);
+          }
+          return shader;
+        }
+
+        createProgram() {
+          const gl = this.gl;
+          const vertexSource = `#version 300 es
+            precision highp float;
+
+            layout(location = 0) in vec4 aSeed;
+
+            uniform vec2 uResolution;
+            uniform float uDistance;
+            uniform float uClock;
+            uniform float uSpeed;
+            uniform float uTrail;
+            uniform float uBoost;
+            uniform vec2 uLook;
+            uniform vec2 uLookPrevious;
+
+            out float vAlong;
+            out float vSide;
+            out float vAlpha;
+            out vec3 vColor;
+            out float vTwinkle;
+
+            vec3 rotateView(vec3 p, vec2 look) {
+              float yaw = look.x * 0.34;
+              float pitch = look.y * 0.28;
+              float cy = cos(yaw);
+              float sy = sin(yaw);
+              float cp = cos(pitch);
+              float sp = sin(pitch);
+
+              p.xz = mat2(cy, -sy, sy, cy) * p.xz;
+              p.yz = mat2(cp, -sp, sp, cp) * p.yz;
+              return p;
+            }
+
+            vec2 projectPoint(vec3 p) {
+              float aspect = uResolution.x / max(1.0, uResolution.y);
+              float z = max(0.16, p.z);
+              float focal = mix(1.42, 1.66, uBoost);
+              return vec2((p.x / z) * focal / aspect, (p.y / z) * focal);
+            }
+
+            void main() {
+              const float nearPlane = 0.48;
+              const float farPlane = 96.0;
+              const float travelRange = farPlane - nearPlane;
+
+              float startingZ = mix(nearPlane, farPlane, aSeed.z);
+              float z = farPlane - mod((farPlane - startingZ) + uDistance, travelRange);
+              float aspect = uResolution.x / max(1.0, uResolution.y);
+
+              float radiusWarp = mix(0.42, 1.0, pow(abs(aSeed.x * aSeed.y), 0.12));
+              float spread = 27.5 * radiusWarp;
+              float x = aSeed.x * spread * aspect;
+              float y = aSeed.y * spread;
+
+              float tailDistance = mix(0.10, 4.8, uTrail) * (0.50 + uSpeed * 0.34) * (1.0 + uBoost * 1.65);
+              float tailZ = min(farPlane - 0.04, z + tailDistance);
+
+              vec3 currentPoint = rotateView(vec3(x, y, z), uLook);
+              vec3 tailPoint = rotateView(vec3(x, y, tailZ), uLookPrevious);
+
+              vec2 currentNdc = projectPoint(currentPoint);
+              vec2 tailNdc = projectPoint(tailPoint);
+
+              vec2 halfResolution = max(vec2(1.0), uResolution * 0.5);
+              vec2 deltaPixels = (currentNdc - tailNdc) * halfResolution;
+              float segmentLength = length(deltaPixels);
+              vec2 directionPixels = segmentLength > 0.001
+                ? deltaPixels / segmentLength
+                : normalize(currentNdc * halfResolution + vec2(0.001, 0.0));
+              vec2 normalPixels = vec2(-directionPixels.y, directionPixels.x);
+
+              float depth = 1.0 - clamp((z - nearPlane) / travelRange, 0.0, 1.0);
+              float starWidth = mix(0.48, 1.72, pow(depth, 0.62));
+              starWidth *= mix(0.72, 1.36, aSeed.w);
+              starWidth *= 1.0 + uBoost * 0.24;
+
+              int vertexId = gl_VertexID;
+              float along = vertexId < 2 ? 0.0 : 1.0;
+              float side = (vertexId == 0 || vertexId == 2) ? -1.0 : 1.0;
+              vec2 base = mix(tailNdc, currentNdc, along);
+              vec2 offsetNdc = (normalPixels * side * starWidth) / halfResolution;
+
+              bool invalid = currentPoint.z <= 0.15 || tailPoint.z <= 0.15;
+              vec2 outputPosition = invalid ? vec2(4.0) : base + offsetNdc;
+              gl_Position = vec4(outputPosition, 0.0, 1.0);
+
+              float nearFade = smoothstep(nearPlane, nearPlane + 1.35, z);
+              float farFade = 1.0 - smoothstep(farPlane - 5.5, farPlane, z);
+              float depthBrightness = mix(0.13, 1.0, pow(depth, 0.56));
+              float seedBrightness = mix(0.28, 1.0, pow(aSeed.w, 1.5));
+
+              vAlong = along;
+              vSide = side;
+              vAlpha = invalid ? 0.0 : nearFade * farFade * depthBrightness * seedBrightness;
+
+              vec3 cold = vec3(0.49, 0.68, 1.0);
+              vec3 neutral = vec3(0.86, 0.92, 1.0);
+              vec3 warm = vec3(1.0, 0.86, 0.69);
+              float temperature = fract(aSeed.w * 7.73 + aSeed.z * 5.11);
+              vColor = temperature < 0.84
+                ? mix(cold, neutral, smoothstep(0.0, 0.84, temperature))
+                : mix(neutral, warm, smoothstep(0.84, 1.0, temperature));
+              vColor = mix(vColor, vec3(0.72, 0.84, 1.0), uBoost * 0.18);
+              vTwinkle = 0.92 + 0.08 * sin(uClock * mix(1.4, 3.0, aSeed.w) + aSeed.z * 91.0);
+            }
+          `;
+
+          const fragmentSource = `#version 300 es
+            precision highp float;
+
+            in float vAlong;
+            in float vSide;
+            in float vAlpha;
+            in vec3 vColor;
+            in float vTwinkle;
+
+            out vec4 outColor;
+
+            void main() {
+              float edge = 1.0 - smoothstep(0.04, 1.0, abs(vSide));
+              float trailRamp = mix(0.12, 1.0, pow(vAlong, 1.35));
+              float headGlow = exp(-pow((1.0 - vAlong) * 5.2, 2.0));
+              float alpha = vAlpha * edge * (trailRamp + headGlow * 0.72) * vTwinkle;
+              if (alpha < 0.008) discard;
+              outColor = vec4(vColor, alpha);
+            }
+          `;
+
+          const vertexShader = this.createShader(gl.VERTEX_SHADER, vertexSource);
+          const fragmentShader = this.createShader(gl.FRAGMENT_SHADER, fragmentSource);
+          const program = gl.createProgram();
+          gl.attachShader(program, vertexShader);
+          gl.attachShader(program, fragmentShader);
+          gl.linkProgram(program);
+          gl.deleteShader(vertexShader);
+          gl.deleteShader(fragmentShader);
+
+          if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            const log = gl.getProgramInfoLog(program) || 'Unknown link error';
+            gl.deleteProgram(program);
+            throw new Error(log);
+          }
+          return program;
+        }
+
+        createSeedBuffer() {
+          const gl = this.gl;
+          const data = new Float32Array(this.maxStars * 4);
+          for (let i = 0; i < this.maxStars; i++) {
+            const o = i * 4;
+            const angle = Math.random() * Math.PI * 2;
+            const radiusBase = Math.sqrt(Math.random());
+            const coreBias = Math.random() < 0.12 ? Math.random() * 0.34 : radiusBase;
+            data[o] = Math.cos(angle) * coreBias;
+            data[o + 1] = Math.sin(angle) * coreBias;
+            data[o + 2] = Math.random();
+            data[o + 3] = Math.pow(Math.random(), 0.72);
+          }
+
+          const buffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+          return buffer;
+        }
+
+        getLocations() {
+          const gl = this.gl;
+          return {
+            resolution: gl.getUniformLocation(this.program, 'uResolution'),
+            distance: gl.getUniformLocation(this.program, 'uDistance'),
+            clock: gl.getUniformLocation(this.program, 'uClock'),
+            speed: gl.getUniformLocation(this.program, 'uSpeed'),
+            trail: gl.getUniformLocation(this.program, 'uTrail'),
+            boost: gl.getUniformLocation(this.program, 'uBoost'),
+            look: gl.getUniformLocation(this.program, 'uLook'),
+            lookPrevious: gl.getUniformLocation(this.program, 'uLookPrevious')
+          };
+        }
+
+        bindState() {
+          const gl = this.gl;
+          gl.useProgram(this.program);
+          gl.bindBuffer(gl.ARRAY_BUFFER, this.seedBuffer);
+          gl.enableVertexAttribArray(0);
+          gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 16, 0);
+          gl.vertexAttribDivisor(0, 1);
+          gl.disable(gl.DEPTH_TEST);
+          gl.enable(gl.BLEND);
+          gl.blendEquation(gl.FUNC_ADD);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+          gl.clearColor(0, 0, 0, 0);
+        }
+
+        resize() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = this.baseDpr * this.renderScale;
+          const width = Math.max(1, Math.floor(rect.width * dpr));
+          const height = Math.max(1, Math.floor(rect.height * dpr));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+            this.gl.viewport(0, 0, width, height);
+          }
+        }
+
+        setPaused(active) { this.userPaused = active; }
+        setDocumentHidden(hidden) { this.documentHidden = hidden; }
+        centerView() { /* common steering state handles this */ }
+
+        desiredStarCount() {
+          const normalized = (settings.density - 10) / 90;
+          const eased = 0.18 + Math.pow(normalized, 0.82) * 0.82;
+          return Math.round((this.minStars + (this.maxStars - this.minStars) * eased) * this.qualityScale);
+        }
+
+        updateQuality(now) {
+          const elapsed = now - this.fpsWindowStart;
+          if (elapsed < 1000) return;
+
+          fps = (this.frameCounter * 1000) / elapsed;
+          this.frameCounter = 0;
+          this.fpsWindowStart = now;
+
+          if (now - this.lastQualityChange > 1800) {
+            if (fps < 49) {
+              this.qualityScale = Math.max(0.52, this.qualityScale - 0.09);
+              if (fps < 41 && this.renderScale > 0.72) {
+                this.renderScale = Math.max(0.72, this.renderScale - 0.08);
+                this.resize();
+              }
+              this.highFpsWindows = 0;
+              this.lastQualityChange = now;
+            } else if (fps > 58) {
+              this.highFpsWindows++;
+              if (this.highFpsWindows >= 4) {
+                if (this.qualityScale < 0.995) {
+                  this.qualityScale = Math.min(1, this.qualityScale + 0.055);
+                } else if (this.renderScale < 0.995) {
+                  this.renderScale = Math.min(1, this.renderScale + 0.04);
+                  this.resize();
+                }
+                this.highFpsWindows = 0;
+                this.lastQualityChange = now;
+              }
+            } else {
+              this.highFpsWindows = Math.max(0, this.highFpsWindows - 1);
+            }
+          }
+
+          qualityPercent = Math.round(Math.min(this.qualityScale, this.renderScale) * 100);
+          updateStatus();
+        }
+
+        frame(now) {
+          requestAnimationFrame(this.frame);
+          const rawDt = Math.min(0.05, Math.max(0.001, (now - this.lastTime) / 1000));
+          this.lastTime = now;
+          this.frameCounter++;
+          this.updateQuality(now);
+
+          const state = commonFrameState(rawDt);
+          const stopped = this.userPaused || this.documentHidden;
+          const targetBoost = state.boosting && !stopped ? 1 : 0;
+          const boostResponse = 1 - Math.exp(-rawDt * (targetBoost > this.boostAmount ? 7.5 : 3.6));
+          this.boostAmount += (targetBoost - this.boostAmount) * boostResponse;
+
+          const targetSpeed = settings.speed * (1 + this.boostAmount * 4.35);
+          const speedResponse = 1 - Math.exp(-rawDt * (targetSpeed > this.currentSpeed ? 4.3 : 2.1));
+          this.currentSpeed += (targetSpeed - this.currentSpeed) * speedResponse;
+
+          if (!stopped) {
+            this.distance += rawDt * this.currentSpeed * 9.6;
+            if (this.distance > 100000) this.distance %= 95.52;
+          }
+
+          const gl = this.gl;
+          const count = this.desiredStarCount();
+          visibleStarCount = count;
+
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.useProgram(this.program);
+          gl.uniform2f(this.locations.resolution, canvas.width, canvas.height);
+          gl.uniform1f(this.locations.distance, this.distance);
+          gl.uniform1f(this.locations.clock, now * 0.001);
+          gl.uniform1f(this.locations.speed, this.currentSpeed);
+          gl.uniform1f(this.locations.trail, settings.trail / 100);
+          gl.uniform1f(this.locations.boost, this.boostAmount);
+          gl.uniform2f(this.locations.look, state.lookX, state.lookY);
+          gl.uniform2f(this.locations.lookPrevious, state.previousLookX, state.previousLookY);
+          gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+        }
+      }
+
+      class CanvasStarfield {
+        constructor() {
+          this.ctx = canvas.getContext('2d', { alpha: true });
+          if (!this.ctx) throw new Error('Canvas 2D unavailable');
+          this.maxStars = isMobile ? 3200 : 5200;
+          this.minStars = isMobile ? 450 : 650;
+          this.stars = new Float32Array(this.maxStars * 5);
+          this.userPaused = false;
+          this.documentHidden = false;
+          this.currentSpeed = settings.speed;
+          this.boostAmount = 0;
+          this.lastTime = performance.now();
+          this.frameCounter = 0;
+          this.fpsWindowStart = this.lastTime;
+          this.qualityScale = 1;
+          this.dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.5);
+          this.resize = this.resize.bind(this);
+          this.frame = this.frame.bind(this);
+          this.seedAll();
+          window.addEventListener('resize', this.resize, { passive: true });
+          window.visualViewport?.addEventListener('resize', this.resize, { passive: true });
+          this.resize();
+          requestAnimationFrame(this.frame);
+        }
+
+        seedStar(i, farOnly = false) {
+          const o = i * 5;
+          const angle = Math.random() * Math.PI * 2;
+          const radius = Math.sqrt(Math.random());
+          this.stars[o] = Math.cos(angle) * radius;
+          this.stars[o + 1] = Math.sin(angle) * radius;
+          this.stars[o + 2] = farOnly ? 95 : 1 + Math.random() * 94;
+          this.stars[o + 3] = Math.random();
+          this.stars[o + 4] = Math.pow(Math.random(), 0.7);
+        }
+
+        seedAll() {
+          for (let i = 0; i < this.maxStars; i++) this.seedStar(i, false);
+        }
+
+        resize() {
+          const rect = canvas.getBoundingClientRect();
+          canvas.width = Math.max(1, Math.floor(rect.width * this.dpr));
+          canvas.height = Math.max(1, Math.floor(rect.height * this.dpr));
+          this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+          this.width = rect.width;
+          this.height = rect.height;
+        }
+
+        setPaused(active) { this.userPaused = active; }
+        setDocumentHidden(hidden) { this.documentHidden = hidden; }
+        centerView() { /* common steering state handles this */ }
+
+        desiredStarCount() {
+          const normalized = (settings.density - 10) / 90;
+          return Math.round((this.minStars + (this.maxStars - this.minStars) * Math.pow(normalized, 0.82)) * this.qualityScale);
+        }
+
+        frame(now) {
+          requestAnimationFrame(this.frame);
+          const dt = Math.min(0.05, Math.max(0.001, (now - this.lastTime) / 1000));
+          this.lastTime = now;
+          this.frameCounter++;
+
+          if (now - this.fpsWindowStart >= 1000) {
+            fps = (this.frameCounter * 1000) / (now - this.fpsWindowStart);
+            this.frameCounter = 0;
+            this.fpsWindowStart = now;
+            if (fps < 48) this.qualityScale = Math.max(0.55, this.qualityScale - 0.08);
+            else if (fps > 58) this.qualityScale = Math.min(1, this.qualityScale + 0.035);
+            qualityPercent = Math.round(this.qualityScale * 100);
+            updateStatus();
+          }
+
+          const state = commonFrameState(dt);
+          const stopped = this.userPaused || this.documentHidden;
+          const targetBoost = state.boosting && !stopped ? 1 : 0;
+          this.boostAmount += (targetBoost - this.boostAmount) * (1 - Math.exp(-dt * 5));
+          const targetSpeed = settings.speed * (1 + this.boostAmount * 4.0);
+          this.currentSpeed += (targetSpeed - this.currentSpeed) * (1 - Math.exp(-dt * 3));
+
+          const ctx = this.ctx;
+          const w = this.width;
+          const h = this.height;
+          const cx = w * 0.5;
+          const cy = h * 0.5;
+          const aspect = w / Math.max(1, h);
+          const focal = Math.min(w, h) * (0.9 + this.boostAmount * 0.12);
+          const count = this.desiredStarCount();
+          visibleStarCount = count;
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.lineCap = 'round';
+
+          const speedDistance = stopped ? 0 : dt * this.currentSpeed * 10;
+          const tailFactor = (settings.trail / 100) * (0.45 + this.currentSpeed * 0.45) * (1 + this.boostAmount * 1.4);
+
+          for (let band = 0; band < 3; band++) {
+            ctx.beginPath();
+            for (let i = band; i < count; i += 3) {
+              const o = i * 5;
+              let z = this.stars[o + 2] - speedDistance;
+              if (z < 0.65) {
+                this.seedStar(i, true);
+                z = this.stars[o + 2];
+              }
+              this.stars[o + 2] = z;
+
+              const x = this.stars[o] * 28 * aspect;
+              const y = this.stars[o + 1] * 28;
+              const yaw = state.lookX * 0.34;
+              const pitch = state.lookY * 0.28;
+              const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+              const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+
+              const rx = x * cosY - z * sinY;
+              const rz0 = x * sinY + z * cosY;
+              const ry = y * cosP - rz0 * sinP;
+              const rz = y * sinP + rz0 * cosP;
+              if (rz <= 0.2) continue;
+
+              const tailZ = Math.min(95, z + tailFactor * 4.5);
+              const prx = x * Math.cos(state.previousLookX * 0.34) - tailZ * Math.sin(state.previousLookX * 0.34);
+              const prz0 = x * Math.sin(state.previousLookX * 0.34) + tailZ * Math.cos(state.previousLookX * 0.34);
+              const pry = y * Math.cos(state.previousLookY * 0.28) - prz0 * Math.sin(state.previousLookY * 0.28);
+              const prz = y * Math.sin(state.previousLookY * 0.28) + prz0 * Math.cos(state.previousLookY * 0.28);
+              if (prz <= 0.2) continue;
+
+              const sx = cx + (rx / rz) * focal;
+              const sy = cy - (ry / rz) * focal;
+              const px = cx + (prx / prz) * focal;
+              const py = cy - (pry / prz) * focal;
+              if (sx < -80 || sx > w + 80 || sy < -80 || sy > h + 80) continue;
+
+              ctx.moveTo(px, py);
+              ctx.lineTo(sx, sy);
+            }
+            const alphas = [0.28, 0.46, 0.72];
+            const widths = [0.55, 0.85, 1.15];
+            ctx.strokeStyle = `rgba(${165 + band * 18}, ${202 + band * 12}, 255, ${alphas[band]})`;
+            ctx.lineWidth = widths[band] * (1 + this.boostAmount * 0.2);
+            ctx.stroke();
+          }
+
+          ctx.globalCompositeOperation = 'source-over';
+        }
+      }
+
+      function start() {
+        updateLabels();
+        hideHintSoon();
+        if (!coarsePointer) {
+          setPanel(true, true);
+        }
+
+        try {
+          renderer = new WebGLStarfield();
+        } catch (webglError) {
+          console.warn('WebGL renderer unavailable; using Canvas fallback.', webglError);
+          try {
+            renderer = new CanvasStarfield();
+          } catch (canvasError) {
+            console.error(canvasError);
+            errorCard.hidden = false;
+            statusEl.textContent = '啟動失敗';
+            return;
+          }
+        }
+
+        window.setInterval(updateStatus, 500);
+      }
+
+      start();
+    })();
+  </script>
+</body>
+</html>
