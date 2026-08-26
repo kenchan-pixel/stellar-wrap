@@ -38,7 +38,7 @@ jobs:
           rsync -a --delete \
             --exclude='.git/' \
             --exclude='.bootstrap/' \
-            --exclude='.github/workflows/bootstrap-import.yml' \
+            --exclude='.github/workflows/' \
             /tmp/stellar-wrap-source/ ./
           rm -rf .bootstrap
           npm run check
