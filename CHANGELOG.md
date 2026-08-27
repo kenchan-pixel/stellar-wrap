@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Added
 
+- Added a V5-candidate **PROX Starport Alignment** exploration slice: after a true final arrival at PROX, users can tune two normalized -50–50 directional axes to locate three approach windows tied to the outer traffic beacon, lava-side thermal corridor and starport docking axis.
+- Each PROX approach gate requires both axes inside a bounded ±3 window. Completing all three unlocks the local-only Star Atlas discovery `紅矮星港三點進場網`; the directional values are interaction indices rather than real angles or distances.
+- Star Atlas now exposes a coherent `x / 7 發現` collection across the seven destinations outside the SOL home system. Completing all seven local discoveries shows an `探索檔案完成` milestone without inventing a SOL discovery solely to fill the count.
+- PROX progress survives reloads through versioned local storage, mutation re-checks live safe final-exploration state, production Star Atlas refreshes in the same tab and after fresh-process reload, and the module is included in prepared offline shell cache v11 without adding renderer-loop or network work.
 - Added a V5-candidate **SIRIUS Dual-Star Relay Calibration** exploration slice: after a true final arrival at SIRIUS, users can tune two normalized 0–100 calibration axes together and locate three stable relay handshake windows tied to the blue-white primary, companion and artificial relay ring.
 - Each SIRIUS window requires both carrier and phase to fall inside a bounded ±4 gate. Completing the three dual-axis locks unlocks the local-only Star Atlas discovery `雙星相位中繼窗`; the two axes are interaction indices rather than real frequency or angle measurements.
 - SIRIUS progress survives reloads through versioned local storage, mutation re-checks live safe final-exploration state, production Star Atlas refreshes in the same tab and after fresh-process reload, and the module is included in prepared offline shell cache v10 without adding renderer-loop or network work.
@@ -25,6 +29,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added focused PROX alignment validation covering JavaScript syntax, three unique two-axis approach windows, simultaneous ±3 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, seven-discovery completion UI, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused SIRIUS relay validation covering JavaScript syntax, three unique dual-axis 0–100 windows, simultaneous ±4 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused TAU ring validation covering JavaScript syntax, three unique normalized ring anomalies, ±3 capture gating, production range-input/click execution, unsafe-state rejection, local persistence across a fresh process, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added a no-dependency executable destination interaction runtime harness at a 390×844 phone acceptance viewport. It loads the production Star Atlas plus CYG/ORION modules, drives real range-input and click events, proves bounded lock/capture and duplicate protection, verifies same-tab Atlas discovery refresh, rejects unsafe flight/context-loss mutations, and recreates a fresh process to prove local progress survives reload.
