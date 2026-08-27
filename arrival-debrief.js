@@ -2,7 +2,6 @@
 'use strict';
 
 const SYSTEM_NAMES={SOL:'地球近軌',LUNA:'月環基地',VEGA:'織女星門',CYG:'天鵝航標',ORION:'獵戶前哨',TAU:'金牛塵海',SIRIUS:'天狼中繼站',PROX:'比鄰星港'};
-const COORD={SOL:[0,0,0],LUNA:[1.4,2.4,.5],VEGA:[5.2,3.1,1.4],CYG:[9.1,5.6,2.3],ORION:[12.2,1.2,3.2],TAU:[9.5,-4,1.7],SIRIUS:[4.4,-3.4,-.9],PROX:[1.5,-1.8,-2.4]};
 const IDS=new Set(Object.keys(SYSTEM_NAMES));
 let uiReady=false;
 let visible=false;
@@ -11,15 +10,12 @@ let currentEntry=null;
 function normalise(entry){
   if(!entry||!Array.isArray(entry.route))return null;
   const route=entry.route.filter(id=>IDS.has(id));
-  const seconds=Number(entry.seconds);
+  const seconds=Number(entry.seconds),rawDistance=entry.distance;
   if(route.length<2||!Number.isFinite(seconds))return null;
-  return{route,seconds:Math.max(1,Math.min(86400,Math.round(seconds)))};
+  let distance=null;
+  if(rawDistance!==undefined&&rawDistance!==null){distance=Number(rawDistance);if(!Number.isFinite(distance)||distance<=0||distance>10000)return null;distance=Math.round(distance*10)/10}
+  return{route,seconds:Math.max(1,Math.min(86400,Math.round(seconds))),...(distance===null?{}:{distance})};
 }
-function distance(a,b){
-  const A=COORD[a],B=COORD[b];
-  return A&&B?Math.hypot(A[0]-B[0],A[1]-B[1],A[2]-B[2]):0;
-}
-function routeDistance(route){return route.slice(1).reduce((sum,id,index)=>sum+distance(route[index],id),0)}
 function safeArrival(entry){
   const destination=entry?.route?.[entry.route.length-1];
   const api=window.WarpSim;
@@ -64,7 +60,8 @@ function render(entry){
   const route=document.querySelector('#arrivalDebriefRoute');
   if(!title||!stats||!route)return false;
   title.textContent='航程完成 · '+SYSTEM_NAMES[destination];
-  stats.textContent=`${entry.route.length-1} 段 · ${routeDistance(entry.route).toFixed(1)} LY · ${entry.seconds} 秒活躍航行`;
+  const distance=Number.isFinite(entry.distance)?entry.distance.toFixed(1)+' LY':'距離未記錄';
+  stats.textContent=`${entry.route.length-1} 段 · ${distance} · ${entry.seconds} 秒活躍航行`;
   route.textContent=entry.route.map(id=>SYSTEM_NAMES[id]).join(' → ');
   return true;
 }
