@@ -124,4 +124,5 @@ function sample(){
 setInterval(sample,500);
 sample();
 window.WarpTravelJournal={entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))}};
+import('./exploration-survey.js').catch(()=>{});
 })();
