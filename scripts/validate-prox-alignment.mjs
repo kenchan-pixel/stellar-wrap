@@ -49,6 +49,14 @@ function query(node,sel,include){return walk(node,include,[]).filter(el=>matches
 function parse(html,parent){const stack=[parent],tokens=html.match(/<[^>]+>|[^<]+/g)||[],voids=new Set(['BR','INPUT','HR','IMG']);for(const token of tokens){if(token.startsWith('</')){if(stack.length>1)stack.pop();continue}if(token.startsWith('<')){const m=token.match(/^<\s*([\w-]+)/);if(!m)continue;const el=new El(m[1]),attrs=token.slice(m[0].length,token.length-(token.endsWith('/>')?2:1));for(const a of attrs.matchAll(/([^\s=/>]+)(?:\s*=\s*"([^"]*)")?/g))el.setAttribute(a[1],a[2]??'');stack.at(-1).append(el);if(!token.endsWith('/>')&&!voids.has(el.tagName))stack.push(el)}else if(token.trim()){const text=new El('span');text.textContent=token;stack.at(-1).append(text)}}}
 class Storage{constructor(seed={}){this.map=new Map(Object.entries(seed))}getItem(k){return this.map.has(String(k))?this.map.get(String(k)):null}setItem(k,v){this.map.set(String(k),String(v))}snapshot(){return Object.fromEntries(this.map)}}
 
+function installCompletedDiscoveryStubs(){
+  globalThis.WarpLunaSurvey={progress(){return{discovery:true}}};
+  globalThis.WarpVegaSurvey={progress(){return{discovery:true}}};
+  globalThis.WarpCygBeacon={progress(){return{discovery:true}}};
+  globalThis.WarpOrionSpectrum={progress(){return{discovery:true}}};
+  globalThis.WarpTauRings={progress(){return{discovery:true}}};
+  globalThis.WarpSiriusRelay={progress(){return{discovery:true}}};
+}
 function install(seed={}){
   const document=new Doc(),app=document.createElement('main'),desc=document.createElement('div'),guide=document.createElement('section'),journal=document.createElement('section');
   app.id='app';desc.id='exploreDesc';guide.id='landmarkGuide';journal.id='travelJournal';app.append(desc,guide,journal);document.body.append(app);
@@ -61,12 +69,7 @@ function install(seed={}){
   globalThis.addEventListener=(...a)=>events.addEventListener(...a);globalThis.removeEventListener=(...a)=>events.removeEventListener(...a);globalThis.dispatchEvent=e=>events.dispatchEvent(e);
   globalThis.setInterval=(fn,ms)=>{intervals.push({fn,ms});return intervals.length};globalThis.clearInterval=()=>{};
   globalThis.WarpTravelJournal={entries(){return[]},visited(){return['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX']}};
-  globalThis.WarpLunaSurvey={progress(){return{discovery:true}}};
-  globalThis.WarpVegaSurvey={progress(){return{discovery:true}}};
-  globalThis.WarpCygBeacon={progress(){return{discovery:true}}};
-  globalThis.WarpOrionSpectrum={progress(){return{discovery:true}}};
-  globalThis.WarpTauRings={progress(){return{discovery:true}}};
-  globalThis.WarpSiriusRelay={progress(){return{discovery:true}}};
+  installCompletedDiscoveryStubs();
   globalThis.WarpSim={state(){return{...state}},select(){return true}};
   return{document,storage,state,tick(){intervals.forEach(x=>x.fn())}};
 }
@@ -95,6 +98,10 @@ async function runtime(phase){
     page.state.contextLost=false;page.tick();click(action);assert.equal(api.progress().locked.length,2,'second gate locks after safe state returns');
     input(x,TARGETS[2][0]);input(y,TARGETS[2][1]);click(action);assert.equal(api.progress().locked.length,3,'third gate completes PROX alignment');assert.equal(api.progress().discovery,true,'PROX discovery unlocks');
     assert(page.document.querySelector('#proxDiscovery').classList.contains('show'),'PROX discovery panel shown');assert(atlasHas(page.document,'紅矮星港三點進場網'),'same-tab production Star Atlas shows PROX discovery');
+    // Star Atlas dynamically imports the other production discovery modules, which intentionally replace
+    // these fixture authorities with their empty test-storage state. Restore only the six already-tested
+    // completed discoveries before exercising the collection-completion UI; PROX remains the real module.
+    installCompletedDiscoveryStubs();globalThis.WarpStarAtlas.render();
     assert(page.document.querySelector('#atlasSummary').textContent.includes('7 / 7 發現'),'Star Atlas reports complete seven-discovery collection');
     assert(page.document.querySelector('#atlasDiscoveriesComplete').classList.contains('show'),'Star Atlas shows discovery-completion milestone');
   }else{
