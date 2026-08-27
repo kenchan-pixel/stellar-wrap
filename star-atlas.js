@@ -12,6 +12,7 @@ const SYSTEMS=[
   {id:'PROX',name:'比鄰星港',tag:'紅矮星港',landmark:'熔岩行星 · 外圍星港'}
 ];
 const IDS=new Set(SYSTEMS.map(system=>system.id));
+const DISCOVERY_TOTAL=7;
 const JOURNAL_KEY='stellar-warp-travel-journal-v1';
 const LUNA_SURVEY_KEY='stellar-warp-luna-survey-v1';
 const VEGA_SURVEY_KEY='stellar-warp-vega-survey-v1';
@@ -19,6 +20,7 @@ const CYG_BEACON_KEY='stellar-warp-cyg-beacon-v1';
 const ORION_SURVEY_KEY='stellar-warp-orion-spectrum-v1';
 const TAU_RINGS_KEY='stellar-warp-tau-rings-v1';
 const SIRIUS_RELAY_KEY='stellar-warp-sirius-relay-v1';
+const PROX_ALIGNMENT_KEY='stellar-warp-prox-alignment-v1';
 let uiReady=false;
 let lastSignature='';
 
@@ -39,6 +41,7 @@ function readDiscoveries(){
   try{if(window.WarpOrionSpectrum?.progress?.().discovery)discoveries.set('ORION','三線發射殼層')}catch{}
   try{if(window.WarpTauRings?.progress?.().discovery)discoveries.set('TAU','三層環隙共振')}catch{}
   try{if(window.WarpSiriusRelay?.progress?.().discovery)discoveries.set('SIRIUS','雙星相位中繼窗')}catch{}
+  try{if(window.WarpProxAlignment?.progress?.().discovery)discoveries.set('PROX','紅矮星港三點進場網')}catch{}
   return discoveries;
 }
 function formatStamp(ms){
@@ -80,7 +83,7 @@ function ensureUi(){
     card.id='starAtlas';
     card.className='starAtlas compact';
     card.setAttribute('aria-label','星區圖鑑');
-    card.innerHTML='<div class="atlasHead"><div><div class="atlasTitle">星區圖鑑</div><span id="atlasSummary" class="atlasSummary" aria-live="polite">1 / 8 星區</span></div><button id="atlasToggle" class="atlasToggle" type="button" aria-expanded="false">展開</button></div><div class="atlasProgress" aria-hidden="true"><i id="atlasProgressFill"></i></div><div class="atlasBody"><div id="atlasComplete" class="atlasComplete" role="status">全星區巡航完成 · 8 個星區均已到訪。</div><div id="atlasGrid" class="atlasGrid"></div></div>';
+    card.innerHTML='<div class="atlasHead"><div><div class="atlasTitle">星區圖鑑</div><span id="atlasSummary" class="atlasSummary" aria-live="polite">1 / 8 星區 · 0 / 7 發現</span></div><button id="atlasToggle" class="atlasToggle" type="button" aria-expanded="false">展開</button></div><div class="atlasProgress" aria-hidden="true"><i id="atlasProgressFill"></i></div><div class="atlasBody"><div id="atlasComplete" class="atlasComplete" role="status">全星區巡航完成 · 8 個星區均已到訪。</div><div id="atlasDiscoveriesComplete" class="atlasComplete" role="status">探索檔案完成 · 7 個外站發現已全部收錄。</div><div id="atlasGrid" class="atlasGrid"></div></div>';
     journal.insertAdjacentElement('afterend',card);
     card.querySelector('#atlasToggle').addEventListener('click',()=>{
       const compact=card.classList.toggle('compact');
@@ -117,12 +120,14 @@ function render(force=false){
   const summary=document.querySelector('#atlasSummary');
   const progress=document.querySelector('#atlasProgressFill');
   const complete=document.querySelector('#atlasComplete');
+  const discoveriesComplete=document.querySelector('#atlasDiscoveriesComplete');
   const grid=document.querySelector('#atlasGrid');
-  if(!summary||!progress||!complete||!grid)return;
+  if(!summary||!progress||!complete||!discoveriesComplete||!grid)return;
   const discoveryCount=model.discoveries.size;
-  summary.textContent=`${model.visited.size} / ${SYSTEMS.length} 星區${discoveryCount?` · ${discoveryCount} 個發現`:''}`;
+  summary.textContent=`${model.visited.size} / ${SYSTEMS.length} 星區 · ${discoveryCount} / ${DISCOVERY_TOTAL} 發現`;
   progress.style.width=(model.visited.size/SYSTEMS.length*100).toFixed(1)+'%';
   complete.classList.toggle('show',model.visited.size===SYSTEMS.length);
+  discoveriesComplete.classList.toggle('show',discoveryCount===DISCOVERY_TOTAL);
   grid.replaceChildren();
   for(const system of SYSTEMS){
     const visited=model.visited.has(system.id),current=model.state?.current===system.id,stat=model.stats[system.id],discovery=model.discoveries.get(system.id)||'';
@@ -150,7 +155,7 @@ function render(force=false){
 function sample(){render(false)}
 addEventListener('stellarwarp:journey-complete',()=>render(true));
 addEventListener('stellarwarp:discovery-change',()=>render(true));
-addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY,CYG_BEACON_KEY,ORION_SURVEY_KEY,TAU_RINGS_KEY,SIRIUS_RELAY_KEY].includes(event.key))render(true)});
+addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY,CYG_BEACON_KEY,ORION_SURVEY_KEY,TAU_RINGS_KEY,SIRIUS_RELAY_KEY,PROX_ALIGNMENT_KEY].includes(event.key))render(true)});
 setInterval(sample,1000);
 ensureUi();render(true);
 import('./vega-survey.js').then(()=>render(true)).catch(()=>{});
@@ -158,6 +163,7 @@ import('./cyg-beacon-scan.js').then(()=>render(true)).catch(()=>{});
 import('./orion-spectrograph.js').then(()=>render(true)).catch(()=>{});
 import('./tau-ring-profiler.js').then(()=>render(true)).catch(()=>{});
 import('./sirius-relay-calibration.js').then(()=>render(true)).catch(()=>{});
+import('./prox-starport-alignment.js').then(()=>render(true)).catch(()=>{});
 window.WarpStarAtlas={
   snapshot(){const model=buildModel();return{visited:[...model.visited],discoveries:Object.fromEntries(model.discoveries),systems:SYSTEMS.map(system=>({...system,journeys:model.stats[system.id].journeys,last:model.stats[system.id].last}))}},
   render(){render(true)}
