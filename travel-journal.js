@@ -146,7 +146,6 @@ import('./responsive-ui.js').catch(()=>{});
 import('./exploration-survey.js').catch(()=>{});
 import('./star-atlas.js').catch(()=>{});
 import('./photo-mode.js').catch(()=>{});
-import('./expedition.js').catch(()=>{});
 import('./arrival-debrief.js').catch(()=>{});
 import('./landmark-guide.js').catch(()=>{});
 import('./offline-bootstrap.js').catch(()=>{});
