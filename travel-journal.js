@@ -16,15 +16,21 @@ function normaliseEntry(entry){
   if(rawDistance!==undefined&&rawDistance!==null){distance=Number(rawDistance);if(!Number.isFinite(distance)||distance<=0||distance>10000)return null;distance=Math.round(distance*10)/10}
   return{route,startedAt,endedAt,seconds:Math.max(1,Math.min(86400,Math.round(seconds))),...(distance===null?{}:{distance})};
 }
+function normaliseVisited(raw,entries=[]){
+  const visited=new Set(['SOL']);
+  if(Array.isArray(raw))for(const id of raw)if(IDS.has(id))visited.add(id);
+  for(const entry of entries)for(const id of entry.route)if(IDS.has(id))visited.add(id);
+  return[...visited];
+}
 function load(){
   try{
     const parsed=JSON.parse(localStorage.getItem(KEY)||'{}');
     const entries=Array.isArray(parsed.entries)?parsed.entries.map(normaliseEntry).filter(Boolean).slice(0,LIMIT):[];
-    return{entries};
-  }catch{return{entries:[]}}
+    return{entries,visited:normaliseVisited(parsed.visited,entries)};
+  }catch{return{entries:[],visited:['SOL']}}
 }
 let journal=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify({version:1,entries:journal.entries.slice(0,LIMIT)}))}catch{}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({version:2,entries:journal.entries.slice(0,LIMIT),visited:normaliseVisited(journal.visited,journal.entries)}))}catch{}}
 function formatStamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
 function name(id){return NAMES[id]||id}
 function readPlannedDistance(){
@@ -74,11 +80,10 @@ function render(){
   if(!ensureUi()||!uiReady)return;
   const summary=document.querySelector('#journalSummary'),host=document.querySelector('#journalEntries');
   if(!summary||!host)return;
-  const visited=new Set(['SOL']);
-  for(const entry of journal.entries)for(const id of entry.route)visited.add(id);
+  const visited=normaliseVisited(journal.visited,journal.entries);
   const measured=journal.entries.filter(entry=>Number.isFinite(entry.distance));
   const recordedDistance=measured.reduce((sum,entry)=>sum+entry.distance,0);
-  summary.textContent=journal.entries.length?journal.entries.length+' 次旅程 · '+visited.size+'/8 星區已記錄'+(measured.length?' · '+recordedDistance.toFixed(1)+' LY':''):'完成航程後會自動記錄';
+  summary.textContent=journal.entries.length?journal.entries.length+' 次旅程 · '+visited.length+'/8 星區已記錄'+(measured.length?' · '+recordedDistance.toFixed(1)+' LY':''):'完成航程後會自動記錄';
   host.replaceChildren();
   if(!journal.entries.length){
     const empty=document.createElement('div');
@@ -104,7 +109,7 @@ function recordCompleted(activeSession,state){
   if(route.length<2||state.current!==destination)return false;
   const endedAt=Date.now(),entry=normaliseEntry({route,startedAt:activeSession.startedAt,endedAt,seconds:activeSession.activeMs/1000,distance:activeSession.distance});
   if(!entry)return false;
-  journal.entries.unshift(entry);journal.entries=journal.entries.slice(0,LIMIT);save();render();
+  journal.entries.unshift(entry);journal.entries=journal.entries.slice(0,LIMIT);journal.visited=normaliseVisited(journal.visited,[entry]);save();render();
   const card=document.querySelector('#travelJournal');if(card){card.classList.remove('journalPulse');void card.offsetWidth;card.classList.add('journalPulse')}
   dispatchEvent(new CustomEvent('stellarwarp:journey-complete',{detail:{...entry,route:[...entry.route]}}));
   return true;
@@ -133,9 +138,15 @@ function sample(){
 }
 setInterval(sample,500);
 sample();
-window.WarpTravelJournal={entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))}};
+window.WarpTravelJournal={
+  entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))},
+  visited(){return normaliseVisited(journal.visited,journal.entries)}
+};
+import('./responsive-ui.js').catch(()=>{});
 import('./exploration-survey.js').catch(()=>{});
+import('./star-atlas.js').catch(()=>{});
 import('./photo-mode.js').catch(()=>{});
 import('./arrival-debrief.js').catch(()=>{});
+import('./landmark-guide.js').catch(()=>{});
 import('./offline-bootstrap.js').catch(()=>{});
 })();
