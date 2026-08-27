@@ -15,6 +15,7 @@ const IDS=new Set(SYSTEMS.map(system=>system.id));
 const JOURNAL_KEY='stellar-warp-travel-journal-v1';
 const LUNA_SURVEY_KEY='stellar-warp-luna-survey-v1';
 const VEGA_SURVEY_KEY='stellar-warp-vega-survey-v1';
+const CYG_BEACON_KEY='stellar-warp-cyg-beacon-v1';
 let uiReady=false;
 let lastSignature='';
 
@@ -31,6 +32,7 @@ function readDiscoveries(){
   const discoveries=new Map();
   try{if(window.WarpLunaSurvey?.progress?.().discovery)discoveries.set('LUNA','地月視差層')}catch{}
   try{if(window.WarpVegaSurvey?.progress?.().discovery)discoveries.set('VEGA','雙環共振窗口')}catch{}
+  try{if(window.WarpCygBeacon?.progress?.().discovery)discoveries.set('CYG','雙星航標三角場')}catch{}
   return discoveries;
 }
 function formatStamp(ms){
@@ -141,10 +143,11 @@ function render(force=false){
 }
 function sample(){render(false)}
 addEventListener('stellarwarp:journey-complete',()=>render(true));
-addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY].includes(event.key))render(true)});
+addEventListener('stellarwarp:discovery-change',()=>render(true));
+addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY,CYG_BEACON_KEY].includes(event.key))render(true)});
 setInterval(sample,1000);
 ensureUi();render(true);
-import('./vega-survey.js').then(()=>render(true)).catch(()=>{});
+Promise.allSettled([import('./vega-survey.js'),import('./cyg-beacon-scan.js')]).then(()=>render(true));
 window.WarpStarAtlas={
   snapshot(){const model=buildModel();return{visited:[...model.visited],discoveries:Object.fromEntries(model.discoveries),systems:SYSTEMS.map(system=>({...system,journeys:model.stats[system.id].journeys,last:model.stats[system.id].last}))}},
   render(){render(true)}
