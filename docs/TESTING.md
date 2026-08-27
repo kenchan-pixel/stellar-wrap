@@ -12,6 +12,7 @@ npm run check
 - V4.0 穩定快照 SHA-256 正確；active `index.html` 可獨立演進
 - WebGL context lost／restored handlers、暫停模擬 clock 及診斷控制存在
 - 旅行日誌外掛可通過 `node --check`，使用版本化本機儲存 key、2 Hz 有界輪詢，且只接受真正完成最終目的地的航程
+- LUNA guided survey 可通過獨立 validator：JavaScript 語法、三個固定觀測點、LUNA-only 最終探索 gate、2 Hz polling、本機 persistence、三點全完成先解鎖發現，以及零額外網絡／後端請求
 - HTML 內 module JavaScript 可通過 `node --check`
 - Three.js 版本固定為 `0.185.1`
 - 八個星區 ID 全部存在且只出現一次於資料定義
@@ -90,6 +91,21 @@ npm run check
 - [ ] 重新整理頁面後旅行日誌仍保留，且最多只保留最近 12 次
 - [ ] 從不是目前位置的舊日誌按「再次規劃」，可正常建立前往該目的地的新航線
 
+### F1. LUNA Guided Survey｜V5 候選實驗
+
+建議用最短航線 `SOL → LUNA` 驗證：
+
+- [ ] 只有完整抵達 LUNA 並進入最終探索後，觀測任務才出現；中途飛掠、其他星區及 WebGL context lost 時不顯示
+- [ ] 手機直向仍可看到主要月面景觀；新增任務卡不遮擋中央主要視野、不造成操作捲動陷阱
+- [ ] 三個觀測按鈕分別顯示「月面／地球／環站」提示及對應說明
+- [ ] 完成一個觀測後顯示完成狀態，並自動帶到下一個未完成觀測點
+- [ ] 未完成三點前，不顯示「地月視差層」發現紀錄
+- [ ] 三點全部完成後只解鎖一個「地月視差層」發現紀錄
+- [ ] 重新整理後三點完成進度及發現狀態仍保留
+- [ ] `WarpLunaSurvey.reset()` 可清除候選測試資料，方便重複驗收
+- [ ] 觀測流程只提供導航提示，不會改變原有相機、航行狀態或自動環繞節奏
+- [ ] 完成觀測期間 FPS／DPR 沒有可感知惡化；程式只以 2 Hz 讀取狀態
+
 ### G. 聲音
 
 - [ ] 首次按啟動或聲音按鈕後才建立音訊
@@ -123,12 +139,12 @@ npm run check
 
 | 航線 | 目的 |
 |---|---|
-| SOL → LUNA | 最短直航、細角度轉向、地月景觀 |
+| SOL → LUNA | 最短直航、細角度轉向、地月景觀、LUNA guided survey |
 | SOL → PROX | 明顯下降高度角、紅矮星與熔岩景觀 |
 | SOL → TAU | 南向多段、SIRIUS 中途轉向、環行星終點 |
 | SOL → ORION | 最長多段、三次中途轉向、重型星雲場景 |
 | ORION → TAU | 大方向改變及網絡跨區路線 |
-| TAU → LUNA | 多段返回內圈，測試已到訪狀態 |
+| TAU → LUNA | 多段返回內圈，測試已到訪狀態及 LUNA survey 重入 |
 
 ## 4. Pull Request 完成標準
 
