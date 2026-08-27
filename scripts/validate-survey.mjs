@@ -71,6 +71,8 @@ ok(responsive.includes('--ui-xs:clamp(')&&responsive.includes('--ui-lg:clamp('),
 ok(responsive.includes('#app .kicker')&&responsive.includes('#app #panel')&&responsive.includes('#app #exploreCard'),'responsive layer covers the core HUD, navigation panel and exploration card');
 ok(responsive.includes('#app .vegaSurveyTitle')&&responsive.includes('#app .lunaSurveyTitle')&&responsive.includes('#app .arrivalDebriefTitle'),'responsive layer covers destination survey and arrival text');
 ok(responsive.includes('#app .journalTitle')&&responsive.includes('#app .atlasTitle'),'responsive layer covers journal and Star Atlas text');
+ok(responsive.includes('#app .landmarkGuideTitle{font-size:var(--ui-md)}')&&responsive.includes('#app .landmarkRing{font-size:var(--ui-xs)')&&responsive.includes('#app .landmarkCopy{margin-top:6px;font-size:var(--ui-xs)'),'responsive layer covers landmark guide desktop typography with shared tokens');
+ok(responsive.includes('#app .landmarkTab{min-height:40px;font-size:var(--ui-sm)}'),'landmark guide desktop controls use the readable shared text size and 40 px minimum height');
 ok(!/requestAnimationFrame|setInterval|localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(responsive),'responsive layer adds no polling, render-loop, persistence or network work');
 ok(!/zoom\s*:|transform\s*:\s*scale/i.test(responsive),'desktop readability does not scale or distort the WebGL canvas');
 

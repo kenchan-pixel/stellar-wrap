@@ -89,6 +89,18 @@ style.textContent=`
   #app .arrivalDebriefActions{gap:8px}
   #app .arrivalDebriefActions button{min-height:40px;font-size:var(--ui-sm)}
 
+  #app .landmarkGuide{margin:10px 0 9px;padding:10px;border-radius:13px}
+  #app .landmarkGuideHead{gap:10px}
+  #app .landmarkGuideTitle{font-size:var(--ui-md)}
+  #app .landmarkRing{font-size:var(--ui-xs);line-height:1.45}
+  #app .landmarkTabs{gap:7px;margin-top:9px}
+  #app .landmarkTab{min-height:40px;font-size:var(--ui-sm)}
+  #app .landmarkDetail{margin-top:9px;padding-top:9px}
+  #app .landmarkMeta{gap:8px}
+  #app .landmarkKind{padding:3px 8px;font-size:var(--ui-xs)}
+  #app .landmarkName{font-size:var(--ui-sm)}
+  #app .landmarkCopy{margin-top:6px;font-size:var(--ui-xs);line-height:1.55}
+
   #app .photoModeToolbar{left:max(18px,var(--safeL));right:max(18px,var(--safeR));bottom:max(18px,var(--safeB));padding:9px;gap:9px}
   #app .photoModeToolbar button{font-size:var(--ui-sm)}
   #app .photoModeLabel strong{font-size:var(--ui-sm)}

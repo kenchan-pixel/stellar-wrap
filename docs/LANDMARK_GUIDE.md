@@ -31,6 +31,7 @@
 - 不保存進度、不建立 discovery、不寫 `localStorage`。
 - 不加入網絡、後端、分析追蹤或新依賴。
 - 加入既有 Service Worker active shell，確保已準備的離線 session 同樣可讀場景導覽。
+- 桌面寬屏由既有 `responsive-ui.js` 在 `900px` breakpoint 起套用共用 `--ui-xs/--ui-sm/--ui-md` 字級及較高的地標按鈕；手機原有尺寸不變。
 
 ## Acceptance Criteria
 
@@ -41,9 +42,10 @@
 5. 中途飛掠、航行中或 WebGL context lost 時不顯示場景導覽。
 6. 切換目的地時自動回到該站第一個地標，不沿用上一站選擇。
 7. 手機直向保持三個短地標按鈕；窄於 350 px 時仍不造成橫向溢出。
-8. 不新增 `requestAnimationFrame`、renderer work、storage、network 或 backend path。
-9. Offline shell 包含 `landmark-guide.js`。
-10. V4.0 immutable snapshot、八站路線及完整 travel state machine 維持不變。
+8. 桌面 `>=900px` 時，標題、環狀結構摘要、地標名稱／說明及按鈕必須使用既有 responsive shared tokens，不可回退到獨立 7–10 px 細字。
+9. 不新增 `requestAnimationFrame`、renderer work、storage、network 或 backend path。
+10. Offline shell 包含 `landmark-guide.js` 及 `responsive-ui.js`。
+11. V4.0 immutable snapshot、八站路線及完整 travel state machine 維持不變。
 
 ## Out of Scope
 
@@ -57,6 +59,7 @@
 
 - 狀態取樣固定 500 ms 一次。
 - 點選地標時只重建 3 個小型按鈕及一段說明。
+- 桌面修正只新增 media-query CSS，沒有 JavaScript state loop 或 WebGL work。
 - 無 WebGL API、Three.js import、動畫 loop、網絡請求或持久資料寫入。
 - 新增成本主要是少量 DOM/CSS，對 60 Hz renderer 沒有 per-frame 負載。
 
@@ -69,11 +72,12 @@
 3. `SOL → LUNA → VEGA` 多段航行：中途飛掠不出現導覽，到最終站才出現。
 4. 開啟／恢復 WebGL context loss：導覽在中斷期間隱藏，恢復探索後重新出現。
 5. 已準備 offline cache 後斷網重開，場景導覽仍可載入。
-6. 桌面寬屏配合 `responsive-ui.js`，新增導覽文字仍可舒適閱讀。
+6. 桌面寬屏：場景導覽應跟探索卡其他內容同級可讀，不需要瀏覽器縮放；三個地標按鈕保持清楚並有足夠高度。
+7. 約 900 px breakpoint 上下縮放視窗，確認手機／桌面字級切換不造成內容重疊或突然溢出。
 
 ## Completion signal
 
 - GitHub Actions `npm run check` 全通過。
 - Vercel Preview Ready。
-- Exact PR HEAD review 無未解決 P0／P1 finding。
+- Exact PR HEAD review 無未解決 P0／P1 finding，且先前 landmark-guide desktop readability review finding 已有 focused regression guard。
 - 上述手機／視覺項目仍需擁有人實機確認後，才可視為體驗已通過驗證。
