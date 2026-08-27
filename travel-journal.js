@@ -10,9 +10,11 @@ function normaliseEntry(entry){
   if(!entry||!Array.isArray(entry.route))return null;
   const route=entry.route.filter(id=>IDS.has(id));
   if(route.length<2)return null;
-  const startedAt=Number(entry.startedAt),endedAt=Number(entry.endedAt),seconds=Number(entry.seconds);
+  const startedAt=Number(entry.startedAt),endedAt=Number(entry.endedAt),seconds=Number(entry.seconds),rawDistance=entry.distance;
   if(!Number.isFinite(startedAt)||!Number.isFinite(endedAt)||!Number.isFinite(seconds))return null;
-  return{route,startedAt,endedAt,seconds:Math.max(1,Math.min(86400,Math.round(seconds)))};
+  let distance=null;
+  if(rawDistance!==undefined&&rawDistance!==null){distance=Number(rawDistance);if(!Number.isFinite(distance)||distance<=0||distance>10000)return null;distance=Math.round(distance*10)/10}
+  return{route,startedAt,endedAt,seconds:Math.max(1,Math.min(86400,Math.round(seconds))),...(distance===null?{}:{distance})};
 }
 function load(){
   try{
@@ -25,7 +27,12 @@ let journal=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify({version:1,entries:journal.entries.slice(0,LIMIT)}))}catch{}}
 function formatStamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
 function name(id){return NAMES[id]||id}
-function beginSession(state,sampleAt){return{route:Array.isArray(state.route)?[...state.route]:[],startedAt:Date.now(),activeMs:0,lastSampleAt:sampleAt}}
+function readPlannedDistance(){
+  const text=document.querySelector('#routeMeta')?.textContent||'';
+  const match=text.match(/(\d+(?:\.\d+)?)\s*LY\b/i),distance=match?Number(match[1]):NaN;
+  return Number.isFinite(distance)&&distance>0&&distance<10000?Math.round(distance*10)/10:null;
+}
+function beginSession(state,sampleAt){return{route:Array.isArray(state.route)?[...state.route]:[],startedAt:Date.now(),activeMs:0,lastSampleAt:sampleAt,distance:readPlannedDistance()}}
 function resetSampleClock(){if(active)active.lastSampleAt=performance.now()}
 document.addEventListener('visibilitychange',resetSampleClock);
 for(const eventName of['webglcontextlost','webglcontextrestored'])document.querySelector('#space')?.addEventListener(eventName,resetSampleClock);
@@ -69,12 +76,14 @@ function render(){
   if(!summary||!host)return;
   const visited=new Set(['SOL']);
   for(const entry of journal.entries)for(const id of entry.route)visited.add(id);
-  summary.textContent=journal.entries.length?journal.entries.length+' 次旅程 · '+visited.size+'/8 星區已記錄':'完成航程後會自動記錄';
+  const measured=journal.entries.filter(entry=>Number.isFinite(entry.distance));
+  const recordedDistance=measured.reduce((sum,entry)=>sum+entry.distance,0);
+  summary.textContent=journal.entries.length?journal.entries.length+' 次旅程 · '+visited.size+'/8 星區已記錄'+(measured.length?' · '+recordedDistance.toFixed(1)+' LY':''):'完成航程後會自動記錄';
   host.replaceChildren();
   if(!journal.entries.length){
     const empty=document.createElement('div');
     empty.className='journalEmpty';
-    empty.textContent='完整抵達最終目的地後，會在此保存路線與活躍航行時間；中止航程不會寫入。';
+    empty.textContent='完整抵達最終目的地後，會在此保存路線、距離與活躍航行時間；中止航程不會寫入。';
     host.append(empty);return;
   }
   for(const entry of journal.entries.slice(0,5)){
@@ -83,7 +92,7 @@ function render(){
     const main=document.createElement('div');main.className='journalMain';
     const title=document.createElement('strong');title.textContent=name(entry.route[0])+' → '+name(destination);
     const route=document.createElement('div');route.className='journalRoute';route.textContent=entry.route.map(name).join(' → ');
-    const meta=document.createElement('div');meta.className='journalMeta';meta.textContent=formatStamp(entry.endedAt)+' · '+entry.seconds+' 秒活躍航行';
+    const meta=document.createElement('div');meta.className='journalMeta';meta.textContent=formatStamp(entry.endedAt)+' · '+(Number.isFinite(entry.distance)?entry.distance.toFixed(1)+' LY · ':'')+entry.seconds+' 秒活躍航行';
     main.append(title,route,meta);
     const revisit=document.createElement('button');revisit.type='button';revisit.className='journalRevisit';revisit.dataset.destination=destination;revisit.textContent=destination===currentId?'目前位置':'再次規劃';revisit.disabled=destination===currentId;
     row.append(main,revisit);host.append(row);
@@ -93,7 +102,7 @@ function recordCompleted(activeSession,state){
   const route=(activeSession?.route||[]).filter(id=>IDS.has(id));
   const destination=route[route.length-1];
   if(route.length<2||state.current!==destination)return false;
-  const endedAt=Date.now(),entry=normaliseEntry({route,startedAt:activeSession.startedAt,endedAt,seconds:activeSession.activeMs/1000});
+  const endedAt=Date.now(),entry=normaliseEntry({route,startedAt:activeSession.startedAt,endedAt,seconds:activeSession.activeMs/1000,distance:activeSession.distance});
   if(!entry)return false;
   journal.entries.unshift(entry);journal.entries=journal.entries.slice(0,LIMIT);save();render();
   const card=document.querySelector('#travelJournal');if(card){card.classList.remove('journalPulse');void card.offsetWidth;card.classList.add('journalPulse')}
