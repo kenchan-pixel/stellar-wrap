@@ -142,6 +142,7 @@ window.WarpTravelJournal={
   entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))},
   visited(){return normaliseVisited(journal.visited,journal.entries)}
 };
+import('./responsive-ui.js').catch(()=>{});
 import('./exploration-survey.js').catch(()=>{});
 import('./star-atlas.js').catch(()=>{});
 import('./photo-mode.js').catch(()=>{});
