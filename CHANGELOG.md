@@ -4,6 +4,16 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ## [Unreleased]
 
+### Added
+
+- Added a V5-candidate **CYG Beacon Triangulation** exploration slice: after a true final arrival at CYG, users can sweep a 0–359° signal sensor and locate three distinct peaks from the blue star, violet companion and artificial beacon ring.
+- Signal sources only lock inside a bounded ±8° window, making CYG a short active-search interaction rather than another three-button observation checklist. All three locks unlock the local-only Star Atlas discovery `雙星航標三角場`.
+- CYG scan progress survives reloads through a versioned local record, refreshes Star Atlas immediately in the same tab, adds no backend/network/render-loop work, and is included in the prepared offline shell.
+
+### Validation
+
+- Added focused CYG beacon validation covering JavaScript syntax, three unique 0–359° signal peaks, angle wrap-around, ±8° locking, local persistence, safe CYG-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
+
 ## [4.1.0] - 2026-08-27
 
 ### Release status
