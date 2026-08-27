@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Added
 
+- Added a V5-candidate **SIRIUS Dual-Star Relay Calibration** exploration slice: after a true final arrival at SIRIUS, users can tune two normalized 0–100 calibration axes together and locate three stable relay handshake windows tied to the blue-white primary, companion and artificial relay ring.
+- Each SIRIUS window requires both carrier and phase to fall inside a bounded ±4 gate. Completing the three dual-axis locks unlocks the local-only Star Atlas discovery `雙星相位中繼窗`; the two axes are interaction indices rather than real frequency or angle measurements.
+- SIRIUS progress survives reloads through versioned local storage, mutation re-checks live safe final-exploration state, production Star Atlas refreshes in the same tab and after fresh-process reload, and the module is included in prepared offline shell cache v10 without adding renderer-loop or network work.
 - Added a V5-candidate **TAU Ring Resonance Mapper** exploration slice: after a true final arrival at TAU, users can sweep a normalized 0–100 radial probe across the natural planetary rings and locate three simplified density anomalies at 23, 56 and 82.
 - TAU ring features can only be recorded inside a bounded ±3 window. Completing the inner sparse band, moon resonance gap and outer density wave unlocks the local-only Star Atlas discovery `三層環隙共振`; the radial values are interaction indices rather than physical kilometres.
 - TAU progress survives reloads through a versioned local record, mutation re-checks live safe final-exploration state, Star Atlas refreshes from the existing discovery event, and the module is included in prepared offline shell cache v9 without adding renderer-loop or network work.
@@ -22,6 +25,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added focused SIRIUS relay validation covering JavaScript syntax, three unique dual-axis 0–100 windows, simultaneous ±4 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused TAU ring validation covering JavaScript syntax, three unique normalized ring anomalies, ±3 capture gating, production range-input/click execution, unsafe-state rejection, local persistence across a fresh process, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added a no-dependency executable destination interaction runtime harness at a 390×844 phone acceptance viewport. It loads the production Star Atlas plus CYG/ORION modules, drives real range-input and click events, proves bounded lock/capture and duplicate protection, verifies same-tab Atlas discovery refresh, rejects unsafe flight/context-loss mutations, and recreates a fresh process to prove local progress survives reload.
 - Added focused ORION spectrum validation covering JavaScript syntax, three unique 470–680 nm emission lines, ±4 nm capture gating, local persistence, safe ORION-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.

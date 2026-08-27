@@ -1,5 +1,5 @@
 const CACHE_PREFIX='stellar-wrap-shell-';
-const CACHE_NAME=`${CACHE_PREFIX}v9`;
+const CACHE_NAME=`${CACHE_PREFIX}v10`;
 const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const CORE=[
   './',
@@ -12,6 +12,7 @@ const CORE=[
   './cyg-beacon-scan.js',
   './orion-spectrograph.js',
   './tau-ring-profiler.js',
+  './sirius-relay-calibration.js',
   './photo-mode.js',
   './arrival-debrief.js',
   './landmark-guide.js',
