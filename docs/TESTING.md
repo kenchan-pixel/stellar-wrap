@@ -9,8 +9,8 @@ npm run check
 目前檢查：
 
 - 必要檔案存在
-- `index.html` 與 V4.0 穩定快照完全一致
-- V4.0 穩定版 SHA-256 正確
+- V4.0 穩定快照 SHA-256 正確；active `index.html` 可獨立演進
+- WebGL context lost／restored handlers、暫停模擬 clock 及診斷控制存在
 - HTML 內 module JavaScript 可通過 `node --check`
 - Three.js 版本固定為 `0.185.1`
 - 八個星區 ID 全部存在且只出現一次於資料定義
@@ -110,6 +110,9 @@ npm run check
 - [ ] 目前站點保持為最近已完成站
 - [ ] 可重新選站及再次起航
 - [ ] 切換 App／鎖屏／返回後可恢復
+- [ ] 航行途中執行 WarpSim.loseContext() 後，畫面顯示恢復提示而航程進度不繼續
+- [ ] 執行 WarpSim.restoreContext() 後，從同一航行階段／位置續航，沒有時間跳躍
+- [ ] 60 秒內於 High 畫質重複兩次 context loss／restore，第二次恢復後本 session 暫降 Standard
 
 ## 3. 建議測試航線
 

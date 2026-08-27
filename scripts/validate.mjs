@@ -67,7 +67,6 @@ for (const path of required) {
 const indexBytes = bytes('index.html');
 const stableBytes = bytes('releases/v4.0-stable.html');
 const stableHash = '8fe7850e0d3c3d8f782571c429a7e3293b86ef2dc119cbbd86c9852f7c10a6a5';
-ok(indexBytes.equals(stableBytes), 'active index matches V4.0 stable snapshot');
 ok(sha256(stableBytes) === stableHash, 'V4.0 stable SHA-256 is unchanged');
 
 const archiveHashes = new Map([
@@ -179,6 +178,10 @@ const requiredBehaviour = [
   ['adaptive quality', "qualityMode==='auto'"],
   ['2.5D star map', '2.5D 全息星圖'],
   ['public diagnostic API', 'window.WarpSim='],
+  ['WebGL context loss handling', "C.addEventListener('webglcontextlost'"],
+  ['WebGL context restoration handling', "C.addEventListener('webglcontextrestored'"],
+  ['simulation pauses during context loss', 'if(hidden||contextLost)return'],
+  ['context recovery diagnostic control', 'loseContext(){renderer.forceContextLoss()}'],
 ];
 for (const [name, marker] of requiredBehaviour) ok(html.includes(marker), name);
 

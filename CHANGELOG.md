@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here. Dates use Hong Kong time.
 
+## [Unreleased]
+
+### Improved
+
+- Added mobile WebGL context-loss recovery: simulation time pauses while the GPU context is unavailable and resumes from the same flight phase after restoration.
+- Added an in-app recovery status overlay and delayed guidance when automatic restoration takes longer than expected.
+- Repeated context loss while using High quality temporarily falls back to Standard quality without overwriting the user's saved preference.
+- Auto quality re-benchmarks after context restoration instead of treating the recovery pause as poor frame performance.
+
+### Validation
+
+- The active simulator may now evolve independently while releases/v4.0-stable.html remains hash-locked as the regression baseline.
+- Added structural checks for WebGL context loss/restoration handlers and the paused simulation clock.
+
 ## [4.0.0] - 2026-08-25
 
 ### Added
