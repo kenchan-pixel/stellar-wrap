@@ -33,8 +33,8 @@
 - 同一異常不能重複增加進度。
 - 三個異常完成後只解鎖一個 `三層環隙共振`。
 - reload 後三個完成狀態與 TAU discovery 保留。
-- Star Atlas 同一分頁即時顯示 TAU 發現，storage change 亦可刷新。
-- 手機直向控制不形成水平 overflow；range 可觸控，主要動作按鈕高度最少 40 px。
+- Star Atlas 同一分頁即時顯示 TAU 發現，fresh-process reload 亦會由本機進度恢復該 discovery。
+- 手機直向控制不形成水平 overflow；range 與主要動作按鈕均提供 44 px 觸控高度。
 - Desktop >=900 px 使用既有 shared typography tokens。
 - 零 backend、零 analytics、零新 network request、零 `requestAnimationFrame`；只以 2 Hz 讀取安全探索狀態。
 - V4.0 immutable snapshot、SOL→ORION／SOL→TAU 路線、完整 V4.1 flight state machine 不變。
@@ -55,9 +55,10 @@
 - Safe final-exploration mutation guard。
 - 版本化 localStorage persistence。
 - 2 Hz 狀態取樣及零 network／render-loop work。
-- Star Atlas aggregation／import／storage key。
+- 44 px 手機 range／capture 觸控基線。
+- Production Star Atlas aggregation／import／storage key。
 - Service Worker offline shell inclusion。
-- 實際 production range `input`＋button `click` 流程、unsafe-state rejection 及 fresh-process reload。
+- 實際 production range `input`＋button `click` 流程、unsafe-state rejection、同頁 Star Atlas 更新及 fresh-process reload。
 
 ## Risks／manual checks
 
@@ -69,4 +70,4 @@
 
 ## Completion signal
 
-Implementation、focused runtime validation、offline integration、Star Atlas aggregation、Changelog／本文件及 persistent Draft PR 全部更新，exact HEAD CI 綠燈且沒有 P0/P1/P2 blocker；剩餘只有實機視覺／觸控／性能驗收。
+Implementation、production Star Atlas/runtime validation、offline integration、Changelog／本文件及 persistent Draft PR 全部更新，exact HEAD CI 綠燈且沒有 P0/P1/P2 blocker；剩餘只有實機視覺／觸控／性能驗收。
