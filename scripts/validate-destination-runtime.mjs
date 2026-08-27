@@ -34,6 +34,7 @@ class MiniElement extends EventTarget {
     this.disabled=false;
     this.value='';
     this.type='';
+    this.scrolled=false;
     this._text='';
     this._className='';
     this.classList=new MiniClassList(this);
@@ -65,6 +66,7 @@ class MiniElement extends EventTarget {
     for(let node of nodes){
       if(node===null||node===undefined)continue;
       if(typeof node==='string')node=new MiniText(node);
+      if(node.parentNode&&node.parentNode!==this){const prior=node.parentNode.children?.indexOf(node)??-1;if(prior>=0)node.parentNode.children.splice(prior,1)}
       node.parentNode=this;
       this.children.push(node);
     }
@@ -72,12 +74,13 @@ class MiniElement extends EventTarget {
   appendChild(node){this.append(node);return node}
   replaceChildren(...nodes){this.children=[];this._text='';this.append(...nodes)}
   insertAdjacentElement(position,element){
-    if(position!=='afterend'||!this.parentNode)return null;
+    if(!['afterend','beforebegin'].includes(position)||!this.parentNode)return null;
+    if(element.parentNode){const oldIndex=element.parentNode.children.indexOf(element);if(oldIndex>=0)element.parentNode.children.splice(oldIndex,1)}
     const siblings=this.parentNode.children,index=siblings.indexOf(this);
     if(index<0)return null;
-    element.parentNode=this.parentNode;siblings.splice(index+1,0,element);return element;
+    element.parentNode=this.parentNode;siblings.splice(position==='beforebegin'?index:index+1,0,element);return element;
   }
-  scrollIntoView(){}
+  scrollIntoView(){this.scrolled=true}
   querySelector(selector){return querySelectorAllFrom(this,selector,false)[0]||null}
   querySelectorAll(selector){return querySelectorAllFrom(this,selector,false)}
   closest(selector){let node=this;while(node){if(node.nodeType===1&&matchesSelector(node,selector))return node;node=node.parentNode}return null}
@@ -153,10 +156,13 @@ class MiniStorage {
 function installPage(target,seed){
   const document=new MiniDocument(390,844);
   const app=document.createElement('main');app.id='app';
+  const exploreCard=document.createElement('section');exploreCard.id='exploreCard';
   const desc=document.createElement('div');desc.id='exploreDesc';
   const landmark=document.createElement('section');landmark.id='landmarkGuide';
+  const actions=document.createElement('div');actions.className='exploreActions';
+  exploreCard.append(desc,landmark,actions);
   const journal=document.createElement('section');journal.id='travelJournal';
-  app.append(desc,landmark,journal);document.body.append(app);
+  app.append(exploreCard,journal);document.body.append(app);
   const events=new EventTarget(),intervals=[],storage=new MiniStorage(seed),state={current:target,exploring:true,flying:false,contextLost:false};
   Object.defineProperty(globalThis,'window',{value:globalThis,configurable:true});
   Object.defineProperty(globalThis,'document',{value:document,configurable:true});
@@ -188,6 +194,27 @@ const SPECS={
 async function loadProduction(spec){
   await import(pathToFileURL(resolve(root,'star-atlas.js')).href);
   await waitFor(()=>globalThis[spec.api]&&globalThis.WarpStarAtlas,`${spec.api} and WarpStarAtlas`);
+  await import(pathToFileURL(resolve(root,'arrival-debrief.js')).href);
+  await waitFor(()=>globalThis.WarpArrivalDebrief,'WarpArrivalDebrief');
+}
+function arrivalEntry(target){return{route:['SOL',target],seconds:18,distance:6.2}}
+function runArrivalHandoff(page,target,spec,section,phase){
+  if(target!=='CYG')return;
+  assert.equal(globalThis.WarpArrivalDebrief.show(arrivalEntry(target)),true,'arrival debrief opens from a safe completed journey');
+  const debrief=page.document.querySelector('#arrivalDebrief'),objective=page.document.querySelector('#arrivalDebriefObjective'),explore=page.document.querySelector('#arrivalDebriefExplore'),landmark=page.document.querySelector('#landmarkGuide');
+  assert(debrief&&objective&&explore&&landmark,'production arrival handoff controls exist');
+  const siblings=debrief.parentElement.children;
+  assert(siblings.indexOf(debrief)<siblings.indexOf(landmark),'arrival summary is placed before landmark and destination task content');
+  if(phase==='fresh'){
+    assert(objective.textContent.includes('尚未完成'),'fresh arrival identifies unfinished destination exploration');
+    assert.equal(explore.textContent,'開始探索','fresh arrival offers a direct exploration action');
+    dispatchClick(explore);
+    assert.equal(globalThis.WarpArrivalDebrief.visible(),false,'exploration action closes the arrival summary');
+    assert.equal(section.scrolled,true,'arrival handoff scrolls the real destination interaction into view');
+  }else{
+    assert(objective.textContent.includes(spec.discovery),'reloaded completed arrival names the persisted discovery');
+    assert.equal(explore.textContent,'查看發現','completed arrival offers discovery review instead of a generic continue action');
+  }
 }
 async function runPage(target,phase){
   const spec=SPECS[target];assert(spec,`unknown target ${target}`);
@@ -200,6 +227,7 @@ async function runPage(target,phase){
   assert(section.classList.contains('show'),'interaction is visible during safe final exploration');
   const api=globalThis[spec.api];
   if(phase==='fresh'){
+    runArrivalHandoff(page,target,spec,section,'fresh');
     dispatchInput(range,spec.outside);assert.equal(action.disabled,true,'action stays disabled away from a target window');
     dispatchInput(range,spec.boundary);assert.equal(action.disabled,false,'action enables at the approved capture/lock boundary');
     dispatchInput(range,spec.targets[0]);dispatchClick(action);assert.equal(api.progress()[spec.field].length,1,'first source is recorded once');
@@ -217,12 +245,18 @@ async function runPage(target,phase){
     assert.equal(api.progress().discovery,true,'third source unlocks discovery state');
     assert(page.document.querySelector(spec.discoveryEl).classList.contains('show'),'production discovery panel is shown');
     assert(atlasHas(page.document,spec.discovery),'same-tab discovery event refreshes production Star Atlas DOM');
+    if(target==='CYG'){
+      assert.equal(globalThis.WarpArrivalDebrief.show(arrivalEntry(target)),true,'arrival summary can reopen after discovery completion');
+      assert(page.document.querySelector('#arrivalDebriefObjective').textContent.includes(spec.discovery),'same-tab completed arrival reflects the new Star Atlas discovery');
+      assert.equal(page.document.querySelector('#arrivalDebriefExplore').textContent,'查看發現','same-tab completed arrival switches its primary handoff action');
+    }
   }else if(phase==='reload'){
     assert.equal(api.progress()[spec.field].length,3,'fresh-process reload restores all three recorded sources');
     assert.equal(api.progress().discovery,true,'fresh-process reload restores discovery state');
     assert(page.document.querySelector(spec.progress).textContent.startsWith('3 / 3'),'reloaded production UI renders completed progress');
     assert(page.document.querySelector(spec.discoveryEl).classList.contains('show'),'reloaded production UI renders discovery panel');
     assert(atlasHas(page.document,spec.discovery),'reloaded production Star Atlas renders persisted discovery');
+    runArrivalHandoff(page,target,spec,section,'reload');
   }else throw new Error(`unknown phase ${phase}`);
   console.log(`STORAGE_B64:${Buffer.from(JSON.stringify(page.storage.snapshot()),'utf8').toString('base64')}`);
 }
@@ -236,7 +270,7 @@ if(process.argv[2]==='--page')await runPage(process.argv[3],process.argv[4]);
 else{
   const packageJson=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8'));
   assert(packageJson.scripts?.check?.includes('node scripts/validate-destination-runtime.mjs'),'npm run check includes executable destination runtime validation');
-  let passes=1;
+  let passes=2;
   for(const target of Object.keys(SPECS)){const storage=runChild(target,'fresh');passes++;runChild(target,'reload',storage);passes++}
-  console.log(`\nDestination interaction runtime: ${passes}/${passes} checks passed (production DOM/event integration, 390×844 harness).`);
+  console.log(`\nDestination interaction runtime: ${passes}/${passes} checks passed (production DOM/event integration + arrival handoff, 390×844 harness).`);
 }
