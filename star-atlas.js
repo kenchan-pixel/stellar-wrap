@@ -147,7 +147,8 @@ addEventListener('stellarwarp:discovery-change',()=>render(true));
 addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY,CYG_BEACON_KEY].includes(event.key))render(true)});
 setInterval(sample,1000);
 ensureUi();render(true);
-Promise.allSettled([import('./vega-survey.js'),import('./cyg-beacon-scan.js')]).then(()=>render(true));
+import('./vega-survey.js').then(()=>render(true)).catch(()=>{});
+import('./cyg-beacon-scan.js').then(()=>render(true)).catch(()=>{});
 window.WarpStarAtlas={
   snapshot(){const model=buildModel();return{visited:[...model.visited],discoveries:Object.fromEntries(model.discoveries),systems:SYSTEMS.map(system=>({...system,journeys:model.stats[system.id].journeys,last:model.stats[system.id].last}))}},
   render(){render(true)}
