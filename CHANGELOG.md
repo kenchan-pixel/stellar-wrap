@@ -6,12 +6,16 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Added
 
+- Added a V5-candidate **ORION Nebula Spectrograph** exploration slice: after a true final arrival at ORION, users can sweep a 470–680 nm narrow-band control and locate three simplified emission peaks at Hβ 486 nm, [O III] 501 nm and Hα 656 nm.
+- Spectral lines can only be recorded inside a bounded ±4 nm window, turning ORION into an active wavelength-search interaction rather than another fixed observation checklist. Completing all three unlocks the local-only Star Atlas discovery `三線發射殼層`.
+- ORION spectrum progress survives reloads through a versioned local record, refreshes Star Atlas immediately in the same tab, adds no backend/network/render-loop work, and is included in the prepared offline shell. The wavelength values are simplified interaction references, not a physical model of the fictional ORION scene.
 - Added a V5-candidate **CYG Beacon Triangulation** exploration slice: after a true final arrival at CYG, users can sweep a 0–359° signal sensor and locate three distinct peaks from the blue star, violet companion and artificial beacon ring.
 - Signal sources only lock inside a bounded ±8° window, making CYG a short active-search interaction rather than another three-button observation checklist. All three locks unlock the local-only Star Atlas discovery `雙星航標三角場`.
 - CYG scan progress survives reloads through a versioned local record, refreshes Star Atlas immediately in the same tab, adds no backend/network/render-loop work, and is included in the prepared offline shell.
 
 ### Validation
 
+- Added focused ORION spectrum validation covering JavaScript syntax, three unique 470–680 nm emission lines, ±4 nm capture gating, local persistence, safe ORION-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused CYG beacon validation covering JavaScript syntax, three unique 0–359° signal peaks, angle wrap-around, ±8° locking, local persistence, safe CYG-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 
 ## [4.1.0] - 2026-08-27
