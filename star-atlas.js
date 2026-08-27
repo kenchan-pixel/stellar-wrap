@@ -13,7 +13,8 @@ const SYSTEMS=[
 ];
 const IDS=new Set(SYSTEMS.map(system=>system.id));
 const JOURNAL_KEY='stellar-warp-travel-journal-v1';
-const SURVEY_KEY='stellar-warp-luna-survey-v1';
+const LUNA_SURVEY_KEY='stellar-warp-luna-survey-v1';
+const VEGA_SURVEY_KEY='stellar-warp-vega-survey-v1';
 let uiReady=false;
 let lastSignature='';
 
@@ -28,9 +29,8 @@ function readVisited(){
 }
 function readDiscoveries(){
   const discoveries=new Map();
-  try{
-    if(window.WarpLunaSurvey?.progress?.().discovery)discoveries.set('LUNA','地月視差層');
-  }catch{}
+  try{if(window.WarpLunaSurvey?.progress?.().discovery)discoveries.set('LUNA','地月視差層')}catch{}
+  try{if(window.WarpVegaSurvey?.progress?.().discovery)discoveries.set('VEGA','雙環共振窗口')}catch{}
   return discoveries;
 }
 function formatStamp(ms){
@@ -54,8 +54,7 @@ function buildModel(){
     }
   }
   if(IDS.has(state?.current))visited.add(state.current);
-  const discoveries=readDiscoveries();
-  return{state,visited,stats,discoveries};
+  return{state,visited,stats,discoveries:readDiscoveries()};
 }
 function ensureUi(){
   if(uiReady&&document.querySelector('#starAtlas'))return true;
@@ -142,9 +141,10 @@ function render(force=false){
 }
 function sample(){render(false)}
 addEventListener('stellarwarp:journey-complete',()=>render(true));
-addEventListener('storage',event=>{if(event.key===JOURNAL_KEY||event.key===SURVEY_KEY)render(true)});
+addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY].includes(event.key))render(true)});
 setInterval(sample,1000);
 ensureUi();render(true);
+import('./vega-survey.js').then(()=>render(true)).catch(()=>{});
 window.WarpStarAtlas={
   snapshot(){const model=buildModel();return{visited:[...model.visited],discoveries:Object.fromEntries(model.discoveries),systems:SYSTEMS.map(system=>({...system,journeys:model.stats[system.id].journeys,last:model.stats[system.id].last}))}},
   render(){render(true)}
