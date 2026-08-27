@@ -2,7 +2,7 @@
 
 ## 1. 架構結論
 
-V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。Active evolution 仍維持純靜態部署；核心航行、3D、音效及效能邏輯留在 `index.html`，而低頻率、非渲染關鍵路徑的旅行日誌以 `travel-journal.js` 獨立載入。Three.js 仍以固定版本從 CDN 載入。
+V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。Active evolution 仍維持純靜態部署；核心航行、3D、音效及效能邏輯留在 `index.html`，而低頻率、非渲染關鍵路徑的旅行日誌以 `travel-journal.js` 獨立載入；V5 候選的 LUNA guided survey 再由該低頻率 client 動態載入 `exploration-survey.js`。Three.js 仍以固定版本從 CDN 載入。
 
 這個做法適合目前階段：
 
@@ -10,6 +10,7 @@ V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL �
 - 沒有資料庫、API key、伺服器或帳戶維護
 - 可完整保存為單一 HTML 穩定版本
 - 對手機載入及除錯比大型框架簡單
+- 候選探索功能可在不改核心 60 Hz render loop 的情況下獨立驗證
 
 代價是主程式已變成單一大型檔案。下一次架構整理應只做**等效模組化**，不可同時改動航行行為。
 
@@ -31,6 +32,9 @@ flowchart TD
     SYSTEM --> RENDER
     UI --> PERF
     RENDER --> DIAG[FPS／DPR／Draw Call 診斷]
+    FSM --> API[WarpSim 公開狀態]
+    API --> JOURNAL[travel-journal.js · 2 Hz]
+    JOURNAL --> SURVEY[exploration-survey.js · LUNA 候選 · 2 Hz]
 ```
 
 ## 3. 主要邏輯區塊
@@ -49,6 +53,7 @@ flowchart TD
 | 自動畫質 | 量度移動平均幀時間，調整 DPR 及 GPU 負載 |
 | `WarpSim` | 提供測試／診斷用的公開控制介面 |
 | `travel-journal.js` | 以 2 Hz 讀取公開 flight state，只在完整抵達最終目的地時把最近旅程寫入本機日誌；不參與每幀渲染 |
+| `exploration-survey.js` | V5 候選；只在 LUNA 最終探索顯示三個觀測點，三點完成後解鎖一個本機發現紀錄；只讀公開 state、不改核心相機／航行狀態、不發網絡請求 |
 
 ## 4. 座標及方向模型
 
@@ -164,13 +169,14 @@ warpExit 1.15 s + decelerate 1.75 s + approach 2.80 s
 
 ## 9. 儲存及私隱
 
-目前只使用 `localStorage` 保存畫質模式、聲音設定及 active evolution 的本機旅行日誌：
+目前只使用 `localStorage` 保存畫質模式、聲音設定，以及 active evolution 的本機探索資料：
 
 - 沒有後端
 - 沒有帳戶
 - 沒有遙測或分析追蹤
 - 旅行日誌只保存最近最多 12 次已完成路線與本機時間；中止航程不記錄
-- 沒有上傳位置、裝置或航行資料
+- LUNA guided survey 只保存三個固定觀測點的完成 ID；三點完成狀態代表一個本機發現紀錄
+- 沒有上傳位置、裝置、航行或探索資料
 - 沒有 API key 或秘密
 
 ## 10. 已知技術債
@@ -181,6 +187,7 @@ warpExit 1.15 s + decelerate 1.75 s + approach 2.80 s
 4. 星區資料、場景建構及 UI 文案未分層。
 5. 目的地座標屬產品模擬尺度，不是實際天文距離。
 6. 程序化地球是視覺仿真，不是地理準確模型。
+7. `travel-journal.js` 暫時同時負責載入候選探索 module；若 V5 方向獲批准，應改成明確的 client bootstrap，而不是繼續增加隱性相依。
 
 ## 11. 建議模組化次序
 
