@@ -1,0 +1,46 @@
+name: Apply autonomous evolution slice
+
+on:
+  push:
+    branches: [autonomous-evolution]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[evolution-applied]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out evolution branch
+        uses: actions/checkout@v4
+        with:
+          ref: autonomous-evolution
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply product slice
+        run: node scripts/apply-evolution-slice.mjs
+
+      - name: Validate evolved simulator
+        run: npm run check
+
+      - name: Commit final slice and remove staging helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "stellar-wrap-evolution"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html scripts/validate.mjs CHANGELOG.md docs/PERFORMANCE.md docs/TESTING.md
+          git rm scripts/apply-evolution-slice.mjs .github/workflows/evolution-apply.yml
+          if git diff --cached --quiet; then
+            echo "No staged changes"
+            exit 0
+          fi
+          git commit -m "feat: recover gracefully from WebGL context loss [evolution-applied]"
+          git push origin HEAD:autonomous-evolution
