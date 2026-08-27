@@ -1,5 +1,5 @@
 const CACHE_PREFIX='stellar-wrap-shell-';
-const CACHE_NAME=`${CACHE_PREFIX}v1`;
+const CACHE_NAME=`${CACHE_PREFIX}v2`;
 const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const CORE=[
   './',
@@ -7,6 +7,7 @@ const CORE=[
   './travel-journal.js',
   './exploration-survey.js',
   './photo-mode.js',
+  './arrival-debrief.js',
   './offline-bootstrap.js'
 ];
 

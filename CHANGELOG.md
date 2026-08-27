@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Added a V5-candidate **Arrival Debrief** vertical slice: a genuinely completed final-destination journey now gets a compact in-context summary with destination, leg count, full route, route distance and journal-measured active flight time, plus direct actions to continue exploring or open the next-destination map.
+- The debrief consumes the travel journal's already-validated completion event instead of creating a second flight-completion authority; aborted journeys and intermediate fly-bys do not trigger it, and WebGL context loss hides it safely.
+- Arrival Debrief stays inside the existing destination exploration card, adds no polling/render-loop work, network request, backend or persistence store, and is included in the V4.1 offline shell cache.
 - Added a V4.1 static navigation fallback: browsers without usable WebGL, or sessions where the 3D app does not reach ready state within about 9 seconds, now retain a mobile-safe eight-system SVG map, shortest-route planning from SOL and a clear 3D retry action instead of ending at a dead loader.
 - The fallback is explicitly navigation-only, preserves the approved 6.0 LY/Dijkstra route graph, adds no render loop, polling, backend or user-data path, and releases its temporary WebGL capability-probe context before the main renderer starts.
 - Added a V4.1 candidate offline-resilience slice: after one successful online load, a Service Worker caches the active shell plus the pinned Three.js `0.185.1` dependency so later reloads can fall back to the most recently cached version when the network is unavailable.
@@ -27,6 +30,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added a focused Arrival Debrief validator covering syntax, trusted completion-event wiring, safe final-exploration gating, approved ORION/TAU route-distance baselines, zero polling/network/storage work, WebGL-loss hiding, next-destination handoff and offline-shell inclusion.
 - Added a focused static-fallback validator covering WebGL capability detection/context release, fallback startup paths, exact eight-system route baselines, reachability, zero render-loop/polling work and explicit fallback limitations.
 - Added a focused offline-resilience validator covering service-worker/bootstrap syntax, exact core-cache scope, pinned Three.js caching, network-first navigation, cache-first fixed dependency fallback, readiness reporting, absence of render-loop polling, and inclusion in `npm run check`.
 - Added a focused photo-mode validator covering bootstrap loading, JavaScript syntax, final-exploration gating, bounded 2 Hz polling, clean-HUD state, capture-toolbar exclusion, fresh-frame PNG extraction, local file output, automatic safe exit, and absence of network/storage paths.

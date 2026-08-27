@@ -97,6 +97,7 @@ function recordCompleted(activeSession,state){
   if(!entry)return false;
   journal.entries.unshift(entry);journal.entries=journal.entries.slice(0,LIMIT);save();render();
   const card=document.querySelector('#travelJournal');if(card){card.classList.remove('journalPulse');void card.offsetWidth;card.classList.add('journalPulse')}
+  dispatchEvent(new CustomEvent('stellarwarp:journey-complete',{detail:{...entry,route:[...entry.route]}}));
   return true;
 }
 function sample(){
@@ -126,5 +127,6 @@ sample();
 window.WarpTravelJournal={entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))}};
 import('./exploration-survey.js').catch(()=>{});
 import('./photo-mode.js').catch(()=>{});
+import('./arrival-debrief.js').catch(()=>{});
 import('./offline-bootstrap.js').catch(()=>{});
 })();
