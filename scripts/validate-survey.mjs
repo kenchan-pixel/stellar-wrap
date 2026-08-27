@@ -32,14 +32,18 @@ ok(!survey.includes('fetch(')&&!survey.includes('XMLHttpRequest'),'guided survey
 
 const atlasIds=[...atlas.matchAll(/\{id:'([^']+)',name:/g)].map(match=>match[1]);
 ok(atlasIds.length===8&&new Set(atlasIds).size===8,'star atlas defines exactly eight unique existing systems');
-ok(atlas.includes("const visited=new Set(['SOL'])"),'star atlas starts from the approved SOL origin without a new persistence record');
-ok(atlas.includes('window.WarpTravelJournal?.entries?.()'),'star atlas derives visit history from the existing travel journal');
+ok(journal.includes("function normaliseVisited(raw,entries=[])")&&journal.includes("visited:normaliseVisited(parsed.visited,entries)"),'travel journal migrates and retains cumulative visited-system state');
+ok(journal.includes("version:2")&&journal.includes("visited:normaliseVisited(journal.visited,journal.entries)"),'visited-system state shares the existing journal record instead of adding a new store');
+ok(journal.includes("journal.visited=normaliseVisited(journal.visited,[entry])"),'completed routes extend persistent visited-system state before capped history is saved');
+ok(journal.includes("visited(){return normaliseVisited(journal.visited,journal.entries)}"),'travel journal exposes persistent visited systems to exploration clients');
+ok(atlas.includes('window.WarpTravelJournal?.visited?.()'),'star atlas derives long-lived visit progress from the journal authority');
+ok(atlas.includes('window.WarpTravelJournal?.entries?.()'),'star atlas uses retained journal entries only for recent per-system statistics');
 ok(atlas.includes('window.WarpLunaSurvey?.progress?.()'),'star atlas consumes the existing LUNA discovery authority');
 ok(atlas.includes('window.WarpSim.select(destination)'),'star atlas hands route planning back to the existing WarpSim planner');
 ok(atlas.includes('state.flying||state.contextLost||destination===state.current'),'star atlas blocks replanning in unsafe or redundant states');
 ok(atlas.includes('model.visited.size===SYSTEMS.length'),'star atlas completion requires all eight systems');
 ok(atlas.includes('setInterval(sample,1000)'),'star atlas sampling is bounded to 1 Hz');
-ok(!/localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(atlas),'star atlas adds no persistence, network or backend path');
+ok(!/localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(atlas),'star atlas itself adds no persistence, network or backend path');
 ok(journal.includes("import('./star-atlas.js').catch(()=>{})"),'active simulator loads star atlas through the existing client bootstrap');
 
 for(const message of passes)console.log(`✓ ${message}`);

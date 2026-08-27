@@ -23,6 +23,9 @@ function readState(){
 function readEntries(){
   try{return window.WarpTravelJournal?.entries?.()||[]}catch{return[]}
 }
+function readVisited(){
+  try{return window.WarpTravelJournal?.visited?.()||['SOL']}catch{return['SOL']}
+}
 function readDiscoveries(){
   const discoveries=new Map();
   try{
@@ -36,16 +39,15 @@ function formatStamp(ms){
 }
 function buildModel(){
   const state=readState();
-  const visited=new Set(['SOL']);
+  const visited=new Set(readVisited().filter(id=>IDS.has(id)));
+  visited.add('SOL');
   const stats=Object.fromEntries(SYSTEMS.map(system=>[system.id,{journeys:0,last:0}]));
   for(const entry of readEntries()){
     if(!Array.isArray(entry?.route))continue;
     const seen=new Set();
     const endedAt=Number(entry.endedAt);
     for(const id of entry.route){
-      if(!IDS.has(id))continue;
-      visited.add(id);
-      if(seen.has(id))continue;
+      if(!IDS.has(id)||seen.has(id))continue;
       seen.add(id);
       stats[id].journeys++;
       if(Number.isFinite(endedAt))stats[id].last=Math.max(stats[id].last,endedAt);
@@ -71,7 +73,7 @@ function ensureUi(){
     card.id='starAtlas';
     card.className='starAtlas compact';
     card.setAttribute('aria-label','星區圖鑑');
-    card.innerHTML='<div class="atlasHead"><div><div class="atlasTitle">星區圖鑑</div><span id="atlasSummary" class="atlasSummary" aria-live="polite">1 / 8 星區</span></div><button id="atlasToggle" class="atlasToggle" type="button" aria-expanded="false">展開</button></div><div class="atlasProgress" aria-hidden="true"><i id="atlasProgressFill"></i></div><div class="atlasBody"><div id="atlasComplete" class="atlasComplete" role="status">全星區巡航完成 · 8 個星區均已有航行紀錄。</div><div id="atlasGrid" class="atlasGrid"></div></div>';
+    card.innerHTML='<div class="atlasHead"><div><div class="atlasTitle">星區圖鑑</div><span id="atlasSummary" class="atlasSummary" aria-live="polite">1 / 8 星區</span></div><button id="atlasToggle" class="atlasToggle" type="button" aria-expanded="false">展開</button></div><div class="atlasProgress" aria-hidden="true"><i id="atlasProgressFill"></i></div><div class="atlasBody"><div id="atlasComplete" class="atlasComplete" role="status">全星區巡航完成 · 8 個星區均已到訪。</div><div id="atlasGrid" class="atlasGrid"></div></div>';
     journal.insertAdjacentElement('afterend',card);
     card.querySelector('#atlasToggle').addEventListener('click',()=>{
       const compact=card.classList.toggle('compact');
@@ -126,15 +128,15 @@ function render(force=false){
     const tag=document.createElement('div');tag.className='atlasTag';tag.textContent=system.tag;
     const landmark=document.createElement('div');landmark.className='atlasLandmark';landmark.textContent=system.landmark;
     const meta=document.createElement('div');meta.className='atlasMeta';
-    if(current)meta.textContent='目前位置'+(stat.journeys?` · ${stat.journeys} 次旅程涉及`:'');
-    else if(visited)meta.textContent=(stat.journeys?`${stat.journeys} 次旅程涉及`:'已到訪')+(stat.last?` · 最近 ${formatStamp(stat.last)}`:'');
+    if(current)meta.textContent='目前位置'+(stat.journeys?` · 最近日誌 ${stat.journeys} 次`:'');
+    else if(visited)meta.textContent=(stat.journeys?`最近日誌 ${stat.journeys} 次`:'已到訪')+(stat.last?` · 最近 ${formatStamp(stat.last)}`:'');
     else meta.textContent='尚未到訪';
     row.append(top,tag,landmark,meta);
     if(discovery){const badge=document.createElement('div');badge.className='atlasDiscovery';badge.textContent='發現 · '+discovery;row.append(badge)}
     const plan=document.createElement('button');plan.type='button';plan.className='atlasPlan';plan.dataset.destination=system.id;
-    const blocked=model.state?.flying||model.state?.contextLost;
+    const blocked=!!(model.state?.flying||model.state?.contextLost);
     plan.disabled=current||blocked;
-    plan.textContent=current?'目前位置':blocked?'航行中':'規劃前往';
+    plan.textContent=current?'目前位置':model.state?.contextLost?'圖像恢復中':model.state?.flying?'航行中':'規劃前往';
     row.append(plan);grid.append(row);
   }
 }
