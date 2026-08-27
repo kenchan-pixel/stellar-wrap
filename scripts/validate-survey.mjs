@@ -10,17 +10,21 @@ const atlasPath=resolve(root,'star-atlas.js');
 const journalPath=resolve(root,'travel-journal.js');
 const responsivePath=resolve(root,'responsive-ui.js');
 const landmarkPath=resolve(root,'landmark-guide.js');
+const expeditionPath=resolve(root,'expedition.js');
+const debriefPath=resolve(root,'arrival-debrief.js');
 const survey=readFileSync(surveyPath,'utf8');
 const vega=readFileSync(vegaPath,'utf8');
 const atlas=readFileSync(atlasPath,'utf8');
 const journal=readFileSync(journalPath,'utf8');
 const responsive=readFileSync(responsivePath,'utf8');
 const landmark=readFileSync(landmarkPath,'utf8');
+const expedition=readFileSync(expeditionPath,'utf8');
+const debrief=readFileSync(debriefPath,'utf8');
 const failures=[];
 const passes=[];
 const ok=(condition,message)=>(condition?passes:failures).push(message);
 
-for(const [label,path] of [['LUNA guided survey',surveyPath],['VEGA gate survey',vegaPath],['star atlas',atlasPath],['responsive UI',responsivePath],['landmark guide',landmarkPath]]){
+for(const [label,path] of [['LUNA guided survey',surveyPath],['VEGA gate survey',vegaPath],['star atlas',atlasPath],['responsive UI',responsivePath],['landmark guide',landmarkPath],['expedition continuity',expeditionPath],['arrival debrief',debriefPath]]){
   const parse=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
   ok(parse.status===0,`${label} JavaScript parses${parse.stderr?`: ${parse.stderr.trim()}`:''}`);
 }
@@ -87,6 +91,22 @@ ok(landmark.includes('state.exploring&&!state.flying&&!state.contextLost'),'land
 ok(landmark.includes('setInterval(sample,500)'),'landmark guide state sampling is bounded to 2 Hz');
 ok(journal.includes("import('./landmark-guide.js').catch(()=>{})"),'active simulator loads the landmark guide through the existing client bootstrap');
 ok(!/localStorage|fetch\(|XMLHttpRequest|WebSocket|requestAnimationFrame/.test(landmark),'landmark guide adds no persistence, network, backend or render-loop work');
+
+ok(journal.includes("import('./expedition.js').catch(()=>{})"),'active simulator loads expedition continuity before the arrival handoff');
+ok(expedition.includes("const KEY='stellar-warp-expedition-v1'"),'expedition itinerary uses a versioned local storage key');
+ok(expedition.includes('const LIMIT=6'),'expedition itinerary is bounded to six destinations');
+ok(expedition.includes("IDS.has(id)&&!stops.includes(id)&&stops.length<LIMIT"),'stored expedition data is normalised to unique approved destination IDs');
+ok(expedition.includes("localStorage.setItem(KEY,JSON.stringify({version:1,stops:plan.stops,cursor:plan.cursor}))"),'expedition order and progress persist locally across reloads');
+ok(expedition.includes("state.flying||state.contextLost||id===state.current"),'expedition planning blocks unsafe flight, recovery and redundant current-destination states');
+ok(expedition.includes('window.WarpSim.select(id)'),'each expedition leg delegates route calculation to the existing core planner');
+ok(!/Dijkstra|MAX_LEG|MAX=6|Math\.hypot\([^\n]*p\[/.test(expedition),'expedition layer does not duplicate route graph or distance calculation authority');
+ok(expedition.includes("addEventListener('stellarwarp:journey-complete',onJourneyComplete)"),'expedition progress advances from the existing trusted completed-journey event');
+ok(expedition.includes('destination!==nextStop()'),'out-of-order journeys do not silently advance the itinerary');
+ok(expedition.includes("dispatchEvent(new CustomEvent('stellarwarp:expedition-progress'"),'expedition emits a focused progress handoff event after advancement');
+ok(!/setInterval|requestAnimationFrame|fetch\(|XMLHttpRequest|WebSocket/.test(expedition),'expedition adds no polling, render-loop or network work');
+ok(expedition.includes('@media(min-width:900px)')&&expedition.includes('font-size:var(--ui-sm)'),'expedition ships desktop readability using the existing shared typography tokens');
+ok(debrief.includes('window.WarpExpedition?.next?.()')&&debrief.includes('window.WarpExpedition?.planNext?.()'),'arrival debrief offers direct handoff to the next expedition stop');
+ok(debrief.includes('queueMicrotask(()=>show(event.detail))'),'arrival debrief waits for expedition progress to advance before rendering next-stop handoff');
 
 for(const message of passes)console.log(`✓ ${message}`);
 if(failures.length){
