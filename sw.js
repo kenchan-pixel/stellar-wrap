@@ -1,11 +1,12 @@
 const CACHE_PREFIX='stellar-wrap-shell-';
-const CACHE_NAME=`${CACHE_PREFIX}v2`;
+const CACHE_NAME=`${CACHE_PREFIX}v3`;
 const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const CORE=[
   './',
   './index.html',
   './travel-journal.js',
   './exploration-survey.js',
+  './star-atlas.js',
   './photo-mode.js',
   './arrival-debrief.js',
   './offline-bootstrap.js'

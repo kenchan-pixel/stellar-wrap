@@ -5,15 +5,19 @@ import { spawnSync } from 'node:child_process';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const surveyPath=resolve(root,'exploration-survey.js');
+const atlasPath=resolve(root,'star-atlas.js');
 const journalPath=resolve(root,'travel-journal.js');
 const survey=readFileSync(surveyPath,'utf8');
+const atlas=readFileSync(atlasPath,'utf8');
 const journal=readFileSync(journalPath,'utf8');
 const failures=[];
 const passes=[];
 const ok=(condition,message)=>(condition?passes:failures).push(message);
 
-const parse=spawnSync(process.execPath,['--check',surveyPath],{encoding:'utf8'});
-ok(parse.status===0,`guided survey JavaScript parses${parse.stderr?`: ${parse.stderr.trim()}`:''}`);
+for(const [label,path] of [['guided survey',surveyPath],['star atlas',atlasPath]]){
+  const parse=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
+  ok(parse.status===0,`${label} JavaScript parses${parse.stderr?`: ${parse.stderr.trim()}`:''}`);
+}
 ok(survey.includes("const KEY='stellar-warp-luna-survey-v1'"),'guided survey storage key is versioned');
 ok(survey.includes("const SYSTEM='LUNA'"),'guided survey is scoped to LUNA only');
 const ids=[...survey.matchAll(/id:'([^']+)'/g)].map(match=>match[1]).filter(id=>['basin','earth','ring'].includes(id));
@@ -26,10 +30,22 @@ ok(survey.includes("navigator.vibrate?.(10)"),'guided survey haptic hint is opti
 ok(journal.includes("import('./exploration-survey.js').catch(()=>{})"),'active simulator loads the guided survey module through the existing low-frequency client');
 ok(!survey.includes('fetch(')&&!survey.includes('XMLHttpRequest'),'guided survey adds no network or backend dependency');
 
+const atlasIds=[...atlas.matchAll(/\{id:'([^']+)',name:/g)].map(match=>match[1]);
+ok(atlasIds.length===8&&new Set(atlasIds).size===8,'star atlas defines exactly eight unique existing systems');
+ok(atlas.includes("const visited=new Set(['SOL'])"),'star atlas starts from the approved SOL origin without a new persistence record');
+ok(atlas.includes('window.WarpTravelJournal?.entries?.()'),'star atlas derives visit history from the existing travel journal');
+ok(atlas.includes('window.WarpLunaSurvey?.progress?.()'),'star atlas consumes the existing LUNA discovery authority');
+ok(atlas.includes('window.WarpSim.select(destination)'),'star atlas hands route planning back to the existing WarpSim planner');
+ok(atlas.includes('state.flying||state.contextLost||destination===state.current'),'star atlas blocks replanning in unsafe or redundant states');
+ok(atlas.includes('model.visited.size===SYSTEMS.length'),'star atlas completion requires all eight systems');
+ok(atlas.includes('setInterval(sample,1000)'),'star atlas sampling is bounded to 1 Hz');
+ok(!/localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(atlas),'star atlas adds no persistence, network or backend path');
+ok(journal.includes("import('./star-atlas.js').catch(()=>{})"),'active simulator loads star atlas through the existing client bootstrap');
+
 for(const message of passes)console.log(`✓ ${message}`);
 if(failures.length){
-  console.error(`\n${failures.length} guided-survey validation failure(s):`);
+  console.error(`\n${failures.length} exploration validation failure(s):`);
   for(const message of failures)console.error(`✗ ${message}`);
   process.exit(1);
 }
-console.log(`\nAll ${passes.length} guided-survey checks passed.`);
+console.log(`\nExploration continuity: ${passes.length}/${passes.length} checks passed.`);

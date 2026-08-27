@@ -135,6 +135,7 @@ setInterval(sample,500);
 sample();
 window.WarpTravelJournal={entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))}};
 import('./exploration-survey.js').catch(()=>{});
+import('./star-atlas.js').catch(()=>{});
 import('./photo-mode.js').catch(()=>{});
 import('./arrival-debrief.js').catch(()=>{});
 import('./offline-bootstrap.js').catch(()=>{});
