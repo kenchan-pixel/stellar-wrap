@@ -8,15 +8,17 @@ const surveyPath=resolve(root,'exploration-survey.js');
 const vegaPath=resolve(root,'vega-survey.js');
 const atlasPath=resolve(root,'star-atlas.js');
 const journalPath=resolve(root,'travel-journal.js');
+const responsivePath=resolve(root,'responsive-ui.js');
 const survey=readFileSync(surveyPath,'utf8');
 const vega=readFileSync(vegaPath,'utf8');
 const atlas=readFileSync(atlasPath,'utf8');
 const journal=readFileSync(journalPath,'utf8');
+const responsive=readFileSync(responsivePath,'utf8');
 const failures=[];
 const passes=[];
 const ok=(condition,message)=>(condition?passes:failures).push(message);
 
-for(const [label,path] of [['LUNA guided survey',surveyPath],['VEGA gate survey',vegaPath],['star atlas',atlasPath]]){
+for(const [label,path] of [['LUNA guided survey',surveyPath],['VEGA gate survey',vegaPath],['star atlas',atlasPath],['responsive UI',responsivePath]]){
   const parse=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
   ok(parse.status===0,`${label} JavaScript parses${parse.stderr?`: ${parse.stderr.trim()}`:''}`);
 }
@@ -60,6 +62,15 @@ ok(atlas.includes('model.visited.size===SYSTEMS.length'),'star atlas completion 
 ok(atlas.includes('setInterval(sample,1000)'),'star atlas sampling is bounded to 1 Hz');
 ok(!/localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(atlas),'star atlas itself adds no persistence, network or backend path');
 ok(journal.includes("import('./star-atlas.js').catch(()=>{})"),'active simulator loads star atlas through the existing client bootstrap');
+
+ok(journal.includes("import('./responsive-ui.js').catch(()=>{})"),'active simulator loads the responsive readability layer');
+ok(responsive.includes('@media (min-width:900px)'),'desktop readability changes are isolated behind a desktop-width media query');
+ok(responsive.includes('--ui-xs:clamp(')&&responsive.includes('--ui-lg:clamp('),'desktop typography scales within bounded clamp values');
+ok(responsive.includes('#app .kicker')&&responsive.includes('#app #panel')&&responsive.includes('#app #exploreCard'),'responsive layer covers the core HUD, navigation panel and exploration card');
+ok(responsive.includes('#app .vegaSurveyTitle')&&responsive.includes('#app .lunaSurveyTitle')&&responsive.includes('#app .arrivalDebriefTitle'),'responsive layer covers destination survey and arrival text');
+ok(responsive.includes('#app .journalTitle')&&responsive.includes('#app .atlasTitle'),'responsive layer covers journal and Star Atlas text');
+ok(!/requestAnimationFrame|setInterval|localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(responsive),'responsive layer adds no polling, render-loop, persistence or network work');
+ok(!/zoom\s*:|transform\s*:\s*scale/i.test(responsive),'desktop readability does not scale or distort the WebGL canvas');
 
 for(const message of passes)console.log(`✓ ${message}`);
 if(failures.length){
