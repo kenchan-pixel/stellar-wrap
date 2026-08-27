@@ -73,8 +73,9 @@ python3 -m http.server 8080
 ```text
 .
 ├── index.html                         # 目前 active app；功能 branch 可演進
-├── travel-journal.js                  # Active evolution：低頻率本機旅行日誌 client
+├── travel-journal.js                  # Active evolution：低頻率本機旅行日誌 client / candidate bootstrap
 ├── exploration-survey.js              # V5 候選：LUNA guided survey；非正式基線
+├── photo-mode.js                      # V5 候選：最終到站乾淨觀景與本機 PNG capture
 ├── releases/v4.0-stable.html         # 不可覆寫的 V4.0 穩定版快照
 ├── archive/                           # V1–V3.2 演進版本
 ├── docs/
@@ -92,7 +93,8 @@ python3 -m http.server 8080
 ├── scripts/
 │   ├── serve.mjs                      # 零依賴本機伺服器
 │   ├── validate.mjs                   # 結構、語法、基線及秘密掃描
-│   └── validate-survey.mjs            # LUNA guided survey 聚焦驗證
+│   ├── validate-survey.mjs            # LUNA guided survey 聚焦驗證
+│   └── validate-photo-mode.mjs        # Destination photo mode 聚焦驗證
 ├── AGENTS.md                          # AI agent 工作規則
 └── .github/workflows/validate.yml     # GitHub Actions 驗證
 ```
