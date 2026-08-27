@@ -107,6 +107,8 @@ ok(journalScript.includes("const KEY='stellar-warp-travel-journal-v1'"), 'travel
 ok(journalScript.includes('previous.flying&&!state.flying&&active'), 'travel journal detects completed flight transitions');
 ok(journalScript.includes('state.current!==destination'), 'travel journal rejects aborted or incomplete routes');
 ok(journalScript.includes('setInterval(sample,500)'), 'travel journal sampling is bounded to 2 Hz');
+ok(journalScript.includes('!document.hidden&&!state.contextLost'), 'travel journal excludes background and WebGL recovery pauses from active flight time');
+ok(journalScript.includes("document.addEventListener('visibilitychange',resetSampleClock)"), 'travel journal resets its sample clock across visibility changes');
 
 const nodeBlock = html.match(/const N=\[([\s\S]*?)\];\s*const node=/);
 ok(Boolean(nodeBlock), 'star-system data block exists');

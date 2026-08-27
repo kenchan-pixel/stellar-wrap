@@ -25,6 +25,10 @@ let journal=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify({version:1,entries:journal.entries.slice(0,LIMIT)}))}catch{}}
 function formatStamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
 function name(id){return NAMES[id]||id}
+function beginSession(state,sampleAt){return{route:Array.isArray(state.route)?[...state.route]:[],startedAt:Date.now(),activeMs:0,lastSampleAt:sampleAt}}
+function resetSampleClock(){if(active)active.lastSampleAt=performance.now()}
+document.addEventListener('visibilitychange',resetSampleClock);
+for(const eventName of['webglcontextlost','webglcontextrestored'])document.querySelector('#space')?.addEventListener(eventName,resetSampleClock);
 function ensureUi(){
   if(uiReady&&document.querySelector('#travelJournal'))return true;
   const routeCard=document.querySelector('.routeCard');
@@ -41,7 +45,7 @@ function ensureUi(){
     card.id='travelJournal';
     card.className='travelJournal compact';
     card.setAttribute('aria-label','旅行日誌');
-    card.innerHTML='<div class="journalHead"><div><div class="journalTitle">旅行日誌</div><span id="journalSummary" class="journalSummary">尚未記錄旅程</span></div><button id="journalToggle" class="journalToggle" type="button" aria-expanded="false">展開</button></div><div id="journalBody" class="journalBody"><div id="journalEntries"></div></div>';
+    card.innerHTML='<div class="journalHead"><div><div class="journalTitle">旅行日誌</div><span id="journalSummary" class="journalSummary" aria-live="polite">尚未記錄旅程</span></div><button id="journalToggle" class="journalToggle" type="button" aria-expanded="false">展開</button></div><div id="journalBody" class="journalBody"><div id="journalEntries"></div></div>';
     routeCard.insertAdjacentElement('afterend',card);
     card.querySelector('#journalToggle').addEventListener('click',()=>{
       const compact=card.classList.toggle('compact');
@@ -70,7 +74,7 @@ function render(){
   if(!journal.entries.length){
     const empty=document.createElement('div');
     empty.className='journalEmpty';
-    empty.textContent='完整抵達最終目的地後，會在此保存路線與實際航行時間；中止航程不會寫入。';
+    empty.textContent='完整抵達最終目的地後，會在此保存路線與活躍航行時間；中止航程不會寫入。';
     host.append(empty);return;
   }
   for(const entry of journal.entries.slice(0,5)){
@@ -79,7 +83,7 @@ function render(){
     const main=document.createElement('div');main.className='journalMain';
     const title=document.createElement('strong');title.textContent=name(entry.route[0])+' → '+name(destination);
     const route=document.createElement('div');route.className='journalRoute';route.textContent=entry.route.map(name).join(' → ');
-    const meta=document.createElement('div');meta.className='journalMeta';meta.textContent=formatStamp(entry.endedAt)+' · '+entry.seconds+' 秒';
+    const meta=document.createElement('div');meta.className='journalMeta';meta.textContent=formatStamp(entry.endedAt)+' · '+entry.seconds+' 秒活躍航行';
     main.append(title,route,meta);
     const revisit=document.createElement('button');revisit.type='button';revisit.className='journalRevisit';revisit.dataset.destination=destination;revisit.textContent=destination===currentId?'目前位置':'再次規劃';revisit.disabled=destination===currentId;
     row.append(main,revisit);host.append(row);
@@ -89,7 +93,7 @@ function recordCompleted(activeSession,state){
   const route=(activeSession?.route||[]).filter(id=>IDS.has(id));
   const destination=route[route.length-1];
   if(route.length<2||state.current!==destination)return false;
-  const endedAt=Date.now(),entry=normaliseEntry({route,startedAt:activeSession.startedAt,endedAt,seconds:(endedAt-activeSession.startedAt)/1000});
+  const endedAt=Date.now(),entry=normaliseEntry({route,startedAt:activeSession.startedAt,endedAt,seconds:activeSession.activeMs/1000});
   if(!entry)return false;
   journal.entries.unshift(entry);journal.entries=journal.entries.slice(0,LIMIT);save();render();
   const card=document.querySelector('#travelJournal');if(card){card.classList.remove('journalPulse');void card.offsetWidth;card.classList.add('journalPulse')}
@@ -98,12 +102,22 @@ function recordCompleted(activeSession,state){
 function sample(){
   ensureUi();
   const api=window.WarpSim;if(!api||typeof api.state!=='function')return;
+  const sampleAt=performance.now();
   let state;try{state=api.state()}catch{return}
   currentId=IDS.has(state.current)?state.current:currentId;
-  if(!previous){previous=state;if(state.flying&&Array.isArray(state.route)&&state.route.length>1)active={route:[...state.route],startedAt:Date.now()};render();return}
-  if(state.flying&&!previous.flying)active={route:Array.isArray(state.route)?[...state.route]:[],startedAt:Date.now()};
-  else if(state.flying&&active&&Array.isArray(state.route)&&state.route.length>1)active.route=[...state.route];
-  if(previous.flying&&!state.flying&&active){recordCompleted(active,state);active=null}
+  if(!previous){previous=state;if(state.flying&&Array.isArray(state.route)&&state.route.length>1)active=beginSession(state,sampleAt);render();return}
+  if(state.flying&&!previous.flying)active=beginSession(state,sampleAt);
+  if(state.flying&&active){
+    const delta=Math.max(0,sampleAt-active.lastSampleAt);
+    if(!document.hidden&&!state.contextLost)active.activeMs+=Math.min(1000,delta);
+    active.lastSampleAt=sampleAt;
+    if(Array.isArray(state.route)&&state.route.length>1)active.route=[...state.route];
+  }
+  if(previous.flying&&!state.flying&&active){
+    const delta=Math.max(0,sampleAt-active.lastSampleAt);
+    if(!document.hidden&&!state.contextLost)active.activeMs+=Math.min(600,delta);
+    recordCompleted(active,state);active=null;
+  }
   if(previous.current!==state.current)render();
   previous=state;
 }
