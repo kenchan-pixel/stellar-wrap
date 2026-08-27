@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Added a V4.1 candidate offline-resilience slice: after one successful online load, a Service Worker caches the active shell plus the pinned Three.js `0.185.1` dependency so later reloads can fall back to the most recently cached version when the network is unavailable.
+- Added a low-noise control-panel status for offline readiness (`準備中`／`已準備`／`離線可用`／`未準備`) and an explicit startup recovery screen with reload action if the 3D engine does not reach ready state within about 9 seconds.
+- Online navigation and local runtime files remain network-first so Vercel/static deploy updates are not permanently shadowed by cache; only the fixed Three.js dependency is cache-first.
+- The offline layer introduces no backend, account, analytics, user-data persistence, render-loop polling or flight-timing changes. First-ever use still requires a successful online launch.
 - Added a destination photo-mode candidate for final exploration at all eight systems: the normal HUD, flight bar, telemetry, map controls, exploration card and diagnostics are hidden to leave a clean astronomical view while manual drag-look remains available.
 - Photo mode can save the freshly rendered WebGL canvas as a local PNG named for the current destination; its own capture toolbar is hidden from the saved frame.
 - Photo mode is available only during safe final exploration, automatically exits if flight resumes or WebGL context is lost, polls state at only 2 Hz, stores no data, and adds no backend or network request.
@@ -21,6 +25,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added a focused offline-resilience validator covering service-worker/bootstrap syntax, exact core-cache scope, pinned Three.js caching, network-first navigation, cache-first fixed dependency fallback, readiness reporting, absence of render-loop polling, and inclusion in `npm run check`.
 - Added a focused photo-mode validator covering bootstrap loading, JavaScript syntax, final-exploration gating, bounded 2 Hz polling, clean-HUD state, capture-toolbar exclusion, fresh-frame PNG extraction, local file output, automatic safe exit, and absence of network/storage paths.
 - Added a focused guided-survey validator covering JavaScript syntax, exact three-point scope, LUNA-only explore gating, local persistence, all-three completion gate, bounded 2 Hz polling and absence of network/backend calls.
 - Added syntax and structural checks for the travel journal loader, versioned storage, bounded sampling and completed-route gate.

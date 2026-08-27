@@ -29,7 +29,13 @@
 - 自動／流暢／標準／高畫質模式及效能診斷 HUD
 - 以 60 Hz 裝置上的 16.67 ms 幀預算為優先目標
 
-> `autonomous-evolution` Draft PR 可能包含尚未批准的候選探索功能；正式產品基線仍以 `docs/DECISIONS.md` 及穩定快照為準。
+> `autonomous-evolution` Draft PR 可能包含尚未批准的候選探索及 V4.1 穩定化功能；正式產品基線仍以 `docs/DECISIONS.md` 及穩定快照為準。
+
+### Draft 候選：離線恢復
+
+成功在線開啟一次後，Service Worker 會保存 active shell 及固定 Three.js `0.185.1`，之後斷網重新開啟可回退到最近成功快取。控制面板會顯示離線準備狀態；若 3D 引擎約 9 秒仍未 ready，loading 畫面會提供清楚的重新載入操作。
+
+這不是完整 PWA，也不宣稱第一次使用可離線。詳見 [離線啟動與恢復](docs/OFFLINE.md)。
 
 ## 立即運行
 
@@ -51,7 +57,7 @@ http://localhost:8080
 python3 -m http.server 8080
 ```
 
-> 首次開啟需要網絡載入已鎖定版本的 Three.js。瀏覽器亦只會在使用者首次互動後允許播放聲音。
+> 首次開啟需要網絡載入已鎖定版本的 Three.js。Draft 離線候選完成一次成功快取後，後續重新開啟可在沒有網絡時使用最近成功版本。瀏覽器亦只會在使用者首次互動後允許播放聲音。
 
 ## 操作
 
@@ -76,6 +82,8 @@ python3 -m http.server 8080
 ├── travel-journal.js                  # Active evolution：低頻率本機旅行日誌 client / candidate bootstrap
 ├── exploration-survey.js              # V5 候選：LUNA guided survey；非正式基線
 ├── photo-mode.js                      # V5 候選：最終到站乾淨觀景與本機 PNG capture
+├── offline-bootstrap.js               # V4.1 候選：離線準備狀態、Service Worker 註冊、啟動後備
+├── sw.js                              # V4.1 候選：active shell + pinned Three.js offline cache
 ├── releases/v4.0-stable.html         # 不可覆寫的 V4.0 穩定版快照
 ├── archive/                           # V1–V3.2 演進版本
 ├── docs/
@@ -87,6 +95,7 @@ python3 -m http.server 8080
 │   ├── TESTING.md                     # 自動及實機驗收
 │   ├── DECISIONS.md                   # 已批准設計決定
 │   ├── ROADMAP.md                     # 後續發展方向
+│   ├── OFFLINE.md                     # V4.1 離線啟動候選策略及驗收
 │   ├── HANDOFF.md                     # AI／開發者交接入口
 │   ├── PUBLISHING.md                  # GitHub 發佈及靜態部署
 │   └── REPOSITORY_MANIFEST.md         # 初始 repo 內容、提交及驗證清單
@@ -94,7 +103,8 @@ python3 -m http.server 8080
 │   ├── serve.mjs                      # 零依賴本機伺服器
 │   ├── validate.mjs                   # 結構、語法、基線及秘密掃描
 │   ├── validate-survey.mjs            # LUNA guided survey 聚焦驗證
-│   └── validate-photo-mode.mjs        # Destination photo mode 聚焦驗證
+│   ├── validate-photo-mode.mjs        # Destination photo mode 聚焦驗證
+│   └── validate-offline.mjs           # V4.1 offline resilience 聚焦驗證
 ├── AGENTS.md                          # AI agent 工作規則
 └── .github/workflows/validate.yml     # GitHub Actions 驗證
 ```
@@ -109,6 +119,7 @@ python3 -m http.server 8080
 - [測試與完成標準](docs/TESTING.md)
 - [批准決定](docs/DECISIONS.md)
 - [Roadmap](docs/ROADMAP.md)
+- [離線啟動與恢復](docs/OFFLINE.md)
 - [開發交接](docs/HANDOFF.md)
 - [GitHub 發佈與部署](docs/PUBLISHING.md)
 - [Repository 準備清單](docs/REPOSITORY_MANIFEST.md)
@@ -124,6 +135,6 @@ python3 -m http.server 8080
 
 ## 依賴及授權
 
-- Three.js `0.185.1`，由 jsDelivr 以固定版本載入。
+- Three.js `0.185.1`，由 jsDelivr 以固定版本載入；Draft 離線候選可在首次成功在線載入後保存同一版本作 offline fallback。
 - 星體紋理、雲層、星雲及聲音均於瀏覽器程序化生成；沒有內嵌第三方圖片或音訊資產。
 - 本專案目前未授予開源授權；除非擁有人另行批准，保留所有權利。

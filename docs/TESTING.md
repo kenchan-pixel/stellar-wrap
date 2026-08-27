@@ -14,6 +14,7 @@ npm run check
 - 旅行日誌外掛可通過 `node --check`，使用版本化本機儲存 key、2 Hz 有界輪詢，且只接受真正完成最終目的地的航程
 - LUNA guided survey 可通過獨立 validator：JavaScript 語法、三個固定觀測點、LUNA-only 最終探索 gate、2 Hz polling、本機 persistence、三點全完成先解鎖發現，以及零額外網絡／後端請求
 - Destination photo mode 可通過獨立 validator：bootstrap 載入、JavaScript 語法、最終探索 gate、2 Hz polling、乾淨 HUD、capture toolbar 排除、fresh-frame PNG、local download、安全退出，以及零網絡／零儲存
+- V4.1 offline resilience 可通過獨立 validator：bootstrap／Service Worker 語法、固定 Three.js cache、核心 shell cache、network-first navigation、cache-first fixed dependency、cache-ready 回報、9 秒 startup fallback，以及零 render-loop polling
 - HTML 內 module JavaScript 可通過 `node --check`
 - Three.js 版本固定為 `0.185.1`
 - 八個星區 ID 全部存在且只出現一次於資料定義
@@ -23,7 +24,7 @@ npm run check
 - repo 內沒有常見 API key／私鑰格式
 - archive 及 release 清單與已知 hash 相符
 
-自動檢查只證明結構、語法及基線沒有被意外破壞，不能取代 WebGL 視覺及手機實機驗收。
+自動檢查只證明結構、語法及基線沒有被意外破壞，不能取代 WebGL 視覺、Service Worker 真實快取及手機實機驗收。
 
 ## 2. 核心手動驗收
 
@@ -122,6 +123,18 @@ npm run check
 - [ ] 開啟攝影模式後觸發 WebGL context lost，模式會自動退出；恢復後可重新進入
 - [ ] `WarpPhotoMode.enter()`／`exit()`／`capture()` 可供驗收，不會新增 localStorage、analytics 或網絡請求
 
+### F3. Offline Resilience｜V4.1 候選實驗
+
+詳細策略見 `docs/OFFLINE.md`。至少驗證：
+
+- [ ] iPhone Safari 在線成功開啟後，控制面板「離線啟動」由「準備中」變成「已準備」
+- [ ] 完全關閉／離開頁面，再開飛行模式重新開啟同一 production／preview URL，顯示「離線可用」而不是無限 loading
+- [ ] 離線狀態可打開星圖、規劃並完成 `SOL → LUNA`，核心 3D、航行狀態及本機候選功能仍可載入
+- [ ] 恢復網絡後重新載入會取得最新 online 部署，不會永久停留舊快取
+- [ ] 清除網站資料後直接離線開啟，不會假稱快取已準備，並提示需要先連線成功開啟一次
+- [ ] 阻擋／模擬固定 Three.js 依賴失敗時，約 9 秒後 loading 畫面提供可理解的 reload 操作
+- [ ] Service Worker 快取／更新期間 FPS、DPR、航行時間及 animation timing 沒有可感知改變；它沒有 per-frame 工作
+
 ### G. 聲音
 
 - [ ] 首次按啟動或聲音按鈕後才建立音訊
@@ -155,7 +168,7 @@ npm run check
 
 | 航線 | 目的 |
 |---|---|
-| SOL → LUNA | 最短直航、細角度轉向、地月景觀、LUNA guided survey、photo mode |
+| SOL → LUNA | 最短直航、細角度轉向、地月景觀、LUNA guided survey、photo mode、offline basic route |
 | SOL → PROX | 明顯下降高度角、紅矮星與熔岩景觀 |
 | SOL → TAU | 南向多段、SIRIUS 中途轉向、環行星終點 |
 | SOL → ORION | 最長多段、三次中途轉向、重型星雲場景 |
@@ -174,4 +187,4 @@ npm run check
 - 未能自動證明的風險
 - 需擁有人手確認的畫面或產品決定
 
-沒有實機證據時，不可聲稱「已穩定 60 fps」；只可說明程式以 60 Hz 為目標及自動調節已通過結構驗證。
+沒有實機證據時，不可聲稱「已穩定 60 fps」或「iPhone 已可離線使用」；只可說明程式結構、快取策略及自動調節已通過相應驗證。

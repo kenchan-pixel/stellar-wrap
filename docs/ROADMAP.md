@@ -25,18 +25,33 @@
 
 目標：不改變使用效果，令穩定版更容易維護、測試及部署。
 
+> Draft 驗證中：`autonomous-evolution` 已加入 **WebGL context lost／restore 恢復**，以及一個 **online-first 離線啟動候選**。後者會在首次成功在線載入後快取 active shell 與固定 Three.js `0.185.1`，之後斷網重新開啟時使用最近成功快取；它不代表完整 PWA／安裝體驗已獲批准。
+
 候選工作：
 
 1. 把星區資料、路線規劃、抵達曲線及狀態機逐步拆成模組。
 2. 加入 route planner 與 arrival profile 單元測試。
 3. 加入手機尺寸自動截圖及關鍵畫面回歸基線。
-4. 研究把 Three.js 固定版本放入 repo，支援首次離線啟動。
-5. 加入 PWA manifest、service worker 與安裝提示。
+4. 研究把 Three.js 固定版本放入 repo，支援真正首次離線啟動。
+5. 加入 PWA manifest、App Icon 與安裝提示；先以現有離線快取候選驗證 online→offline→online 可靠性。
 6. 建立實機效能記錄格式及已驗證裝置清單。
 7. 加入 WebGL context lost／restore 處理。
 8. 加入簡單的錯誤畫面及不支援 WebGL 的靜態後備。
 
-**完成標準：** V4.0 全部手動驗收通過，穩定快照 hash 不變，模組化後畫面及航行時間沒有可見差異。
+### V4.1 離線恢復垂直切片｜目前 Draft
+
+- Service Worker 只快取 active shell、候選 client modules 及固定 Three.js `0.185.1`。
+- 在線時 navigation／同源 runtime 使用 network-first，成功後刷新快取；離線才回退到最近成功版本。
+- 固定 Three.js 依賴使用 cache-first，避免每次重開都依賴 CDN。
+- 控制面板顯示離線準備狀態；約 9 秒仍未啟動時，loading 畫面轉成可操作的 reload 後備。
+- 不加後端、帳戶、分析追蹤、使用者資料儲存、render-loop polling 或 flight timing 改動。
+- 第一次使用仍需要網絡；真正首次離線啟動／完整安裝 PWA 仍屬後續工作。
+
+**驗證目的：** 先確認手機在一次成功在線載入後，斷網重開仍可完成基本星圖與航程，而恢復網絡後又能取得最新部署，不被舊快取永久鎖死。
+
+完整驗收見 [OFFLINE.md](OFFLINE.md)。
+
+**完成標準：** V4.0 全部手動驗收通過，穩定快照 hash 不變，模組化後畫面及航行時間沒有可見差異；離線候選需完成實機 online→offline→online 驗證後才可標記為已通過驗證。
 
 ---
 
@@ -134,8 +149,9 @@
 
 ## 當前最建議下一步
 
-1. **先以實機驗證 LUNA 三觀測點＋攝影模式**：確認手機直向不擠迫、提示有助觀察、三點完成／reload persistence 正常，以及乾淨畫面與 PNG capture 在 iPhone Safari 可用。
-2. **V4.1 模組化 route planner 與 flight state machine**，先補純邏輯測試。
-3. **建立 iPhone 實機性能基準**，記錄最長航程的 FPS／DPR／熱力。
-4. **完成 PWA／離線依賴研究**，確認是否仍維持零建置架構。
-5. LUNA 切片獲批准後，先為另一個視覺差異最大的星區做第二個觀測模板，再決定是否全面擴展。
+1. **實機驗證 V4.1 離線恢復候選**：iPhone Safari online 成功載入一次 → 飛行模式重開 → 恢復網絡重開，確認能離線完成 `SOL → LUNA` 且 online 時不被舊 cache 鎖死。
+2. **實機驗證 LUNA 三觀測點＋攝影模式**：確認手機直向不擠迫、提示有助觀察、三點完成／reload persistence 正常，以及乾淨畫面與 PNG capture 在 iPhone Safari 可用。
+3. **V4.1 模組化 route planner 與 flight state machine**，先補純邏輯測試。
+4. **建立 iPhone 實機性能基準**，記錄最長航程的 FPS／DPR／熱力。
+5. 離線恢復獲驗證後，再決定是否補 manifest／App Icon／安裝提示，或把固定 Three.js vendor 入 repo 支援真正首次離線啟動。
+6. LUNA 切片獲批准後，先為另一個視覺差異最大的星區做第二個觀測模板，再決定是否全面擴展。
