@@ -85,9 +85,9 @@ style.textContent=`
   #app .lunaComplete,#app .vegaComplete{min-height:40px;font-size:var(--ui-sm)}
   #app .lunaDiscovery,#app .vegaDiscovery{font-size:var(--ui-xs);line-height:1.55}
   #app .arrivalDebriefStats{font-size:var(--ui-sm);line-height:1.5}
-  #app .arrivalDebriefRoute{font-size:var(--ui-xs);line-height:1.5}
+  #app .arrivalDebriefRoute,#app .arrivalDebriefObjective{font-size:var(--ui-xs);line-height:1.5}
   #app .arrivalDebriefActions{gap:8px}
-  #app .arrivalDebriefActions button{min-height:40px;font-size:var(--ui-sm)}
+  #app .arrivalDebriefActions button{min-height:44px;font-size:var(--ui-sm)}
 
   #app .landmarkGuide{margin:10px 0 9px;padding:10px;border-radius:13px}
   #app .landmarkGuideHead{gap:10px}
