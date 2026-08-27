@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Added a guided LUNA exploration vertical slice: three observation checkpoints (lunar basin, distant Earth parallax and orbital ring station) turn the existing free-look arrival scene into an intentional survey task.
+- Completing all three LUNA observations unlocks one local-only discovery record (`地月視差層`); progress survives reloads and never leaves the device.
+- The guided survey runs outside the render loop at 2 Hz, appears only during final LUNA exploration, and adds no backend, analytics, network request or rendering dependency.
 - Added a local-only travel journal that records completed final-destination journeys, route, timestamp and actual elapsed travel time, with a quick re-plan action for past destinations.
 - Travel journal history is capped at the latest 12 journeys, survives reloads through a versioned `localStorage` record, excludes aborted flights, and is sampled at only 2 Hz outside the render loop.
 - Added mobile WebGL context-loss recovery: simulation time pauses while the GPU context is unavailable and resumes from the same flight phase after restoration.
@@ -15,6 +18,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added a focused guided-survey validator covering JavaScript syntax, exact three-point scope, LUNA-only explore gating, local persistence, all-three completion gate, bounded 2 Hz polling and absence of network/backend calls.
 - Added syntax and structural checks for the travel journal loader, versioned storage, bounded sampling and completed-route gate.
 - The active simulator may now evolve independently while releases/v4.0-stable.html remains hash-locked as the regression baseline.
 - Added structural checks for WebGL context loss/restoration handlers and the paused simulation clock.
