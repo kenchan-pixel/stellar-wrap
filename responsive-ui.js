@@ -53,7 +53,7 @@ style.textContent=`
   #app .legend{font-size:var(--ui-xs);line-height:1.55}
   #app .chip{font-size:var(--ui-xs);padding:6px 9px}
 
-  #app #exploreCard{left:18px;bottom:18px;width:clamp(410px,25vw,500px);padding:14px;border-radius:18px}
+  #app #exploreCard{left:18px;bottom:18px;width:clamp(410px,25vw,500px);max-height:calc(100vh - 36px);overflow:auto;overscroll-behavior:contain;padding:14px;border-radius:18px}
   #app #exploreCard.transit{width:clamp(390px,23vw,470px)}
   #app .exploreKicker{font-size:var(--ui-xs)}
   #app .exploreTitle{font-size:clamp(17px,.78vw,20px);margin-top:4px}
