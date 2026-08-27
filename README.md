@@ -6,8 +6,9 @@
 
 ## 專案狀態
 
-- **目前穩定基線：V4.0 Stable**（不可覆寫快照：`releases/v4.0-stable.html`）
-- **Active app：** `index.html` 可在功能 branch／Draft PR 上演進，但不得把候選功能誤記為已批准基線
+- **目前 release baseline：V4.1.0**（2026-08-27；見 `releases/v4.1.0.md`）
+- **不可覆寫回歸快照：V4.0 Stable**（`releases/v4.0-stable.html`）
+- **Active app：** `index.html` 現為 V4.1.0 基線；後續功能仍透過 branch／PR 演進
 - **產品方向：** 由曲速特效展示，持續發展成完整星際探索體驗
 - **主要平台：** 手機瀏覽器，兼容桌面瀏覽器
 - **架構：** 無建置流程的靜態 Three.js WebGL 應用
@@ -27,11 +28,17 @@
 - 中途站短暫飛掠；最終目的地進入可拖動、自動環繞的探索模式
 - Web Audio 動態引擎、曲速、轉向與環境聲
 - 自動／流暢／標準／高畫質模式及效能診斷 HUD
+- WebGL context lost 時凍結航程並於恢復後由原位置續航
+- 本機旅行日誌保存完成航程、路線、活躍時間、距離及累積 LY
+- LUNA 三點觀測探索及本機發現紀錄
+- 最終目的地攝影模式及本機 PNG capture
+- 成功在線啟動一次後支援離線重新啟動；3D 啟動失敗時提供靜態導航 fallback
+- 完整抵達後顯示 Arrival Debrief，包括目的地、航段、路線、距離及活躍航行時間
 - 以 60 Hz 裝置上的 16.67 ms 幀預算為優先目標
 
-> `autonomous-evolution` Draft PR 可能包含尚未批准的候選探索及 V4.1 穩定化功能；正式產品基線仍以 `docs/DECISIONS.md` 及穩定快照為準。
+> V4.1.0 已經 owner 實機驗收並由 PR #4 合併成 release baseline。這只確認目前已發佈行為，不等同預先批准更廣泛的 V5 roadmap。
 
-### Draft 候選：離線恢復
+### 離線恢復
 
 成功在線開啟一次後，Service Worker 會保存 active shell 及固定 Three.js `0.185.1`，之後斷網重新開啟可回退到最近成功快取。控制面板會顯示離線準備狀態；若 3D 引擎約 9 秒仍未 ready，loading 畫面會提供清楚的重新載入操作。
 
@@ -57,7 +64,7 @@ http://localhost:8080
 python3 -m http.server 8080
 ```
 
-> 首次開啟需要網絡載入已鎖定版本的 Three.js。Draft 離線候選完成一次成功快取後，後續重新開啟可在沒有網絡時使用最近成功版本。瀏覽器亦只會在使用者首次互動後允許播放聲音。
+> 首次開啟需要網絡載入已鎖定版本的 Three.js。完成一次成功快取後，後續重新開啟可在沒有網絡時使用最近成功版本。瀏覽器亦只會在使用者首次互動後允許播放聲音。
 
 ## 操作
 
@@ -78,12 +85,13 @@ python3 -m http.server 8080
 
 ```text
 .
-├── index.html                         # 目前 active app；功能 branch 可演進
-├── travel-journal.js                  # Active evolution：低頻率本機旅行日誌 client / candidate bootstrap
-├── exploration-survey.js              # V5 候選：LUNA guided survey；非正式基線
-├── photo-mode.js                      # V5 候選：最終到站乾淨觀景與本機 PNG capture
-├── offline-bootstrap.js               # V4.1 候選：離線準備狀態、Service Worker 註冊、啟動後備
-├── sw.js                              # V4.1 候選：active shell + pinned Three.js offline cache
+├── index.html                         # V4.1.0 active app；後續 branch 可演進
+├── travel-journal.js                  # V4.1.0：本機旅行日誌與完成航程記錄
+├── exploration-survey.js              # V4.1.0：LUNA guided survey
+├── photo-mode.js                      # V4.1.0：目的地乾淨觀景與本機 PNG capture
+├── offline-bootstrap.js               # V4.1.0：離線準備狀態、Service Worker 註冊、啟動後備
+├── sw.js                              # V4.1.0：active shell + pinned Three.js offline cache
+├── releases/v4.1.0.md                # V4.1.0 release／實機驗收紀錄
 ├── releases/v4.0-stable.html         # 不可覆寫的 V4.0 穩定版快照
 ├── archive/                           # V1–V3.2 演進版本
 ├── docs/
@@ -95,7 +103,7 @@ python3 -m http.server 8080
 │   ├── TESTING.md                     # 自動及實機驗收
 │   ├── DECISIONS.md                   # 已批准設計決定
 │   ├── ROADMAP.md                     # 後續發展方向
-│   ├── OFFLINE.md                     # V4.1 離線啟動候選策略及驗收
+│   ├── OFFLINE.md                     # 離線啟動策略及驗收
 │   ├── HANDOFF.md                     # AI／開發者交接入口
 │   ├── PUBLISHING.md                  # GitHub 發佈及靜態部署
 │   └── REPOSITORY_MANIFEST.md         # 初始 repo 內容、提交及驗證清單
@@ -104,7 +112,7 @@ python3 -m http.server 8080
 │   ├── validate.mjs                   # 結構、語法、基線及秘密掃描
 │   ├── validate-survey.mjs            # LUNA guided survey 聚焦驗證
 │   ├── validate-photo-mode.mjs        # Destination photo mode 聚焦驗證
-│   └── validate-offline.mjs           # V4.1 offline resilience 聚焦驗證
+│   └── validate-offline.mjs           # Offline resilience 聚焦驗證
 ├── AGENTS.md                          # AI agent 工作規則
 └── .github/workflows/validate.yml     # GitHub Actions 驗證
 ```
@@ -127,7 +135,7 @@ python3 -m http.server 8080
 ## 開發守則
 
 - 所有新要求均視為在已批准功能上**疊加修正**，不可因重構刪走原有體驗。
-- `releases/v4.0-stable.html` 是不可修改的回歸基線。
+- `releases/v4.0-stable.html` 是不可修改的回歸基線；V4.1.0 release baseline 由 `releases/v4.1.0.md` 記錄其 immutable Git commit。
 - 先證明核心航程完整，再增加新星區、任務或遊戲系統。
 - 手機直向畫面及實機流暢度優先於桌面特效數量。
 - 不加入分析追蹤、秘密、API key 或不必要後端。
@@ -135,6 +143,6 @@ python3 -m http.server 8080
 
 ## 依賴及授權
 
-- Three.js `0.185.1`，由 jsDelivr 以固定版本載入；Draft 離線候選可在首次成功在線載入後保存同一版本作 offline fallback。
+- Three.js `0.185.1`，由 jsDelivr 以固定版本載入；首次成功在線載入後可保存同一版本作 offline fallback。
 - 星體紋理、雲層、星雲及聲音均於瀏覽器程序化生成；沒有內嵌第三方圖片或音訊資產。
 - 本專案目前未授予開源授權；除非擁有人另行批准，保留所有權利。
