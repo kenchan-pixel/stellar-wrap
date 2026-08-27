@@ -4,6 +4,15 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-08-27
+
+### Release status
+
+- Owner physical-device manual acceptance completed and PR #4 was merged to `main`.
+- v4.1.0 runtime baseline commit: `e852096e65194543b97355efc48894339d550be7`.
+- Pre-merge exact-HEAD validation: 405 / 405 checks passed; GitHub Actions and Vercel Preview succeeded.
+- The immutable V4.0 regression snapshot remains unchanged.
+
 ### Improved
 
 - Hardened **journey-distance authority** after PR review: Arrival Debrief no longer carries its own star-coordinate table or recomputes route distance independently. New completed journeys carry the existing core planner's displayed route-distance snapshot into the travel journal and debrief instead.
