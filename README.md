@@ -6,7 +6,8 @@
 
 ## 專案狀態
 
-- **目前穩定基線：V4.0 Stable**
+- **目前穩定基線：V4.0 Stable**（不可覆寫快照：`releases/v4.0-stable.html`）
+- **Active app：** `index.html` 可在功能 branch／Draft PR 上演進，但不得把候選功能誤記為已批准基線
 - **產品方向：** 由曲速特效展示，持續發展成完整星際探索體驗
 - **主要平台：** 手機瀏覽器，兼容桌面瀏覽器
 - **架構：** 無建置流程的靜態 Three.js WebGL 應用
@@ -27,6 +28,8 @@
 - Web Audio 動態引擎、曲速、轉向與環境聲
 - 自動／流暢／標準／高畫質模式及效能診斷 HUD
 - 以 60 Hz 裝置上的 16.67 ms 幀預算為優先目標
+
+> `autonomous-evolution` Draft PR 可能包含尚未批准的候選探索功能；正式產品基線仍以 `docs/DECISIONS.md` 及穩定快照為準。
 
 ## 立即運行
 
@@ -69,8 +72,10 @@ python3 -m http.server 8080
 
 ```text
 .
-├── index.html                         # 目前可運行版本（V4.0 Stable）
-├── releases/v4.0-stable.html         # 不可覆寫的穩定版快照
+├── index.html                         # 目前 active app；功能 branch 可演進
+├── travel-journal.js                  # Active evolution：低頻率本機旅行日誌 client
+├── exploration-survey.js              # V5 候選：LUNA guided survey；非正式基線
+├── releases/v4.0-stable.html         # 不可覆寫的 V4.0 穩定版快照
 ├── archive/                           # V1–V3.2 演進版本
 ├── docs/
 │   ├── PRD.md                         # 產品目標及範圍
@@ -86,7 +91,8 @@ python3 -m http.server 8080
 │   └── REPOSITORY_MANIFEST.md         # 初始 repo 內容、提交及驗證清單
 ├── scripts/
 │   ├── serve.mjs                      # 零依賴本機伺服器
-│   └── validate.mjs                   # 結構、語法、基線及秘密掃描
+│   ├── validate.mjs                   # 結構、語法、基線及秘密掃描
+│   └── validate-survey.mjs            # LUNA guided survey 聚焦驗證
 ├── AGENTS.md                          # AI agent 工作規則
 └── .github/workflows/validate.yml     # GitHub Actions 驗證
 ```
