@@ -17,6 +17,7 @@ const LUNA_SURVEY_KEY='stellar-warp-luna-survey-v1';
 const VEGA_SURVEY_KEY='stellar-warp-vega-survey-v1';
 const CYG_BEACON_KEY='stellar-warp-cyg-beacon-v1';
 const ORION_SURVEY_KEY='stellar-warp-orion-spectrum-v1';
+const TAU_RINGS_KEY='stellar-warp-tau-rings-v1';
 let uiReady=false;
 let lastSignature='';
 
@@ -35,6 +36,7 @@ function readDiscoveries(){
   try{if(window.WarpVegaSurvey?.progress?.().discovery)discoveries.set('VEGA','雙環共振窗口')}catch{}
   try{if(window.WarpCygBeacon?.progress?.().discovery)discoveries.set('CYG','雙星航標三角場')}catch{}
   try{if(window.WarpOrionSpectrum?.progress?.().discovery)discoveries.set('ORION','三線發射殼層')}catch{}
+  try{if(window.WarpTauRings?.progress?.().discovery)discoveries.set('TAU','三層環隙共振')}catch{}
   return discoveries;
 }
 function formatStamp(ms){
@@ -146,12 +148,13 @@ function render(force=false){
 function sample(){render(false)}
 addEventListener('stellarwarp:journey-complete',()=>render(true));
 addEventListener('stellarwarp:discovery-change',()=>render(true));
-addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY,CYG_BEACON_KEY,ORION_SURVEY_KEY].includes(event.key))render(true)});
+addEventListener('storage',event=>{if([JOURNAL_KEY,LUNA_SURVEY_KEY,VEGA_SURVEY_KEY,CYG_BEACON_KEY,ORION_SURVEY_KEY,TAU_RINGS_KEY].includes(event.key))render(true)});
 setInterval(sample,1000);
 ensureUi();render(true);
 import('./vega-survey.js').then(()=>render(true)).catch(()=>{});
 import('./cyg-beacon-scan.js').then(()=>render(true)).catch(()=>{});
 import('./orion-spectrograph.js').then(()=>render(true)).catch(()=>{});
+import('./tau-ring-profiler.js').then(()=>render(true)).catch(()=>{});
 window.WarpStarAtlas={
   snapshot(){const model=buildModel();return{visited:[...model.visited],discoveries:Object.fromEntries(model.discoveries),systems:SYSTEMS.map(system=>({...system,journeys:model.stats[system.id].journeys,last:model.stats[system.id].last}))}},
   render(){render(true)}

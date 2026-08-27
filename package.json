@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "serve": "node scripts/serve.mjs",
-    "check": "node scripts/validate.mjs && node scripts/validate-survey.mjs && node scripts/validate-cyg-beacon.mjs && node scripts/validate-orion-spectrum.mjs && node scripts/validate-destination-runtime.mjs && node scripts/validate-photo-mode.mjs && node scripts/validate-offline.mjs && node scripts/validate-fallback.mjs && node scripts/validate-arrival-debrief.mjs"
+    "check": "node scripts/validate.mjs && node scripts/validate-survey.mjs && node scripts/validate-cyg-beacon.mjs && node scripts/validate-orion-spectrum.mjs && node scripts/validate-tau-rings.mjs && node scripts/validate-destination-runtime.mjs && node scripts/validate-photo-mode.mjs && node scripts/validate-offline.mjs && node scripts/validate-fallback.mjs && node scripts/validate-arrival-debrief.mjs"
   },
   "engines": {
     "node": ">=20"

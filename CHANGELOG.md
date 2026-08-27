@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Added
 
+- Added a V5-candidate **TAU Ring Resonance Mapper** exploration slice: after a true final arrival at TAU, users can sweep a normalized 0–100 radial probe across the natural planetary rings and locate three simplified density anomalies at 23, 56 and 82.
+- TAU ring features can only be recorded inside a bounded ±3 window. Completing the inner sparse band, moon resonance gap and outer density wave unlocks the local-only Star Atlas discovery `三層環隙共振`; the radial values are interaction indices rather than physical kilometres.
+- TAU progress survives reloads through a versioned local record, mutation re-checks live safe final-exploration state, Star Atlas refreshes from the existing discovery event, and the module is included in prepared offline shell cache v9 without adding renderer-loop or network work.
 - Added a V5-candidate **ORION Nebula Spectrograph** exploration slice: after a true final arrival at ORION, users can sweep a 470–680 nm narrow-band control and locate three simplified emission peaks at Hβ 486 nm, [O III] 501 nm and Hα 656 nm.
 - Spectral lines can only be recorded inside a bounded ±4 nm window, turning ORION into an active wavelength-search interaction rather than another fixed observation checklist. Completing all three unlocks the local-only Star Atlas discovery `三線發射殼層`.
 - ORION spectrum progress survives reloads through a versioned local record, refreshes Star Atlas immediately in the same tab, adds no backend/network/render-loop work, and is included in the prepared offline shell. The wavelength values are simplified interaction references, not a physical model of the fictional ORION scene.
@@ -19,6 +22,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added focused TAU ring validation covering JavaScript syntax, three unique normalized ring anomalies, ±3 capture gating, production range-input/click execution, unsafe-state rejection, local persistence across a fresh process, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added a no-dependency executable destination interaction runtime harness at a 390×844 phone acceptance viewport. It loads the production Star Atlas plus CYG/ORION modules, drives real range-input and click events, proves bounded lock/capture and duplicate protection, verifies same-tab Atlas discovery refresh, rejects unsafe flight/context-loss mutations, and recreates a fresh process to prove local progress survives reload.
 - Added focused ORION spectrum validation covering JavaScript syntax, three unique 470–680 nm emission lines, ±4 nm capture gating, local persistence, safe ORION-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused CYG beacon validation covering JavaScript syntax, three unique 0–359° signal peaks, angle wrap-around, ±8° locking, local persistence, safe CYG-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
