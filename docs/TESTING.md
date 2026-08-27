@@ -13,6 +13,7 @@ npm run check
 - WebGL context lost／restored handlers、暫停模擬 clock 及診斷控制存在
 - 旅行日誌外掛可通過 `node --check`，使用版本化本機儲存 key、2 Hz 有界輪詢，且只接受真正完成最終目的地的航程
 - LUNA guided survey 可通過獨立 validator：JavaScript 語法、三個固定觀測點、LUNA-only 最終探索 gate、2 Hz polling、本機 persistence、三點全完成先解鎖發現，以及零額外網絡／後端請求
+- Destination photo mode 可通過獨立 validator：bootstrap 載入、JavaScript 語法、最終探索 gate、2 Hz polling、乾淨 HUD、capture toolbar 排除、fresh-frame PNG、local download、安全退出，以及零網絡／零儲存
 - HTML 內 module JavaScript 可通過 `node --check`
 - Three.js 版本固定為 `0.185.1`
 - 八個星區 ID 全部存在且只出現一次於資料定義
@@ -106,6 +107,21 @@ npm run check
 - [ ] 觀測流程只提供導航提示，不會改變原有相機、航行狀態或自動環繞節奏
 - [ ] 完成觀測期間 FPS／DPR 沒有可感知惡化；程式只以 2 Hz 讀取狀態
 
+### F2. Destination Photo Mode｜V5 候選實驗
+
+建議先在 `SOL → LUNA`、再於任一非 LUNA 最終站驗證：
+
+- [ ] 「攝影模式」只在最終到站探索顯示；中途飛掠、航行中及 WebGL context lost 時不顯示
+- [ ] 進入後 HUD、flight bar、telemetry、星圖控制、探索卡與 diagnostics 都隱藏，中央 3D 景觀保持完整
+- [ ] 攝影模式內仍可拖動畫面構圖；沒有改變原有 flight state、camera timing 或 auto-orbit 設定
+- [ ] 底部攝影工具列在手機安全區內，返回／儲存影像按鈕有約 44 px 點擊高度
+- [ ] 按「儲存影像」後，輸出的 PNG 不包含攝影工具列或其他 HUD
+- [ ] PNG 解像度符合目前 WebGL canvas／DPR，而不是額外強制高畫質造成卡頓
+- [ ] iPhone Safari 可正常得到 PNG；如 Safari 下載行為轉成開圖／長按保存，提示仍足以完成保存
+- [ ] capture 失敗時顯示可理解後備提示，不會令 app 留在 `photoCapturing` 狀態
+- [ ] 開啟攝影模式後觸發 WebGL context lost，模式會自動退出；恢復後可重新進入
+- [ ] `WarpPhotoMode.enter()`／`exit()`／`capture()` 可供驗收，不會新增 localStorage、analytics 或網絡請求
+
 ### G. 聲音
 
 - [ ] 首次按啟動或聲音按鈕後才建立音訊
@@ -139,7 +155,7 @@ npm run check
 
 | 航線 | 目的 |
 |---|---|
-| SOL → LUNA | 最短直航、細角度轉向、地月景觀、LUNA guided survey |
+| SOL → LUNA | 最短直航、細角度轉向、地月景觀、LUNA guided survey、photo mode |
 | SOL → PROX | 明顯下降高度角、紅矮星與熔岩景觀 |
 | SOL → TAU | 南向多段、SIRIUS 中途轉向、環行星終點 |
 | SOL → ORION | 最長多段、三次中途轉向、重型星雲場景 |

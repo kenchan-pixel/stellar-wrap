@@ -2,7 +2,7 @@
 
 ## 1. 架構結論
 
-V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。Active evolution 仍維持純靜態部署；核心航行、3D、音效及效能邏輯留在 `index.html`，而低頻率、非渲染關鍵路徑的旅行日誌以 `travel-journal.js` 獨立載入；V5 候選的 LUNA guided survey 再由該低頻率 client 動態載入 `exploration-survey.js`。Three.js 仍以固定版本從 CDN 載入。
+V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。Active evolution 仍維持純靜態部署；核心航行、3D、音效及效能邏輯留在 `index.html`，而低頻率、非渲染關鍵路徑的旅行日誌以 `travel-journal.js` 獨立載入。現時這個 client bootstrap 再動態載入兩個 V5 候選 module：LUNA guided survey 的 `exploration-survey.js`，以及所有最終目的地可用的 `photo-mode.js`。Three.js 仍以固定版本從 CDN 載入。
 
 這個做法適合目前階段：
 
@@ -12,7 +12,7 @@ V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL �
 - 對手機載入及除錯比大型框架簡單
 - 候選探索功能可在不改核心 60 Hz render loop 的情況下獨立驗證
 
-代價是主程式已變成單一大型檔案。下一次架構整理應只做**等效模組化**，不可同時改動航行行為。
+代價是主程式已變成單一大型檔案，而 `travel-journal.js` 暫時兼任候選 client bootstrap。下一次架構整理應只做**等效模組化**，不可同時改動航行行為。
 
 ## 2. 執行時組成
 
@@ -35,6 +35,8 @@ flowchart TD
     FSM --> API[WarpSim 公開狀態]
     API --> JOURNAL[travel-journal.js · 2 Hz]
     JOURNAL --> SURVEY[exploration-survey.js · LUNA 候選 · 2 Hz]
+    JOURNAL --> PHOTO[photo-mode.js · 最終到站攝影候選 · 2 Hz]
+    PHOTO --> CANVAS[WebGL canvas PNG capture]
 ```
 
 ## 3. 主要邏輯區塊
@@ -52,8 +54,9 @@ flowchart TD
 | `SpaceAudio` | 以 Web Audio 合成引擎、曲速、提示及環境聲 |
 | 自動畫質 | 量度移動平均幀時間，調整 DPR 及 GPU 負載 |
 | `WarpSim` | 提供測試／診斷用的公開控制介面 |
-| `travel-journal.js` | 以 2 Hz 讀取公開 flight state，只在完整抵達最終目的地時把最近旅程寫入本機日誌；不參與每幀渲染 |
+| `travel-journal.js` | 以 2 Hz 讀取公開 flight state，只在完整抵達最終目的地時把最近旅程寫入本機日誌；同時暫作候選 client bootstrap，不參與每幀渲染 |
 | `exploration-survey.js` | V5 候選；只在 LUNA 最終探索顯示三個觀測點，三點完成後解鎖一個本機發現紀錄；只讀公開 state、不改核心相機／航行狀態、不發網絡請求 |
+| `photo-mode.js` | V5 候選；只在安全的最終探索提供乾淨觀景與本機 PNG capture。以 CSS 隱藏 HUD，不改 renderer／camera／flight state；capture 前等待新一幀並隱藏自身工具列；不保存資料、不發網絡請求 |
 
 ## 4. 座標及方向模型
 
@@ -176,6 +179,7 @@ warpExit 1.15 s + decelerate 1.75 s + approach 2.80 s
 - 沒有遙測或分析追蹤
 - 旅行日誌只保存最近最多 12 次已完成路線與本機時間；中止航程不記錄
 - LUNA guided survey 只保存三個固定觀測點的完成 ID；三點完成狀態代表一個本機發現紀錄
+- Photo mode 不保存偏好或圖片紀錄；PNG 只交給瀏覽器本機下載流程，不上傳
 - 沒有上傳位置、裝置、航行或探索資料
 - 沒有 API key 或秘密
 
@@ -187,7 +191,8 @@ warpExit 1.15 s + decelerate 1.75 s + approach 2.80 s
 4. 星區資料、場景建構及 UI 文案未分層。
 5. 目的地座標屬產品模擬尺度，不是實際天文距離。
 6. 程序化地球是視覺仿真，不是地理準確模型。
-7. `travel-journal.js` 暫時同時負責載入候選探索 module；若 V5 方向獲批准，應改成明確的 client bootstrap，而不是繼續增加隱性相依。
+7. `travel-journal.js` 暫時同時負責載入兩個候選探索 module；若 V5 方向獲批准，應改成明確的 client bootstrap，而不是繼續增加隱性相依。
+8. `canvas.toBlob()` 在 `preserveDrawingBuffer:false` 的 WebGL renderer 上依賴 capture callback 緊接新 render frame；桌面可自動驗證結構，但 iPhone Safari 的實際 PNG 內容必須實機確認。
 
 ## 11. 建議模組化次序
 
