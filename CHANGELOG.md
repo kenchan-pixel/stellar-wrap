@@ -13,8 +13,13 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 - Signal sources only lock inside a bounded ±8° window, making CYG a short active-search interaction rather than another three-button observation checklist. All three locks unlock the local-only Star Atlas discovery `雙星航標三角場`.
 - CYG scan progress survives reloads through a versioned local record, refreshes Star Atlas immediately in the same tab, adds no backend/network/render-loop work, and is included in the prepared offline shell.
 
+### Fixed
+
+- Hardened CYG beacon locking and ORION spectral capture so progress mutations now re-check the live safe final-exploration state at action time. Hidden or diagnostic actions are rejected while flying, during WebGL context loss, or outside the intended destination instead of relying only on UI visibility.
+
 ### Validation
 
+- Added a no-dependency executable destination interaction runtime harness at a 390×844 phone acceptance viewport. It loads the production Star Atlas plus CYG/ORION modules, drives real range-input and click events, proves bounded lock/capture and duplicate protection, verifies same-tab Atlas discovery refresh, rejects unsafe flight/context-loss mutations, and recreates a fresh process to prove local progress survives reload.
 - Added focused ORION spectrum validation covering JavaScript syntax, three unique 470–680 nm emission lines, ±4 nm capture gating, local persistence, safe ORION-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused CYG beacon validation covering JavaScript syntax, three unique 0–359° signal peaks, angle wrap-around, ±8° locking, local persistence, safe CYG-only final-exploration gating, bounded 2 Hz state sampling, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 

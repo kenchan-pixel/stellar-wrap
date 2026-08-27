@@ -31,6 +31,10 @@ function nearest(){
 }
 function discoveryUnlocked(){return progress.locked.length===SIGNALS.length}
 function strength(diff){return Math.max(0,Math.min(100,Math.round((1-diff/72)*100)))}
+function safeExploration(){
+  let state;try{state=window.WarpSim?.state?.()}catch{return false}
+  return !!state&&state.current===SYSTEM&&state.exploring&&!state.flying&&!state.contextLost;
+}
 
 function ensureUi(){
   if(uiReady&&document.querySelector('#cygBeaconScan'))return true;
@@ -89,6 +93,7 @@ function render(pulse=false){
 }
 
 function lockNearest(){
+  if(!safeExploration())return false;
   const candidate=nearest();
   if(!candidate||candidate.diff>LOCK_WINDOW||isLocked(candidate.signal.id))return false;
   progress.locked.push(candidate.signal.id);progress=normalise(progress);save();
@@ -100,9 +105,7 @@ function lockNearest(){
 
 function sample(){
   ensureUi();
-  let state;try{state=window.WarpSim?.state?.()}catch{return}
-  if(!state)return;
-  const visible=state.current===SYSTEM&&state.exploring&&!state.flying&&!state.contextLost;
+  const visible=safeExploration();
   if(visible!==lastVisible){document.querySelector('#cygBeaconScan')?.classList.toggle('show',visible);lastVisible=visible;if(visible)render()}
 }
 
