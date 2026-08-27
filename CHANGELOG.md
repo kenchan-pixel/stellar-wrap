@@ -4,6 +4,13 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ## [Unreleased]
 
+### Added
+
+- Added a V5-candidate **Exploration Expedition** vertical slice: users can build a persistent ordered itinerary of up to six destinations in the control panel, complete them one by one across reloads, and hand directly from Arrival Debrief into planning the next stop.
+- Expedition progress advances only from the existing trusted completed-journey event and only when the completed destination matches the current next stop; aborted or out-of-order journeys do not silently advance it.
+- Each next leg delegates to the existing `WarpSim.select()` planner, so the expedition layer stores no route graph, coordinates, distance model or flight timing and never auto-launches a journey.
+- The expedition UI is event-driven with no polling or render-loop work, uses the existing desktop readability tokens, persists only local itinerary IDs/progress, and is included in the prepared offline shell cache.
+
 ## [4.1.0] - 2026-08-27
 
 ### Release status
