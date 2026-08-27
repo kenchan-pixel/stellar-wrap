@@ -105,3 +105,12 @@
 - 建議先設為 private，待授權、資產及產品方向確認後才決定是否公開。
 - `main` 只保留穩定可運行版本；功能透過 branch／PR。
 - 專案未授予開源授權。
+
+## D-014｜V4.1.0 成為目前 release baseline
+
+- **狀態：用戶已批准 release baseline／已通過實機驗證**
+- 2026-08-27，owner 完成實機 manual test 後合併 PR #4。
+- V4.1.0 runtime baseline commit 為 `e852096e65194543b97355efc48894339d550be7`；完整 release 紀錄見 `releases/v4.1.0.md`。
+- 本版納入 WebGL context recovery、旅行日誌與距離連續性、LUNA 三點觀測、目的地攝影模式、離線重新啟動／啟動恢復、靜態導航 fallback 及 Arrival Debrief。
+- V4.0 `releases/v4.0-stable.html` 仍為不可覆寫的回歸快照，不因 V4.1.0 發佈而修改。
+- 這項決定只確認 V4.1.0 已出貨行為成為目前產品基線；不等同批准更廣泛或尚未實作的 V5 roadmap。
