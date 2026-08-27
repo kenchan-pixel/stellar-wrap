@@ -23,9 +23,6 @@ function safeArrival(entry){
   try{state=api?.state?.()}catch{return false}
   return !!state&&state.current===destination&&state.exploring&&!state.flying&&!state.contextLost;
 }
-function expeditionNext(){
-  try{const id=window.WarpExpedition?.next?.();return IDS.has(id)?id:null}catch{return null}
-}
 function ensureUi(){
   if(uiReady&&document.querySelector('#arrivalDebrief'))return true;
   const actions=document.querySelector('#exploreCard .exploreActions');
@@ -49,11 +46,6 @@ function ensureUi(){
     card.querySelector('#arrivalDebriefExplore').addEventListener('click',hide);
     card.querySelector('#arrivalDebriefNext').addEventListener('click',()=>{
       hide();
-      const next=expeditionNext();
-      if(next&&window.WarpExpedition?.planNext?.()){
-        document.querySelector('#openPanel')?.click();
-        return;
-      }
       document.querySelector('#openPanel')?.click();
     });
   }
@@ -66,14 +58,11 @@ function render(entry){
   const title=document.querySelector('#arrivalDebriefTitle');
   const stats=document.querySelector('#arrivalDebriefStats');
   const route=document.querySelector('#arrivalDebriefRoute');
-  const nextButton=document.querySelector('#arrivalDebriefNext');
-  if(!title||!stats||!route||!nextButton)return false;
+  if(!title||!stats||!route)return false;
   title.textContent='航程完成 · '+SYSTEM_NAMES[destination];
   const distance=Number.isFinite(entry.distance)?entry.distance.toFixed(1)+' LY':'距離未記錄';
   stats.textContent=`${entry.route.length-1} 段 · ${distance} · ${entry.seconds} 秒活躍航行`;
   route.textContent=entry.route.map(id=>SYSTEM_NAMES[id]).join(' → ');
-  const next=expeditionNext();
-  nextButton.textContent=next?`規劃下一站 · ${SYSTEM_NAMES[next]}`:'下一目的地';
   return true;
 }
 function show(raw){
@@ -93,9 +82,8 @@ function hide(){
   visible=false;
   document.querySelector('#arrivalDebrief')?.classList.remove('show');
 }
-function onJourneyComplete(event){queueMicrotask(()=>show(event.detail))}
+function onJourneyComplete(event){show(event.detail)}
 addEventListener('stellarwarp:journey-complete',onJourneyComplete);
-addEventListener('stellarwarp:expedition-progress',()=>{if(visible&&currentEntry)render(currentEntry)});
 document.querySelector('#space')?.addEventListener('webglcontextlost',hide);
 ensureUi();
 window.WarpArrivalDebrief={
