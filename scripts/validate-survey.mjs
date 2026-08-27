@@ -9,16 +9,18 @@ const vegaPath=resolve(root,'vega-survey.js');
 const atlasPath=resolve(root,'star-atlas.js');
 const journalPath=resolve(root,'travel-journal.js');
 const responsivePath=resolve(root,'responsive-ui.js');
+const landmarkPath=resolve(root,'landmark-guide.js');
 const survey=readFileSync(surveyPath,'utf8');
 const vega=readFileSync(vegaPath,'utf8');
 const atlas=readFileSync(atlasPath,'utf8');
 const journal=readFileSync(journalPath,'utf8');
 const responsive=readFileSync(responsivePath,'utf8');
+const landmark=readFileSync(landmarkPath,'utf8');
 const failures=[];
 const passes=[];
 const ok=(condition,message)=>(condition?passes:failures).push(message);
 
-for(const [label,path] of [['LUNA guided survey',surveyPath],['VEGA gate survey',vegaPath],['star atlas',atlasPath],['responsive UI',responsivePath]]){
+for(const [label,path] of [['LUNA guided survey',surveyPath],['VEGA gate survey',vegaPath],['star atlas',atlasPath],['responsive UI',responsivePath],['landmark guide',landmarkPath]]){
   const parse=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
   ok(parse.status===0,`${label} JavaScript parses${parse.stderr?`: ${parse.stderr.trim()}`:''}`);
 }
@@ -71,6 +73,18 @@ ok(responsive.includes('#app .vegaSurveyTitle')&&responsive.includes('#app .luna
 ok(responsive.includes('#app .journalTitle')&&responsive.includes('#app .atlasTitle'),'responsive layer covers journal and Star Atlas text');
 ok(!/requestAnimationFrame|setInterval|localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(responsive),'responsive layer adds no polling, render-loop, persistence or network work');
 ok(!/zoom\s*:|transform\s*:\s*scale/i.test(responsive),'desktop readability does not scale or distort the WebGL canvas');
+
+const landmarkSystems=['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX'];
+ok(landmarkSystems.every(id=>landmark.includes(`${id}:{ring:`)),'landmark guide covers all eight approved destinations');
+const landmarkIds=[...landmark.matchAll(/\{id:'([^']+)',label:/g)].map(match=>match[1]);
+ok(landmarkIds.length===24,'landmark guide provides exactly three scene landmarks per destination');
+ok(landmark.includes("SOL:{ring:'人工近地軌道環'")&&landmark.includes('不是土星式天然行星環'),'SOL explicitly distinguishes artificial orbital rings from natural planetary rings');
+ok(landmark.includes("VEGA:{ring:'人工雙層曲速星門'")&&landmark.includes('共同構成雙層星門'),'VEGA explicitly identifies the two rings as an artificial warp-gate pair');
+ok(landmark.includes("TAU:{ring:'天然行星環'")&&landmark.includes('與 SOL、VEGA 的人工發光環不同'),'TAU explicitly distinguishes its natural planetary ring from artificial ring structures');
+ok(landmark.includes('state.exploring&&!state.flying&&!state.contextLost'),'landmark guide only appears during safe final-destination exploration');
+ok(landmark.includes('setInterval(sample,500)'),'landmark guide state sampling is bounded to 2 Hz');
+ok(journal.includes("import('./landmark-guide.js').catch(()=>{})"),'active simulator loads the landmark guide through the existing client bootstrap');
+ok(!/localStorage|fetch\(|XMLHttpRequest|WebSocket|requestAnimationFrame/.test(landmark),'landmark guide adds no persistence, network, backend or render-loop work');
 
 for(const message of passes)console.log(`✓ ${message}`);
 if(failures.length){
