@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Added a V4.1 static navigation fallback: browsers without usable WebGL, or sessions where the 3D app does not reach ready state within about 9 seconds, now retain a mobile-safe eight-system SVG map, shortest-route planning from SOL and a clear 3D retry action instead of ending at a dead loader.
+- The fallback is explicitly navigation-only, preserves the approved 6.0 LY/Dijkstra route graph, adds no render loop, polling, backend or user-data path, and releases its temporary WebGL capability-probe context before the main renderer starts.
 - Added a V4.1 candidate offline-resilience slice: after one successful online load, a Service Worker caches the active shell plus the pinned Three.js `0.185.1` dependency so later reloads can fall back to the most recently cached version when the network is unavailable.
 - Added a low-noise control-panel status for offline readiness (`準備中`／`已準備`／`離線可用`／`未準備`) and an explicit startup recovery screen with reload action if the 3D engine does not reach ready state within about 9 seconds.
 - Online navigation and local runtime files remain network-first so Vercel/static deploy updates are not permanently shadowed by cache; only the fixed Three.js dependency is cache-first.
@@ -25,6 +27,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added a focused static-fallback validator covering WebGL capability detection/context release, fallback startup paths, exact eight-system route baselines, reachability, zero render-loop/polling work and explicit fallback limitations.
 - Added a focused offline-resilience validator covering service-worker/bootstrap syntax, exact core-cache scope, pinned Three.js caching, network-first navigation, cache-first fixed dependency fallback, readiness reporting, absence of render-loop polling, and inclusion in `npm run check`.
 - Added a focused photo-mode validator covering bootstrap loading, JavaScript syntax, final-exploration gating, bounded 2 Hz polling, clean-HUD state, capture-toolbar exclusion, fresh-frame PNG extraction, local file output, automatic safe exit, and absence of network/storage paths.
 - Added a focused guided-survey validator covering JavaScript syntax, exact three-point scope, LUNA-only explore gating, local persistence, all-three completion gate, bounded 2 Hz polling and absence of network/backend calls.

@@ -14,6 +14,7 @@ function check(ok,label){checks.push([!!ok,label]);if(ok)passed++}
 const syntax=spawnSync(process.execPath,['--check','offline-bootstrap.js'],{cwd:root,encoding:'utf8'});
 check(syntax.status===0,'offline bootstrap JavaScript syntax');
 check(source.includes("function webglAvailable()"),'explicit WebGL capability probe exists');
+check(source.includes("getExtension?.('WEBGL_lose_context')?.loseContext()"),'WebGL capability probe releases its temporary context');
 check(source.includes("function showStaticFallback(reason='startup')"),'static fallback renderer exists');
 check(source.includes("if(webglAvailable())setTimeout(startupGuard,STARTUP_TIMEOUT)"),'9 second guard runs only when WebGL is available');
 check(source.includes("showStaticFallback('webgl')"),'unsupported WebGL enters fallback immediately');
