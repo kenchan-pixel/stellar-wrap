@@ -9,8 +9,12 @@ npm run check
 目前檢查：
 
 - 必要檔案存在
-- `index.html` 與 V4.0 穩定快照完全一致
-- V4.0 穩定版 SHA-256 正確
+- V4.0 穩定快照 SHA-256 正確；active `index.html` 可獨立演進
+- WebGL context lost／restored handlers、暫停模擬 clock 及診斷控制存在
+- 旅行日誌外掛可通過 `node --check`，使用版本化本機儲存 key、2 Hz 有界輪詢，且只接受真正完成最終目的地的航程
+- LUNA guided survey 可通過獨立 validator：JavaScript 語法、三個固定觀測點、LUNA-only 最終探索 gate、2 Hz polling、本機 persistence、三點全完成先解鎖發現，以及零額外網絡／後端請求
+- Destination photo mode 可通過獨立 validator：bootstrap 載入、JavaScript 語法、最終探索 gate、2 Hz polling、乾淨 HUD、capture toolbar 排除、fresh-frame PNG、local download、安全退出，以及零網絡／零儲存
+- V4.1 offline resilience 可通過獨立 validator：bootstrap／Service Worker 語法、固定 Three.js cache、核心 shell cache、network-first navigation、cache-first fixed dependency、cache-ready 回報、9 秒 startup fallback，以及零 render-loop polling
 - HTML 內 module JavaScript 可通過 `node --check`
 - Three.js 版本固定為 `0.185.1`
 - 八個星區 ID 全部存在且只出現一次於資料定義
@@ -20,7 +24,7 @@ npm run check
 - repo 內沒有常見 API key／私鑰格式
 - archive 及 release 清單與已知 hash 相符
 
-自動檢查只證明結構、語法及基線沒有被意外破壞，不能取代 WebGL 視覺及手機實機驗收。
+自動檢查只證明結構、語法及基線沒有被意外破壞，不能取代 WebGL 視覺、Service Worker 真實快取及手機實機驗收。
 
 ## 2. 核心手動驗收
 
@@ -84,6 +88,52 @@ npm run check
 - [ ] 雙擊視角回正
 - [ ] 可暫停／恢復自動環繞
 - [ ] 可打開星圖選擇下一個目的地
+- [ ] 完整抵達最終目的地後，控制面板「旅行日誌」新增一筆路線與實際時間
+- [ ] 中止航程不會新增旅行日誌
+- [ ] 重新整理頁面後旅行日誌仍保留，且最多只保留最近 12 次
+- [ ] 從不是目前位置的舊日誌按「再次規劃」，可正常建立前往該目的地的新航線
+
+### F1. LUNA Guided Survey｜V5 候選實驗
+
+建議用最短航線 `SOL → LUNA` 驗證：
+
+- [ ] 只有完整抵達 LUNA 並進入最終探索後，觀測任務才出現；中途飛掠、其他星區及 WebGL context lost 時不顯示
+- [ ] 手機直向仍可看到主要月面景觀；新增任務卡不遮擋中央主要視野、不造成操作捲動陷阱
+- [ ] 三個觀測按鈕分別顯示「月面／地球／環站」提示及對應說明
+- [ ] 完成一個觀測後顯示完成狀態，並自動帶到下一個未完成觀測點
+- [ ] 未完成三點前，不顯示「地月視差層」發現紀錄
+- [ ] 三點全部完成後只解鎖一個「地月視差層」發現紀錄
+- [ ] 重新整理後三點完成進度及發現狀態仍保留
+- [ ] `WarpLunaSurvey.reset()` 可清除候選測試資料，方便重複驗收
+- [ ] 觀測流程只提供導航提示，不會改變原有相機、航行狀態或自動環繞節奏
+- [ ] 完成觀測期間 FPS／DPR 沒有可感知惡化；程式只以 2 Hz 讀取狀態
+
+### F2. Destination Photo Mode｜V5 候選實驗
+
+建議先在 `SOL → LUNA`、再於任一非 LUNA 最終站驗證：
+
+- [ ] 「攝影模式」只在最終到站探索顯示；中途飛掠、航行中及 WebGL context lost 時不顯示
+- [ ] 進入後 HUD、flight bar、telemetry、星圖控制、探索卡與 diagnostics 都隱藏，中央 3D 景觀保持完整
+- [ ] 攝影模式內仍可拖動畫面構圖；沒有改變原有 flight state、camera timing 或 auto-orbit 設定
+- [ ] 底部攝影工具列在手機安全區內，返回／儲存影像按鈕有約 44 px 點擊高度
+- [ ] 按「儲存影像」後，輸出的 PNG 不包含攝影工具列或其他 HUD
+- [ ] PNG 解像度符合目前 WebGL canvas／DPR，而不是額外強制高畫質造成卡頓
+- [ ] iPhone Safari 可正常得到 PNG；如 Safari 下載行為轉成開圖／長按保存，提示仍足以完成保存
+- [ ] capture 失敗時顯示可理解後備提示，不會令 app 留在 `photoCapturing` 狀態
+- [ ] 開啟攝影模式後觸發 WebGL context lost，模式會自動退出；恢復後可重新進入
+- [ ] `WarpPhotoMode.enter()`／`exit()`／`capture()` 可供驗收，不會新增 localStorage、analytics 或網絡請求
+
+### F3. Offline Resilience｜V4.1 候選實驗
+
+詳細策略見 `docs/OFFLINE.md`。至少驗證：
+
+- [ ] iPhone Safari 在線成功開啟後，控制面板「離線啟動」由「準備中」變成「已準備」
+- [ ] 完全關閉／離開頁面，再開飛行模式重新開啟同一 production／preview URL，顯示「離線可用」而不是無限 loading
+- [ ] 離線狀態可打開星圖、規劃並完成 `SOL → LUNA`，核心 3D、航行狀態及本機候選功能仍可載入
+- [ ] 恢復網絡後重新載入會取得最新 online 部署，不會永久停留舊快取
+- [ ] 清除網站資料後直接離線開啟時，接受瀏覽器自身離線錯誤頁；不把這種「未曾成功快取」情況誤判為已支援的首次離線啟動
+- [ ] 阻擋／模擬固定 Three.js 依賴失敗時，約 9 秒後 loading 畫面提供可理解的 reload 操作
+- [ ] Service Worker 快取／更新期間 FPS、DPR、航行時間及 animation timing 沒有可感知改變；它沒有 per-frame 工作
 
 ### G. 聲音
 
@@ -110,17 +160,20 @@ npm run check
 - [ ] 目前站點保持為最近已完成站
 - [ ] 可重新選站及再次起航
 - [ ] 切換 App／鎖屏／返回後可恢復
+- [ ] 航行途中執行 WarpSim.loseContext() 後，畫面顯示恢復提示而航程進度不繼續
+- [ ] 執行 WarpSim.restoreContext() 後，從同一航行階段／位置續航，沒有時間跳躍
+- [ ] 60 秒內於 High 畫質重複兩次 context loss／restore，第二次恢復後本 session 暫降 Standard
 
 ## 3. 建議測試航線
 
 | 航線 | 目的 |
 |---|---|
-| SOL → LUNA | 最短直航、細角度轉向、地月景觀 |
+| SOL → LUNA | 最短直航、細角度轉向、地月景觀、LUNA guided survey、photo mode、offline basic route |
 | SOL → PROX | 明顯下降高度角、紅矮星與熔岩景觀 |
 | SOL → TAU | 南向多段、SIRIUS 中途轉向、環行星終點 |
 | SOL → ORION | 最長多段、三次中途轉向、重型星雲場景 |
 | ORION → TAU | 大方向改變及網絡跨區路線 |
-| TAU → LUNA | 多段返回內圈，測試已到訪狀態 |
+| TAU → LUNA | 多段返回內圈，測試已到訪狀態及 LUNA survey 重入 |
 
 ## 4. Pull Request 完成標準
 
@@ -134,4 +187,4 @@ npm run check
 - 未能自動證明的風險
 - 需擁有人手確認的畫面或產品決定
 
-沒有實機證據時，不可聲稱「已穩定 60 fps」；只可說明程式以 60 Hz 為目標及自動調節已通過結構驗證。
+沒有實機證據時，不可聲稱「已穩定 60 fps」或「iPhone 已可離線使用」；只可說明程式結構、快取策略及自動調節已通過相應驗證。

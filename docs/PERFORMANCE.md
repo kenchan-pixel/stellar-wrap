@@ -104,7 +104,20 @@
 5. 連續航行 10 分鐘，檢查熱力、電量及記憶體是否惡化。
 6. 切換流暢／標準／高畫質，確認時間節奏完全相同。
 
-## 8. 完成標準
+## 8. WebGL context 中斷與恢復
+
+手機切換 App、GPU 記憶體壓力或瀏覽器重設圖像引擎時，WebGL context 可能短暫遺失。Active simulator 的恢復策略：
+
+- context lost 時暫停模擬 clock，不讓航程在黑畫面期間偷偷前進。
+- 顯示置中的短狀態提示；超過約 6.5 秒仍未恢復才提示重新整理頁面。
+- context restored 後重設 frame timing，重新套用 renderer 尺寸及場景細節。
+- Auto 畫質重新校準，避免把恢復停頓誤判成持續低效能。
+- 60 秒內重複 context lost 且使用 High 畫質時，本次 session 暫降至 Standard；不覆寫已保存偏好。
+- Three.js renderer 本身負責重建 WebGL 內部狀態；應用層負責暫停／續接模擬與 UI 回饋。
+
+可使用公開診斷 API WarpSim.loseContext() / WarpSim.restoreContext() 配合瀏覽器開發工具作模擬測試。
+
+## 9. 完成標準
 
 - 主要裝置自動畫質下，大部分航程接近 60 fps
 - 轉向及抵達沒有因畫質調節產生時間跳動
@@ -113,7 +126,7 @@
 - 切換背景／鎖屏／返回頁面後動畫可正常恢復
 - 沒有 WebGL context lost、音訊累積或明顯記憶體洩漏
 
-## 9. 必須人手核實
+## 10. 必須人手核實
 
 自動測試不能證明：
 

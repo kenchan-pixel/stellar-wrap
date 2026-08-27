@@ -1,0 +1,35 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
+const surveyPath=resolve(root,'exploration-survey.js');
+const journalPath=resolve(root,'travel-journal.js');
+const survey=readFileSync(surveyPath,'utf8');
+const journal=readFileSync(journalPath,'utf8');
+const failures=[];
+const passes=[];
+const ok=(condition,message)=>(condition?passes:failures).push(message);
+
+const parse=spawnSync(process.execPath,['--check',surveyPath],{encoding:'utf8'});
+ok(parse.status===0,`guided survey JavaScript parses${parse.stderr?`: ${parse.stderr.trim()}`:''}`);
+ok(survey.includes("const KEY='stellar-warp-luna-survey-v1'"),'guided survey storage key is versioned');
+ok(survey.includes("const SYSTEM='LUNA'"),'guided survey is scoped to LUNA only');
+const ids=[...survey.matchAll(/id:'([^']+)'/g)].map(match=>match[1]).filter(id=>['basin','earth','ring'].includes(id));
+ok(ids.length===3&&new Set(ids).size===3,'guided survey defines exactly three unique observation points');
+ok(survey.includes("state.current===SYSTEM&&state.exploring&&!state.flying&&!state.contextLost"),'guided survey only activates during safe final-destination exploration');
+ok(survey.includes('POINTS.every(point=>isComplete(point.id))'),'discovery unlock requires all three observations');
+ok(survey.includes("localStorage.setItem(KEY,JSON.stringify({version:1,completed:progress.completed}))"),'guided survey progress persists locally');
+ok(survey.includes('setInterval(sample,500)'),'guided survey polling is bounded to 2 Hz');
+ok(survey.includes("navigator.vibrate?.(10)"),'guided survey haptic hint is optional and capability-gated');
+ok(journal.includes("import('./exploration-survey.js').catch(()=>{})"),'active simulator loads the guided survey module through the existing low-frequency client');
+ok(!survey.includes('fetch(')&&!survey.includes('XMLHttpRequest'),'guided survey adds no network or backend dependency');
+
+for(const message of passes)console.log(`✓ ${message}`);
+if(failures.length){
+  console.error(`\n${failures.length} guided-survey validation failure(s):`);
+  for(const message of failures)console.error(`✗ ${message}`);
+  process.exit(1);
+}
+console.log(`\nAll ${passes.length} guided-survey checks passed.`);
