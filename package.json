@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "serve": "node scripts/serve.mjs",
-    "check": "node scripts/validate.mjs"
+    "check": "node scripts/validate.mjs && node scripts/validate-survey.mjs"
   },
   "engines": {
     "node": ">=20"
