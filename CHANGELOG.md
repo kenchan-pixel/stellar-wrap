@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Hardened **journey-distance authority** after PR review: Arrival Debrief no longer carries its own star-coordinate table or recomputes route distance independently. New completed journeys carry the existing core planner's displayed route-distance snapshot into the travel journal and debrief instead.
+- Travel journal now shows route distance for newly completed journeys and a cumulative LY total for retained entries that have planner distance data. Existing older journal entries without the optional distance field remain readable and are not deleted.
+- This keeps the approved `index.html` `N[].p`／`D()` planner as the only runtime coordinate calculation authority while preserving the V4 flight model, 60 Hz loop, route graph and zero-backend architecture.
 - Added a V5-candidate **Arrival Debrief** vertical slice: a genuinely completed final-destination journey now gets a compact in-context summary with destination, leg count, full route, route distance and journal-measured active flight time, plus direct actions to continue exploring or open the next-destination map.
 - The debrief consumes the travel journal's already-validated completion event instead of creating a second flight-completion authority; aborted journeys and intermediate fly-bys do not trigger it, and WebGL context loss hides it safely.
 - Arrival Debrief stays inside the existing destination exploration card, adds no polling/render-loop work, network request, backend or persistence store, and is included in the V4.1 offline shell cache.
@@ -30,6 +33,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Arrival Debrief validation now rejects a duplicated `COORD` table, checks that journal distance comes from the core planner output, and derives ORION／TAU baselines directly from the production `index.html` star-system data instead of keeping a second hard-coded coordinate fixture.
 - Added a focused Arrival Debrief validator covering syntax, trusted completion-event wiring, safe final-exploration gating, approved ORION/TAU route-distance baselines, zero polling/network/storage work, WebGL-loss hiding, next-destination handoff and offline-shell inclusion.
 - Added a focused static-fallback validator covering WebGL capability detection/context release, fallback startup paths, exact eight-system route baselines, reachability, zero render-loop/polling work and explicit fallback limitations.
 - Added a focused offline-resilience validator covering service-worker/bootstrap syntax, exact core-cache scope, pinned Three.js caching, network-first navigation, cache-first fixed dependency fallback, readiness reporting, absence of render-loop polling, and inclusion in `npm run check`.
