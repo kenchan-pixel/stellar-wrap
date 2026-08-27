@@ -39,6 +39,7 @@ function walk(dir) {
 
 const required = [
   'index.html',
+  'travel-journal.js',
   'releases/v4.0-stable.html',
   'README.md',
   'AGENTS.md',
@@ -86,6 +87,7 @@ ok(html.includes('</html>'), 'HTML closes correctly');
 ok(html.includes('three@0.185.1/build/three.module.js'), 'Three.js dependency is version-pinned');
 ok(html.includes('prefers-reduced-motion:reduce'), 'reduced-motion CSS fallback exists');
 ok(html.includes('aria-label="可轉向的 3D 星際曲速航行模擬器"'), 'main canvas has an accessible label');
+ok(html.includes('travel-journal.js'), 'travel journal client is loaded by the active simulator');
 
 const moduleMatch = html.match(/<script type="module">([\s\S]*?)<\/script>\s*<\/body>/);
 ok(Boolean(moduleMatch), 'inline module script can be extracted');
@@ -97,6 +99,14 @@ if (moduleMatch) {
   ok(result.status === 0, `inline module JavaScript parses${result.stderr ? `: ${result.stderr.trim()}` : ''}`);
   rmSync(tmp, { recursive: true, force: true });
 }
+
+const journalScript = text('travel-journal.js');
+const journalParse = spawnSync(process.execPath, ['--check', join(root, 'travel-journal.js')], { encoding: 'utf8' });
+ok(journalParse.status === 0, `travel journal JavaScript parses${journalParse.stderr ? `: ${journalParse.stderr.trim()}` : ''}`);
+ok(journalScript.includes("const KEY='stellar-warp-travel-journal-v1'"), 'travel journal storage key is versioned');
+ok(journalScript.includes('previous.flying&&!state.flying&&active'), 'travel journal detects completed flight transitions');
+ok(journalScript.includes('state.current!==destination'), 'travel journal rejects aborted or incomplete routes');
+ok(journalScript.includes('setInterval(sample,500)'), 'travel journal sampling is bounded to 2 Hz');
 
 const nodeBlock = html.match(/const N=\[([\s\S]*?)\];\s*const node=/);
 ok(Boolean(nodeBlock), 'star-system data block exists');

@@ -1,18 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-
-const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const read = (path) => readFileSync(join(root, path), 'utf8');
-const write = (path, body) => writeFileSync(join(root, path), body);
-
-function replaceOnce(body, needle, replacement, label) {
-  if (body.includes(replacement)) return body;
-  if (!body.includes(needle)) throw new Error(`Missing ${label}`);
-  return body.replace(needle, replacement);
-}
-
-const journalSource = String.raw`(() => {
+(() => {
 'use strict';
 const KEY='stellar-warp-travel-journal-v1';
 const LIMIT=12;
@@ -125,43 +111,3 @@ setInterval(sample,500);
 sample();
 window.WarpTravelJournal={entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))}};
 })();
-`;
-write('travel-journal.js', journalSource);
-
-let html=read('index.html');
-const loader='<script src="./travel-journal.js" defer></script>\n';
-if(!html.includes(loader.trim())){
-  const marker='<script type="module">';
-  if(!html.includes(marker))throw new Error('Missing inline module marker');
-  html=html.replace(marker,loader+marker);
-  write('index.html',html);
-}
-
-let validator=read('scripts/validate.mjs');
-validator=replaceOnce(validator,"const required = [\n  'index.html',","const required = [\n  'index.html',\n  'travel-journal.js',",'validator required-file anchor');
-validator=replaceOnce(validator,"ok(html.includes('aria-label=\"可轉向的 3D 星際曲速航行模擬器\"'), 'main canvas has an accessible label');","ok(html.includes('aria-label=\"可轉向的 3D 星際曲速航行模擬器\"'), 'main canvas has an accessible label');\nok(html.includes('travel-journal.js'), 'travel journal client is loaded by the active simulator');",'validator HTML marker anchor');
-validator=replaceOnce(validator,"  rmSync(tmp, { recursive: true, force: true });\n}\n\nconst nodeBlock", "  rmSync(tmp, { recursive: true, force: true });\n}\n\nconst journalScript = text('travel-journal.js');\nconst journalParse = spawnSync(process.execPath, ['--check', join(root, 'travel-journal.js')], { encoding: 'utf8' });\nok(journalParse.status === 0, `travel journal JavaScript parses${journalParse.stderr ? `: ${journalParse.stderr.trim()}` : ''}`);\nok(journalScript.includes(\"const KEY='stellar-warp-travel-journal-v1'\"), 'travel journal storage key is versioned');\nok(journalScript.includes('previous.flying&&!state.flying&&active'), 'travel journal detects completed flight transitions');\nok(journalScript.includes('state.current!==destination'), 'travel journal rejects aborted or incomplete routes');\nok(journalScript.includes('setInterval(sample,500)'), 'travel journal sampling is bounded to 2 Hz');\n\nconst nodeBlock",'validator journal checks anchor');
-write('scripts/validate.mjs',validator);
-
-let architecture=read('docs/ARCHITECTURE.md');
-architecture=replaceOnce(architecture,"V4.0 採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。所有 UI、航線資料、狀態機、程序化星體、音效及效能調節均在 `index.html` 內運行；Three.js 以固定版本從 CDN 載入。","V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。Active evolution 仍維持純靜態部署；核心航行、3D、音效及效能邏輯留在 `index.html`，而低頻率、非渲染關鍵路徑的旅行日誌以 `travel-journal.js` 獨立載入。Three.js 仍以固定版本從 CDN 載入。",'architecture summary');
-architecture=replaceOnce(architecture,"| `WarpSim` | 提供測試／診斷用的公開控制介面 |","| `WarpSim` | 提供測試／診斷用的公開控制介面 |\n| `travel-journal.js` | 以 2 Hz 讀取公開 flight state，只在完整抵達最終目的地時把最近旅程寫入本機日誌；不參與每幀渲染 |",'architecture component table');
-architecture=replaceOnce(architecture,"目前只使用 `localStorage` 保存畫質模式等本機設定：","目前只使用 `localStorage` 保存畫質模式、聲音設定及 active evolution 的本機旅行日誌：",'architecture storage summary');
-architecture=replaceOnce(architecture,"- 沒有上傳位置、裝置或航行資料","- 旅行日誌只保存最近最多 12 次已完成路線與本機時間；中止航程不記錄\n- 沒有上傳位置、裝置或航行資料",'architecture privacy list');
-write('docs/ARCHITECTURE.md',architecture);
-
-let testing=read('docs/TESTING.md');
-testing=replaceOnce(testing,"- WebGL context lost／restored handlers、暫停模擬 clock 及診斷控制存在","- WebGL context lost／restored handlers、暫停模擬 clock 及診斷控制存在\n- 旅行日誌外掛可通過 `node --check`，使用版本化本機儲存 key、2 Hz 有界輪詢，且只接受真正完成最終目的地的航程",'testing automated list');
-testing=replaceOnce(testing,"- [ ] 可打開星圖選擇下一個目的地\n\n### G. 聲音","- [ ] 可打開星圖選擇下一個目的地\n- [ ] 完整抵達最終目的地後，控制面板「旅行日誌」新增一筆路線與實際時間\n- [ ] 中止航程不會新增旅行日誌\n- [ ] 重新整理頁面後旅行日誌仍保留，且最多只保留最近 12 次\n- [ ] 從不是目前位置的舊日誌按「再次規劃」，可正常建立前往該目的地的新航線\n\n### G. 聲音",'testing exploration checks');
-write('docs/TESTING.md',testing);
-
-let roadmap=read('docs/ROADMAP.md');
-roadmap=replaceOnce(roadmap,"## V5｜探索層\n\n**狀態：候選方案；產品方向一致**","## V5｜探索層\n\n**狀態：候選方案；產品方向一致**\n\n> Draft 驗證中：`autonomous-evolution` 已加入第一個「探索連續性」切片——純本機旅行日誌，記錄完成航程、實際時間與再次規劃入口。此實作仍在 Draft PR，**不代表 V5 已獲批准**；合併前需由擁有人確認使用效果。",'roadmap V5 status');
-write('docs/ROADMAP.md',roadmap);
-
-let changelog=read('CHANGELOG.md');
-changelog=replaceOnce(changelog,"### Improved\n\n- Added mobile WebGL context-loss recovery:","### Improved\n\n- Added a local-only travel journal that records completed final-destination journeys, route, timestamp and actual elapsed travel time, with a quick re-plan action for past destinations.\n- Travel journal history is capped at the latest 12 journeys, survives reloads through a versioned `localStorage` record, excludes aborted flights, and is sampled at only 2 Hz outside the render loop.\n- Added mobile WebGL context-loss recovery:",'changelog improvements');
-changelog=replaceOnce(changelog,"### Validation\n\n- The active simulator may now evolve independently","### Validation\n\n- Added syntax and structural checks for the travel journal loader, versioned storage, bounded sampling and completed-route gate.\n- The active simulator may now evolve independently",'changelog validation');
-write('CHANGELOG.md',changelog);
-
-console.log('Applied travel journal evolution slice.');

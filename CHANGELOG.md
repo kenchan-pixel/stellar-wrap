@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Added a local-only travel journal that records completed final-destination journeys, route, timestamp and actual elapsed travel time, with a quick re-plan action for past destinations.
+- Travel journal history is capped at the latest 12 journeys, survives reloads through a versioned `localStorage` record, excludes aborted flights, and is sampled at only 2 Hz outside the render loop.
 - Added mobile WebGL context-loss recovery: simulation time pauses while the GPU context is unavailable and resumes from the same flight phase after restoration.
 - Added an in-app recovery status overlay and delayed guidance when automatic restoration takes longer than expected.
 - Repeated context loss while using High quality temporarily falls back to Standard quality without overwriting the user's saved preference.
@@ -13,6 +15,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added syntax and structural checks for the travel journal loader, versioned storage, bounded sampling and completed-route gate.
 - The active simulator may now evolve independently while releases/v4.0-stable.html remains hash-locked as the regression baseline.
 - Added structural checks for WebGL context loss/restoration handlers and the paused simulation clock.
 

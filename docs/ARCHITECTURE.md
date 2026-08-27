@@ -2,7 +2,7 @@
 
 ## 1. 架構結論
 
-V4.0 採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。所有 UI、航線資料、狀態機、程序化星體、音效及效能調節均在 `index.html` 內運行；Three.js 以固定版本從 CDN 載入。
+V4.0 穩定基線採用**單頁、無後端、無建置流程**的靜態 WebGL 架構。Active evolution 仍維持純靜態部署；核心航行、3D、音效及效能邏輯留在 `index.html`，而低頻率、非渲染關鍵路徑的旅行日誌以 `travel-journal.js` 獨立載入。Three.js 仍以固定版本從 CDN 載入。
 
 這個做法適合目前階段：
 
@@ -48,6 +48,7 @@ flowchart TD
 | `SpaceAudio` | 以 Web Audio 合成引擎、曲速、提示及環境聲 |
 | 自動畫質 | 量度移動平均幀時間，調整 DPR 及 GPU 負載 |
 | `WarpSim` | 提供測試／診斷用的公開控制介面 |
+| `travel-journal.js` | 以 2 Hz 讀取公開 flight state，只在完整抵達最終目的地時把最近旅程寫入本機日誌；不參與每幀渲染 |
 
 ## 4. 座標及方向模型
 
@@ -163,11 +164,12 @@ warpExit 1.15 s + decelerate 1.75 s + approach 2.80 s
 
 ## 9. 儲存及私隱
 
-目前只使用 `localStorage` 保存畫質模式等本機設定：
+目前只使用 `localStorage` 保存畫質模式、聲音設定及 active evolution 的本機旅行日誌：
 
 - 沒有後端
 - 沒有帳戶
 - 沒有遙測或分析追蹤
+- 旅行日誌只保存最近最多 12 次已完成路線與本機時間；中止航程不記錄
 - 沒有上傳位置、裝置或航行資料
 - 沒有 API key 或秘密
 
