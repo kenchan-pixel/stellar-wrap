@@ -29,9 +29,9 @@ ok(bootstrap.includes('cacheReady&&navigator.onLine')&&bootstrap.includes('cache
 ok(!bootstrap.includes('localStorage'),'offline bootstrap adds no persistent user-data store');
 
 ok(sw.includes("const CACHE_PREFIX='stellar-wrap-shell-'"),'service worker cache is versioned');
-ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v7`"),'offline shell generation advances for persistent expedition continuity');
+ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v6`"),'offline shell generation advances for the destination landmark guide');
 ok(sw.includes("three@0.185.1/build/three.module.js"),'offline cache pins the approved Three.js version');
-for(const path of ['./index.html','./travel-journal.js','./responsive-ui.js','./exploration-survey.js','./star-atlas.js','./vega-survey.js','./photo-mode.js','./expedition.js','./arrival-debrief.js','./landmark-guide.js','./offline-bootstrap.js'])ok(sw.includes(`'${path}'`),`offline core includes ${path}`);
+for(const path of ['./index.html','./travel-journal.js','./responsive-ui.js','./exploration-survey.js','./star-atlas.js','./vega-survey.js','./photo-mode.js','./arrival-debrief.js','./landmark-guide.js','./offline-bootstrap.js'])ok(sw.includes(`'${path}'`),`offline core includes ${path}`);
 ok(sw.includes("event.request.mode==='navigate'" )&&sw.includes('networkFirst(event.request)'),'navigation uses network-first with cached fallback');
 ok(sw.includes('if(isThree)')&&sw.includes('cacheFirst(event.request)'),'fixed Three.js dependency uses cache-first offline fallback');
 ok(sw.includes("event.data?.type!=='OFFLINE_STATUS'"),'service worker exposes explicit cache-readiness status');
