@@ -16,6 +16,7 @@ const CORE=[
   './prox-starport-alignment.js',
   './photo-mode.js',
   './arrival-debrief.js',
+  './discovery-debrief.js',
   './landmark-guide.js',
   './offline-bootstrap.js'
 ];

@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Added
 
+- Added a V5-candidate **Discovery Completion Handoff**: completing any external destination discovery now shows a compact in-context summary with destination, discovery name and current `x / 7` collection progress, plus direct actions to open the existing Star Atlas or choose the next destination.
+- Discovery completion uses existing `stellarwarp:discovery-change` events when available and a bounded 1 Hz Star Atlas fallback for legacy LUNA／VEGA completion, primes persisted discoveries silently on reload, keeps 44 px mobile actions, and adds no new persistence, network, backend, dependency or render-loop work.
 - Added a V5-candidate **PROX Starport Alignment** exploration slice: after a true final arrival at PROX, users can tune two normalized -50–50 directional axes to locate three approach windows tied to the outer traffic beacon, lava-side thermal corridor and starport docking axis.
 - Each PROX approach gate requires both axes inside a bounded ±3 window. Completing all three unlocks the local-only Star Atlas discovery `紅矮星港三點進場網`; the directional values are interaction indices rather than real angles or distances.
 - Star Atlas now exposes a coherent `x / 7 發現` collection across the seven destinations outside the SOL home system. Completing all seven local discoveries shows an `探索檔案完成` milestone without inventing a SOL discovery solely to fill the count.
@@ -35,6 +37,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added focused Discovery Completion Handoff validation: JavaScript syntax, immediate event + bounded 1 Hz legacy fallback, Star Atlas authority, safe-final-exploration gating, 44 px mobile actions, existing navigation/atlas handoff, offline-shell inclusion, zero persistence/network/render-loop work, plus executable runtime coverage for silent reload priming, legacy completion detection, collection progress and unsafe-flight rejection.
 - Expanded the executable 390×844 handoff regression to late-load each of the seven real production destination modules after Debrief is already visible, asserting the summary remains immediately after `#exploreDesc`, precedes both Landmark Guide and the actual task element, and scrolls the correct task into view.
 - Extended the executable 390×844 production DOM/event harness to cover the arrival-to-exploration handoff: CYG arrival now proves the Debrief is placed before destination content, unfinished exploration exposes `開始探索`, the action scrolls to the real scanner, same-tab discovery completion switches to `查看發現`, and a fresh-process reload keeps the completed handoff state.
 - Added focused PROX alignment validation covering JavaScript syntax, three unique two-axis approach windows, simultaneous ±3 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, seven-discovery completion UI, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.

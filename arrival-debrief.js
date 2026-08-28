@@ -155,4 +155,5 @@ window.WarpArrivalDebrief={
   visible(){return visible},
   entry(){return currentEntry?{...currentEntry,route:[...currentEntry.route]}:null}
 };
+import('./discovery-debrief.js').catch(()=>{});
 })();
