@@ -44,6 +44,19 @@ async function waitUntil(fn,label,timeoutMs=12000){
   const suffix=lastError?` (${lastError.message})`:'';
   throw new Error(`Timed out waiting for ${label}${suffix}`);
 }
+
+async function stopChild(child,label){
+  if(!child||child.exitCode!==null)return;
+  const exited=new Promise(resolve=>child.once('exit',resolve));
+  child.kill('SIGTERM');
+  await Promise.race([exited,sleep(1200)]);
+  if(child.exitCode===null){
+    child.kill('SIGKILL');
+    await Promise.race([new Promise(resolve=>child.once('exit',resolve)),sleep(500)]);
+  }
+  if(child.exitCode===null&&child.signalCode===null)console.warn(`${label} did not report exit before process teardown`);
+}
+
 async function waitHttp(url){
   return waitUntil(async()=>{
     const response=await fetch(url,{cache:'no-store'});
@@ -191,8 +204,7 @@ async function inspectViewport(chrome,baseUrl,width,height){
     console.log(`Exploration Focus Tray real browser ${width}x${height}: passed`);
   }finally{
     cdp?.close();
-    if(browser&&!browser.killed)browser.kill('SIGTERM');
-    await sleep(120);
+    await stopChild(browser,`Chrome ${width}x${height}`);
     rmSync(profile,{recursive:true,force:true});
   }
 }
@@ -207,9 +219,15 @@ if(!chrome){
 const port=await freePort();
 const baseUrl=`http://127.0.0.1:${port}/`;
 const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(port)},stdio:'ignore'});
+let failed=null;
 try{
   await waitHttp(baseUrl);
   for(const [width,height] of [[390,844],[360,800]])await inspectViewport(chrome,baseUrl,width,height);
+}catch(error){
+  failed=error;
+  console.error(error?.stack||error);
 }finally{
-  if(!server.killed)server.kill('SIGTERM');
+  await stopChild(server,'local production server');
 }
+if(failed)process.exit(1);
+process.exit(0);
