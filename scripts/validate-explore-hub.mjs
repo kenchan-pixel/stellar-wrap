@@ -20,7 +20,7 @@ has(hub,"#exploreRailToggle",'scenery-first compact Explore handle is styled');
 has(hub,"min-height:46px",'compact Explore handle exceeds the mobile touch baseline');
 has(hub,"#exploreRailTools",'five mode actions live inside an expandable tool group');
 has(hub,"#exploreRail.railExpanded #exploreRailTools",'tool group is only visually expanded on demand');
-has(hub,"railToggle.setAttribute('aria-expanded',railExpanded?'true':'false')",'compact handle exposes its expanded state');
+has(hub,"railToggle?.setAttribute('aria-expanded',railExpanded?'true':'false')",'compact handle exposes its expanded state');
 has(hub,"setA11yHidden(railTools,!railExpanded)",'collapsed tool group leaves focus and assistive navigation');
 has(hub,"function toggleRail()",'compact handle owns an explicit expand/collapse path');
 has(hub,"closeDrawer();setRailExpanded(true)",'opening the tool chooser closes any content drawer so only one surface dominates');
