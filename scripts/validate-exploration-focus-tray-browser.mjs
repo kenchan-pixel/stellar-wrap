@@ -6,8 +6,6 @@ import {join} from 'node:path';
 import {createServer as createTcpServer} from 'node:net';
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const hubSource=readFileSync('explore-hub.js','utf8');
-const traySource=readFileSync('exploration-focus-tray.js','utf8');
 
 function commandPath(name){
   if(!name)return'';
@@ -90,11 +88,11 @@ class CdpClient{
       if(message.error)pending.reject(new Error(message.error.message||'CDP error'));else pending.resolve(message.result||{});
     });
   }
-  send(method,params={}){
+  send(method,params={},timeoutMs=10000){
     assert(this.ws?.readyState===WebSocket.OPEN,`CDP socket must be open before ${method}`);
     const id=++this.nextId;
     return new Promise((resolve,reject)=>{
-      const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP command timed out: ${method}`))},10000);
+      const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP command timed out: ${method}`))},timeoutMs);
       this.pending.set(id,{resolve,reject,timer});this.ws.send(JSON.stringify({id,method,params}));
     });
   }
@@ -117,20 +115,28 @@ class CdpClient{
     try{this.ws?.close()}catch{}
   }
 }
-async function evaluate(cdp,expression){
-  const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
-  if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text||'Runtime.evaluate failed');
-  return result.result?.value;
+async function evaluate(cdp,expression,label='Runtime.evaluate'){
+  try{
+    const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:false});
+    if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text||'Runtime.evaluate failed');
+    return result.result?.value;
+  }catch(error){
+    throw new Error(`${label}: ${error.message}`);
+  }
 }
-async function waitExpression(cdp,expression,label,timeoutMs=12000){return waitUntil(()=>evaluate(cdp,expression),label,timeoutMs)}
+async function waitExpression(cdp,expression,label,timeoutMs=12000){return waitUntil(()=>evaluate(cdp,expression,label),label,timeoutMs)}
+async function loadProductionScript(cdp,src,globalName){
+  await evaluate(cdp,`(()=>{const id='stellarHarness-${globalName}';if(document.getElementById(id))return true;const script=document.createElement('script');script.id=id;script.src=${JSON.stringify(src)};script.async=false;document.head.append(script);return true})()`,`inject ${src}`);
+  await waitExpression(cdp,`!!window[${JSON.stringify(globalName)}]`,`${globalName} production script`);
+}
 async function clickSelector(cdp,selector){
-  const point=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el);return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none',x:r.left+r.width/2,y:r.top+r.height/2}})()`);
+  const point=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el);return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none',x:r.left+r.width/2,y:r.top+r.height/2}})()`,`measure ${selector}`);
   assert(point?.ok,`${selector} must be visible and pointer-interactive`);
   await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});
   await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1});
 }
 async function snapshot(cdp){
-  return evaluate(cdp,`(()=>{const card=document.querySelector('#exploreCard'),r=card.getBoundingClientRect(),s=getComputedStyle(card);return{viewport:{width:innerWidth,height:innerHeight},pane:card.dataset.hubPane||'',open:card.classList.contains('hubOpen'),active:!!window.WarpExplorationFocusTray?.active?.(),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},computed:{maxHeight:s.maxHeight,left:s.left,right:s.right,bottom:s.bottom,overflowY:s.overflowY}}})()`);
+  return evaluate(cdp,`(()=>{const card=document.querySelector('#exploreCard'),r=card.getBoundingClientRect(),s=getComputedStyle(card);return{viewport:{width:innerWidth,height:innerHeight},pane:card.dataset.hubPane||'',open:card.classList.contains('hubOpen'),active:!!window.WarpExplorationFocusTray?.active?.(),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},computed:{maxHeight:s.maxHeight,left:s.left,right:s.right,bottom:s.bottom,overflowY:s.overflowY}}})()`,'Focus Tray geometry snapshot');
 }
 function px(value){const parsed=Number.parseFloat(value);return Number.isFinite(parsed)?parsed:null}
 function assertTray(state,width,height){
@@ -154,10 +160,13 @@ function assertDrawer(state,name,tray,metrics){
 }
 
 async function inspectViewport(chrome,baseUrl,width,height){
+  const viewport=`${width}x${height}`;
+  const stage=message=>console.log(`[Focus Tray browser ${viewport}] ${message}`);
   const profile=mkdtempSync(join(tmpdir(),`stellar-wrap-layout-${width}-`));let browser=null,cdp=null;
   try{
+    stage('launch headless Chrome');
     browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--mute-audio','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:'ignore'});
-    const portFile=join(profile,'DevToolsActivePort');await waitUntil(()=>existsSync(portFile),`Chrome DevTools port ${width}x${height}`,8000);
+    const portFile=join(profile,'DevToolsActivePort');await waitUntil(()=>existsSync(portFile),`Chrome DevTools port ${viewport}`,8000);
     const debugPort=Number(readFileSync(portFile,'utf8').split(/\r?\n/)[0]);
     const target=await waitUntil(async()=>{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`),targets=await response.json();return targets.find(item=>item.type==='page'&&item.webSocketDebuggerUrl)||null},'Chrome page target',8000);
     cdp=new CdpClient(target.webSocketDebuggerUrl);await cdp.connect();
@@ -165,23 +174,26 @@ async function inspectViewport(chrome,baseUrl,width,height){
     await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true,screenWidth:width,screenHeight:height});
     await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
 
-    // Load the exact production document and CSS while scripts are temporarily disabled. This prevents the
-    // simulator render/runtime from competing with CI software Chrome, but does not modify the product page.
-    // We then execute the exact production Explore Hub + Focus Tray sources and assert rendered geometry.
+    // Render the real production document/CSS without starting the simulator's WebGL runtime. The two exact
+    // production UI scripts under test are then loaded through the local server as browser scripts, avoiding
+    // a giant Runtime.evaluate payload and keeping the layout gate deterministic on software CI runners.
     await cdp.send('Emulation.setScriptExecutionDisabled',{value:true});
     const loaded=cdp.waitEvent('Page.loadEventFired',10000);
     await cdp.send('Page.navigate',{url:baseUrl});
     await loaded;
     await cdp.send('Emulation.setScriptExecutionDisabled',{value:false});
     await waitExpression(cdp,"document.readyState==='complete'&&!!document.querySelector('#app')&&!!document.querySelector('#exploreCard')",'production page DOM');
+    stage('production document and CSS loaded');
 
-    // Bootstrap the production modules while the page is still inactive, matching normal module startup.
-    await evaluate(cdp,`(()=>{window.WarpSim={state:()=>({current:'LUNA',selected:null,route:[],phase:'observe',flying:false,exploring:true,contextLost:false}),select:()=>{},launch:()=>{},abort:()=>{}};document.querySelector('#loading')?.remove();return true})()`);
-    await evaluate(cdp,hubSource);
-    await evaluate(cdp,traySource);
+    // Provide only the existing read-only state authority needed by Explore Hub, then load the exact production
+    // modules over HTTP. No test-only branch exists inside product source and no layout value is mocked.
+    await evaluate(cdp,`(()=>{window.WarpSim={state:()=>({current:'LUNA',selected:null,route:[],phase:'observe',flying:false,exploring:true,contextLost:false}),select:()=>{},launch:()=>{},abort:()=>{}};window.WarpStarAtlas={snapshot:()=>({discoveries:{}})};document.querySelector('#loading')?.remove();return true})()`,'install bounded UI state authority');
+    await loadProductionScript(cdp,`${baseUrl}explore-hub.js`,'WarpExploreHub');
+    await loadProductionScript(cdp,`${baseUrl}exploration-focus-tray.js`,'WarpExplorationFocusTray');
+    stage('production Explore Hub and Focus Tray scripts loaded');
 
     // Enter final exploration only after observers/listeners are mounted, matching the real lifecycle.
-    await evaluate(cdp,`(()=>{const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');return true})()`);
+    await evaluate(cdp,`(()=>{const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');return true})()`,'enter final exploration');
     await waitExpression(cdp,"!!window.WarpExploreHub&&!!window.WarpExplorationFocusTray&&document.querySelector('#app')?.classList.contains('exploreHubMobile')&&!!document.querySelector('#exploreRailToggle')",'production Explore Hub browser bootstrap');
 
     await clickSelector(cdp,'#exploreRailToggle');
@@ -189,6 +201,7 @@ async function inspectViewport(chrome,baseUrl,width,height){
     await clickSelector(cdp,'[data-hub-action="explore"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='explore'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Focus Tray open');
     const tray=await snapshot(cdp),metrics=assertTray(tray,width,height);
+    stage(`Focus Tray geometry accepted (${tray.rect.width.toFixed(1)}×${tray.rect.height.toFixed(1)}px)`);
 
     await clickSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'&&!document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'chooser reopens after tray');
@@ -201,7 +214,7 @@ async function inspectViewport(chrome,baseUrl,width,height){
     await clickSelector(cdp,'[data-hub-action="discovery"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='discovery'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Discovery drawer open');
     assertDrawer(await snapshot(cdp),'discovery',tray,metrics);
-    console.log(`Exploration Focus Tray real browser ${width}x${height}: passed`);
+    console.log(`Exploration Focus Tray real browser ${viewport}: passed`);
   }finally{
     cdp?.close();
     await stopChild(browser);
