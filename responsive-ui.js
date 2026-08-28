@@ -207,6 +207,65 @@ style.textContent=`
   #app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpExit"]::before,
   #app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpExit"]::after{opacity:.08}
 }
+
+/* Journey Scenery · Corridor Landmark Flybys */
+#app.journeyAtmosphereActive #journeyTransit::before,
+#app.journeyAtmosphereActive #journeyTransit::after{
+  content:"";
+  position:absolute;
+  display:block;
+  pointer-events:none;
+  opacity:0;
+  will-change:transform,opacity;
+}
+#journeyAtmosphere[data-phase="warpEntry"] #journeyTransit::before{opacity:.12;transform:translate3d(8vw,-2vh,0) scale(.82)}
+#journeyAtmosphere[data-phase="warpEntry"] #journeyTransit::after{opacity:.08;transform:translate3d(-5vw,3vh,0) scale(.78)}
+#journeyAtmosphere[data-phase="warp"] #journeyTransit::before{animation:corridorLandmarkFlybyA 5.4s ease-in-out infinite alternate}
+#journeyAtmosphere[data-phase="warp"] #journeyTransit::after{animation:corridorLandmarkFlybyB 6.2s ease-in-out infinite alternate}
+#journeyAtmosphere[data-phase="warpExit"] #journeyTransit::before{opacity:.08;transform:translate3d(-12vw,4vh,0) scale(1.12)}
+#journeyAtmosphere[data-phase="warpExit"] #journeyTransit::after{opacity:.05;transform:translate3d(10vw,-3vh,0) scale(1.08)}
+#journeyAtmosphere[data-phase="decelerate"] #journeyTransit::before,
+#journeyAtmosphere[data-phase="decelerate"] #journeyTransit::after,
+#journeyAtmosphere[data-phase="approach"] #journeyTransit::before,
+#journeyAtmosphere[data-phase="approach"] #journeyTransit::after,
+#journeyAtmosphere[data-phase="observe"] #journeyTransit::before,
+#journeyAtmosphere[data-phase="observe"] #journeyTransit::after{opacity:0;animation:none}
+
+#journeyTransit[data-corridor="SOL>LUNA"]::before{left:-28vmin;top:8vh;width:74vmin;height:74vmin;border:2px solid rgba(var(--journey-alt-rgb),.34);border-right-color:transparent;border-bottom-color:transparent;border-radius:50%;background:radial-gradient(circle at 62% 48%,transparent 0 61%,rgba(var(--journey-rgb),.07) 62% 68%,transparent 69%)}
+#journeyTransit[data-corridor="SOL>LUNA"]::after{right:-20vmin;bottom:-14vmin;width:46vmin;height:46vmin;border:1px solid rgba(var(--journey-rgb),.28);border-left-color:transparent;border-radius:50%;box-shadow:inset 18px 0 36px rgba(var(--journey-rgb),.055)}
+#journeyTransit[data-corridor="SOL>SIRIUS"]::before{left:-12vw;top:16vh;width:52vw;height:18vh;border:1px solid rgba(var(--journey-alt-rgb),.3);transform:skewX(-18deg) rotate(11deg);background:linear-gradient(110deg,transparent 0 42%,rgba(var(--journey-rgb),.09) 49% 52%,transparent 60%)}
+#journeyTransit[data-corridor="SOL>SIRIUS"]::after{right:-14vw;bottom:12vh;width:44vw;height:14vh;border-top:1px solid rgba(var(--journey-rgb),.3);border-bottom:1px solid rgba(var(--journey-alt-rgb),.18);transform:skewX(21deg) rotate(-9deg)}
+#journeyTransit[data-corridor="SOL>PROX"]::before{right:-22vmin;top:6vh;width:68vmin;height:68vmin;border:2px solid rgba(var(--journey-rgb),.35);border-left-color:transparent;border-bottom-color:transparent;border-radius:50%;transform:rotate(-28deg);background:radial-gradient(circle at 70% 30%,rgba(var(--journey-rgb),.07),transparent 52%)}
+#journeyTransit[data-corridor="SOL>PROX"]::after{left:-10vw;bottom:8vh;width:54vw;height:24vh;border-top:2px solid rgba(var(--journey-alt-rgb),.22);border-radius:50% 50% 0 0;transform:rotate(12deg)}
+#journeyTransit[data-corridor="LUNA>VEGA"]::before{right:-25vmin;top:10vh;width:76vmin;height:76vmin;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 36%,rgba(var(--journey-alt-rgb),.19) 36.5% 37%,transparent 37.5% 47%,rgba(var(--journey-rgb),.12) 47.5% 48%,transparent 48.5%)}
+#journeyTransit[data-corridor="LUNA>VEGA"]::after{left:-16vmin;bottom:-10vmin;width:50vmin;height:50vmin;border:1px solid rgba(var(--journey-rgb),.28);border-radius:50%;box-shadow:0 0 32px rgba(var(--journey-rgb),.08)}
+#journeyTransit[data-corridor="LUNA>PROX"]::before{left:-9vw;top:12vh;width:48vw;height:28vh;clip-path:polygon(4% 55%,15% 18%,38% 8%,59% 28%,83% 14%,97% 56%,76% 88%,51% 77%,26% 94%);background:radial-gradient(circle at 38% 42%,rgba(185,199,220,.14),rgba(65,72,88,.08) 38%,transparent 72%)}
+#journeyTransit[data-corridor="LUNA>PROX"]::after{right:-5vw;bottom:11vh;width:35vw;height:22vh;clip-path:polygon(8% 44%,28% 10%,55% 20%,84% 6%,97% 52%,74% 90%,42% 80%,17% 96%);background:linear-gradient(132deg,rgba(var(--journey-rgb),.12),rgba(88,96,112,.07),transparent 74%)}
+#journeyTransit[data-corridor="VEGA>CYG"]::before{left:-8vw;top:21vh;width:76vw;height:3px;background:linear-gradient(90deg,transparent,rgba(var(--journey-alt-rgb),.38),rgba(var(--journey-rgb),.12),transparent);transform:rotate(17deg);box-shadow:0 12vh 0 rgba(var(--journey-rgb),.08)}
+#journeyTransit[data-corridor="VEGA>CYG"]::after{right:-9vw;bottom:25vh;width:68vw;height:2px;background:linear-gradient(90deg,transparent,rgba(var(--journey-rgb),.34),transparent);transform:rotate(-14deg);box-shadow:0 -10vh 0 rgba(var(--journey-alt-rgb),.07)}
+#journeyTransit[data-corridor="CYG>ORION"]::before{left:-15vw;top:4vh;width:58vw;height:76vh;background:radial-gradient(ellipse at 30% 42%,rgba(var(--journey-rgb),.14),transparent 58%),radial-gradient(ellipse at 65% 68%,rgba(var(--journey-alt-rgb),.08),transparent 62%);border-radius:46% 54% 62% 38%}
+#journeyTransit[data-corridor="CYG>ORION"]::after{right:-18vw;bottom:-8vh;width:62vw;height:58vh;background:radial-gradient(ellipse at 48% 52%,rgba(var(--journey-alt-rgb),.11),transparent 64%);border-top:1px solid rgba(var(--journey-rgb),.2);border-radius:50%}
+#journeyTransit[data-corridor="TAU>SIRIUS"]::before{left:-30vmin;bottom:-22vmin;width:88vmin;height:54vmin;border:2px solid rgba(var(--journey-rgb),.24);border-top-color:rgba(var(--journey-alt-rgb),.32);border-radius:50%;transform:rotate(14deg);background:radial-gradient(ellipse at center,transparent 0 58%,rgba(var(--journey-rgb),.055) 59% 66%,transparent 67%)}
+#journeyTransit[data-corridor="TAU>SIRIUS"]::after{right:-24vmin;top:5vh;width:62vmin;height:40vmin;border-top:1px solid rgba(var(--journey-alt-rgb),.25);border-bottom:1px solid rgba(var(--journey-rgb),.16);border-radius:50%;transform:rotate(-19deg)}
+#journeyTransit[data-corridor="SIRIUS>PROX"]::before{right:-25vmin;top:7vh;width:72vmin;height:72vmin;border-radius:50%;background:conic-gradient(from 18deg,rgba(var(--journey-alt-rgb),.22) 0 7%,transparent 7% 22%,rgba(var(--journey-rgb),.15) 22% 30%,transparent 30% 49%,rgba(var(--journey-alt-rgb),.16) 49% 55%,transparent 55% 79%,rgba(var(--journey-rgb),.12) 79% 85%,transparent 85%);mask:radial-gradient(circle,transparent 0 58%,#000 59% 63%,transparent 64%)}
+#journeyTransit[data-corridor="SIRIUS>PROX"]::after{left:-12vmin;bottom:8vh;width:42vmin;height:42vmin;border:1px dashed rgba(var(--journey-rgb),.3);border-radius:50%;transform:rotate(22deg)}
+
+@keyframes corridorLandmarkFlybyA{
+  0%{opacity:.1;transform:translate3d(14vw,-3vh,0) scale(.8) rotate(-4deg)}
+  48%{opacity:.38;transform:translate3d(0,2vh,0) scale(1) rotate(0)}
+  100%{opacity:.13;transform:translate3d(-15vw,5vh,0) scale(1.14) rotate(5deg)}
+}
+@keyframes corridorLandmarkFlybyB{
+  0%{opacity:.08;transform:translate3d(-10vw,4vh,0) scale(.84) rotate(4deg)}
+  52%{opacity:.28;transform:translate3d(1vw,-1vh,0) scale(1.02) rotate(0)}
+  100%{opacity:.09;transform:translate3d(13vw,-5vh,0) scale(1.12) rotate(-5deg)}
+}
+@media (prefers-reduced-motion:reduce){
+  #app.journeyAtmosphereActive #journeyTransit::before,
+  #app.journeyAtmosphereActive #journeyTransit::after{animation:none!important;transition:none!important}
+  #journeyAtmosphere[data-phase="warp"] #journeyTransit::before{opacity:.2;transform:none}
+  #journeyAtmosphere[data-phase="warp"] #journeyTransit::after{opacity:.12;transform:none}
+}
 `;
 document.head.append(style);
 })();
