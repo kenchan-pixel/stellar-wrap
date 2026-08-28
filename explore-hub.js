@@ -26,6 +26,11 @@ function currentState(){
 function discoveryAt(id){
   try{return window.WarpStarAtlas?.snapshot?.().discoveries?.[id]||''}catch{return''}
 }
+function setA11yHidden(node,hidden){
+  if(!node)return;
+  if(hidden){node.setAttribute('aria-hidden','true');node.setAttribute('inert','')}
+  else{node.removeAttribute('aria-hidden');node.removeAttribute('inert')}
+}
 function clearStatus(){
   const mounted=statusCard?.isConnected?statusCard:document.querySelector('#exploreHubStatus');
   mounted?.remove();statusCard=null;
@@ -114,7 +119,7 @@ function ensureRail(){
   }
   rail=document.querySelector('#exploreRail');
   if(!rail){
-    rail=document.createElement('nav');rail.id='exploreRail';rail.setAttribute('aria-label','到站探索工具');rail.setAttribute('aria-hidden','true');
+    rail=document.createElement('nav');rail.id='exploreRail';rail.setAttribute('aria-label','到站探索工具');rail.setAttribute('aria-hidden','true');rail.setAttribute('inert','');
     const buttons=[
       ['overview','概覽',false],['explore','探索',false],['discovery','發現',false],['photo','攝影',true],['map','星圖',true]
     ];
@@ -161,13 +166,13 @@ function open(next=pane){
   if(!PANES.has(next)||!finalExplore())return false;
   pane=next;
   const card=document.querySelector('#exploreCard');if(!card)return false;
-  card.classList.remove('collapsed');card.classList.add('hubOpen');
+  card.classList.remove('collapsed');card.classList.add('hubOpen');setA11yHidden(card,false);
   const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='×';collapse.setAttribute('aria-label','關閉探索面板')}
   applyPane();return true;
 }
 function close(){
   const card=document.querySelector('#exploreCard');card?.classList.remove('hubOpen');
-  clearStatus();
+  clearStatus();setA11yHidden(card,finalExplore());
   const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='⌄';collapse.setAttribute('aria-label','收起觀景資訊')}
   updateRail();return true;
 }
@@ -193,13 +198,14 @@ function sync(){
   if(!ensureRail())return;
   const active=finalExplore(),app=document.querySelector('#app'),card=document.querySelector('#exploreCard');
   app?.classList.toggle('exploreHubMobile',active);
-  rail?.setAttribute('aria-hidden',active?'false':'true');
+  setA11yHidden(rail,!active||!!app?.classList.contains('photoMode'));
   if(active){
     card?.classList.remove('collapsed');
     if(!wasActive){pane='overview';close()}
-    else if(card?.classList.contains('hubOpen'))applyPane();
+    else if(card?.classList.contains('hubOpen')){setA11yHidden(card,false);applyPane()}
+    else setA11yHidden(card,true);
   }else{
-    card?.classList.remove('hubOpen');clearStatus();restoreChildren();
+    card?.classList.remove('hubOpen');clearStatus();restoreChildren();setA11yHidden(card,false);
   }
   wasActive=active;updateRail();
 }

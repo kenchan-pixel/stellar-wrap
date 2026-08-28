@@ -14,6 +14,7 @@
 - `攝影` 直接重用 `WarpPhotoMode.enter()`；`星圖` 直接重用現有 `#openPanel`。
 - 抽屜預設收起；同一按鈕再按一次、點擊 3D 畫面、關閉鍵或 Escape 都可收起。
 - 所有探索列按鈕維持最少 44 px 可點高度。
+- 視覺收起狀態與輔助導覽狀態保持一致：收起的抽屜同時套用 `aria-hidden` + `inert`；Photo Mode 隱藏 rail 時亦同步從輔助／焦點導覽移除，重新顯示時恢復。
 
 ## Acceptance Criteria
 
@@ -24,7 +25,8 @@
 5. 中途 fly-by 不使用 Explore Hub，避免破壞 `observe → turn` 自動續航。
 6. 桌面版維持原有 responsive exploration card，不因手機資訊架構改動而縮成窄 rail。
 7. Reduced Motion 關閉 drawer transition；Photo Mode 會隱藏 rail。
-8. 不新增 `setInterval`、`requestAnimationFrame`、storage、network、backend、Three.js 物件、route/timing/camera authority。
+8. 抽屜視覺收起時，其互動內容不得留在 VoiceOver／鍵盤／Switch Control 的可導覽範圍；抽屜展開後才恢復。Photo Mode 的隱藏 rail 亦遵守同一規則。
+9. 不新增 `setInterval`、`requestAnimationFrame`、storage、network、backend、Three.js 物件、route/timing/camera authority。
 
 ## Out of Scope
 
@@ -35,11 +37,12 @@
 
 ## Performance boundary
 
-Explore Hub 只新增固定 5 個按鈕及一個小型狀態節點。狀態同步使用 `MutationObserver`、既有事件及使用者操作；沒有 per-frame 或固定頻率 polling。抽屜動畫只改 `transform` / `opacity`，手機 60 Hz 優先規則不變。
+Explore Hub 只新增固定 5 個按鈕及一個小型狀態節點。狀態同步使用 `MutationObserver`、既有事件及使用者操作；沒有 per-frame 或固定頻率 polling。抽屜動畫只改 `transform` / `opacity`，手機 60 Hz 優先規則不變。`aria-hidden`／`inert` 同步只在既有 open/close／App class／breakpoint 狀態轉換時更新，不增加幀迴圈工作。
 
 ## Manual checks still required
 
 - iPhone Safari 直向：確認 rail 不遮主要地標，五個按鈕容易點擊。
+- iPhone VoiceOver／Switch Control：確認收起抽屜及 Photo Mode 隱藏 rail 不會被導覽到，重新展開／退出 Photo Mode 後控制可再次讀取及操作。
 - LUNA 及任一較長任務站：確認抽屜可捲動、模式切換不會遺失進度。
 - Discovery 完成瞬間：確認發現摘要仍正確顯示，但不強制打開大卡。
 - Photo Mode 進出後：確認 rail 正確隱藏／恢復。
@@ -49,4 +52,4 @@ Explore Hub 只新增固定 5 個按鈕及一個小型狀態節點。狀態同�
 
 ## Completion signal
 
-Focused validator、完整 `npm run check`、exact-HEAD CI 及 Preview 均通過，PR exact-head review 無 P0/P1/P2 blocker；實機視覺仍屬 owner manual gate。
+Focused validator、完整 `npm run check`、exact-HEAD CI 及 Preview 均通過，PR exact-head review 無 P0/P1/P2 blocker；實機視覺及 VoiceOver／Switch Control 體驗仍屬 owner manual gate。
