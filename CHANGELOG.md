@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Added
 
+- Added a V5-candidate **Discovery Field Notes + Photo Handoff** slice: each collected external discovery now carries a compact destination-specific classification and observation note in Star Atlas and the completion handoff, so discoveries read as field records rather than name-only badges.
+- Discovery completion now offers a full-width 44 px `留影記錄` action that reuses the existing safe Destination Photo Mode; the existing `查看星區圖鑑` and `下一目的地` actions remain available, with no second screenshot, storage or camera authority.
 - Added a V5-candidate **Exploration-Aware Navigation Map**: the existing 2.5D star map now marks external destinations with a compact `✓` when their discovery is already collected, while the selected route card shows current `x / 7` exploration progress and whether that destination is complete or still worth exploring.
 - Navigation discovery status reads only the existing Star Atlas discovery snapshot, reapplies markers after the core SVG map redraw through a direct-child-only microtask-coalesced observer, adds no route recommendation or itinerary logic, and is included in prepared offline shell cache v12 without persistence, network, backend, polling or render-loop work.
 - Added a V5-candidate **Discovery Completion Handoff**: completing any external destination discovery now shows a compact in-context summary with destination, discovery name and current `x / 7` collection progress, plus direct actions to open the existing Star Atlas or choose the next destination.
@@ -29,6 +31,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Star Atlas discovery cards now show a destination-specific field-note classification and concise observation note only after that discovery is collected; the static note metadata is exposed through `snapshot().systems` for presentation handoff but remains separate from completion/persistence authority.
 - Travel Journal now forms a **journey → discovery continuity** layer: each retained completed journey shows the destination's current exploration outcome as `發現 · 名稱`, `探索未完成`, or SOL home-system semantics, while the journal summary exposes the same `x / 7 發現` progress used by Star Atlas.
 - Journey discovery status reads only `WarpStarAtlas.snapshot().discoveries`; it does not copy discovery data into journal storage, so completing a discovery later updates older journey entries immediately through the existing discovery event and after reload/storage refresh, without adding a new timer, backend or network path.
 - Arrival Debrief now forms a direct **arrival → exploration handoff**: on a true final arrival it is repositioned ahead of Landmark Guide and destination task content, shows whether the current destination still has an unfinished exploration objective, and changes its primary action between `開始探索`, `查看發現` and SOL `自由探索`.
@@ -41,6 +44,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Extended Discovery Completion validation for exactly seven field-note profiles, Star Atlas/debrief metadata handoff, safe Photo Mode reuse, full-width mobile action layout, runtime note rendering and zero new storage/network/render-loop work.
 - Extended exploration-continuity validation for journey discovery outcomes: Star Atlas remains the sole discovery aggregation authority, Journal distinguishes completed/pending/home outcomes, same-tab discovery events refresh immediately, Star Atlas bootstrap triggers a post-load refresh, and the journal summary uses the seven-external-destination collection count without adding persistence or a new polling loop.
 - Added focused Exploration-Aware Navigation validation: JavaScript syntax, existing Star Atlas authority, direct-child-only map redraw observation, microtask coalescing, same-tab discovery refresh, offline-shell/bootstrap integration and zero persistence/network/render-loop work, plus executable DOM coverage for `2 / 7 → 3 / 7`, selected complete/pending/SOL states and marker restoration after a real core-style SVG rebuild.
 - Added focused Discovery Completion Handoff validation: JavaScript syntax, immediate event + bounded 1 Hz legacy fallback, Star Atlas authority, safe-final-exploration gating, 44 px mobile actions, existing navigation/atlas handoff, offline-shell inclusion, zero persistence/network/render-loop work, plus executable runtime coverage for silent reload priming, legacy completion detection, collection progress and unsafe-flight rejection.

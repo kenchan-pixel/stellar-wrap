@@ -3,13 +3,13 @@
 
 const SYSTEMS=[
   {id:'SOL',name:'地球近軌',tag:'類地近軌',landmark:'地球 · 月球 · 軌道環'},
-  {id:'LUNA',name:'月環基地',tag:'地月基地',landmark:'月面 · 遠方地球 · 環站'},
-  {id:'VEGA',name:'織女星門',tag:'A 型主星',landmark:'藍白主星 · 雙層星門'},
-  {id:'CYG',name:'天鵝航標',tag:'藍紫雙星',landmark:'雙星 · 航標陣列'},
-  {id:'ORION',name:'獵戶前哨',tag:'紅超巨星前哨',landmark:'紅巨星 · 岩質前哨'},
-  {id:'TAU',name:'金牛塵海',tag:'環狀氣態巨星',landmark:'巨型行星環 · 粉紫塵海'},
-  {id:'SIRIUS',name:'天狼中繼站',tag:'藍白雙星',landmark:'雙星 · 中繼環站'},
-  {id:'PROX',name:'比鄰星港',tag:'紅矮星港',landmark:'熔岩行星 · 外圍星港'}
+  {id:'LUNA',name:'月環基地',tag:'地月基地',landmark:'月面 · 遠方地球 · 環站',discovery:{name:'地月視差層',kind:'地月幾何',note:'月面、遠方地球與環站形成可重現的三層視差基準，將基地周邊空間關係收錄成一份模擬觀測紀錄。'}},
+  {id:'VEGA',name:'織女星門',tag:'A 型主星',landmark:'藍白主星 · 雙層星門',discovery:{name:'雙環共振窗口',kind:'人工星門',note:'雙層星門在特定觀測關係下出現同步共振窗口，確認兩個人工環結構可作同一套通行基準。'}},
+  {id:'CYG',name:'天鵝航標',tag:'藍紫雙星',landmark:'雙星 · 航標陣列',discovery:{name:'雙星航標三角場',kind:'導航訊號',note:'雙星與人工航標三個訊號源形成穩定三角場，可用作本星區的相對定位與進場參考。'}},
+  {id:'ORION',name:'獵戶前哨',tag:'紅超巨星前哨',landmark:'紅巨星 · 岩質前哨',discovery:{name:'三線發射殼層',kind:'發射光譜',note:'Hβ、[O III] 與 Hα 三條窄帶峰同時出現，標記前哨外圍一層可辨認的模擬發射殼層。'}},
+  {id:'TAU',name:'金牛塵海',tag:'環狀氣態巨星',landmark:'巨型行星環 · 粉紫塵海',discovery:{name:'三層環隙共振',kind:'行星環結構',note:'內側稀疏帶、衛星共振隙與外側密度波共同構成三層環系特徵，令天然行星環有可記錄的層次。'}},
+  {id:'SIRIUS',name:'天狼中繼站',tag:'藍白雙星',landmark:'雙星 · 中繼環站',discovery:{name:'雙星相位中繼窗',kind:'中繼相位',note:'雙星背景與人工中繼環之間出現三個可重現的載波／相位穩定窗口，形成本區通訊校準基準。'}},
+  {id:'PROX',name:'比鄰星港',tag:'紅矮星港',landmark:'熔岩行星 · 外圍星港',discovery:{name:'紅矮星港三點進場網',kind:'星港進場',note:'外圍航標、熔岩側熱走廊與星港對接軸線組成三點進場網，將終端星港的接近路徑收錄成完整紀錄。'}}
 ];
 const IDS=new Set(SYSTEMS.map(system=>system.id));
 const DISCOVERY_TOTAL=7;
@@ -74,7 +74,7 @@ function ensureUi(){
   if(!document.querySelector('#starAtlasStyle')){
     const style=document.createElement('style');
     style.id='starAtlasStyle';
-    style.textContent='.starAtlas{margin-top:9px;border:1px solid var(--line);border-radius:15px;padding:10px;background:rgba(255,255,255,.024)}.atlasHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.atlasTitle{font-size:11px;font-weight:790}.atlasSummary{display:block;margin-top:2px;font-size:8px;color:var(--muted)}.atlasToggle,.atlasPlan{border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--text);border-radius:10px;min-height:34px;padding:0 9px;font-size:8px;font-weight:750}.atlasProgress{height:3px;margin-top:8px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.07)}.atlasProgress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7fb7ff,#76ead3);transition:width .25s}.atlasBody{margin-top:8px}.starAtlas.compact .atlasBody{display:none}.atlasComplete{display:none;margin-bottom:7px;padding:7px 8px;border:1px solid rgba(104,235,207,.25);border-radius:9px;background:rgba(73,190,164,.08);font-size:8px;line-height:1.4;color:#ddfff7}.atlasComplete.show{display:block}.atlasGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.atlasCard{min-width:0;padding:8px;border:1px solid rgba(188,215,255,.1);border-radius:11px;background:rgba(255,255,255,.018);opacity:.62}.atlasCard.visited{opacity:1;border-color:rgba(132,213,195,.19);background:rgba(83,174,158,.035)}.atlasCard.current{border-color:rgba(165,207,255,.42);box-shadow:inset 0 0 0 1px rgba(148,196,255,.08)}.atlasCardTop{display:flex;align-items:baseline;justify-content:space-between;gap:5px}.atlasCardTop strong{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.atlasId{font-size:7px;color:#a8c7f3}.atlasTag{margin-top:3px;font-size:7px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.atlasLandmark{margin-top:3px;font-size:7px;color:#d5e7ff;line-height:1.35;min-height:19px}.atlasMeta{margin-top:4px;font-size:7px;color:#9fc6ff;line-height:1.35}.atlasDiscovery{margin-top:5px;padding:4px 5px;border-radius:7px;background:rgba(72,192,165,.09);color:#a9f4e4;font-size:7px}.atlasPlan{width:100%;margin-top:6px}.atlasPlan:disabled{opacity:.46}@media(max-width:360px){.atlasGrid{grid-template-columns:1fr}}';
+    style.textContent='.starAtlas{margin-top:9px;border:1px solid var(--line);border-radius:15px;padding:10px;background:rgba(255,255,255,.024)}.atlasHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.atlasTitle{font-size:11px;font-weight:790}.atlasSummary{display:block;margin-top:2px;font-size:8px;color:var(--muted)}.atlasToggle,.atlasPlan{border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--text);border-radius:10px;min-height:34px;padding:0 9px;font-size:8px;font-weight:750}.atlasProgress{height:3px;margin-top:8px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.07)}.atlasProgress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7fb7ff,#76ead3);transition:width .25s}.atlasBody{margin-top:8px}.starAtlas.compact .atlasBody{display:none}.atlasComplete{display:none;margin-bottom:7px;padding:7px 8px;border:1px solid rgba(104,235,207,.25);border-radius:9px;background:rgba(73,190,164,.08);font-size:8px;line-height:1.4;color:#ddfff7}.atlasComplete.show{display:block}.atlasGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.atlasCard{min-width:0;padding:8px;border:1px solid rgba(188,215,255,.1);border-radius:11px;background:rgba(255,255,255,.018);opacity:.62}.atlasCard.visited{opacity:1;border-color:rgba(132,213,195,.19);background:rgba(83,174,158,.035)}.atlasCard.current{border-color:rgba(165,207,255,.42);box-shadow:inset 0 0 0 1px rgba(148,196,255,.08)}.atlasCardTop{display:flex;align-items:baseline;justify-content:space-between;gap:5px}.atlasCardTop strong{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.atlasId{font-size:7px;color:#a8c7f3}.atlasTag{margin-top:3px;font-size:7px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.atlasLandmark{margin-top:3px;font-size:7px;color:#d5e7ff;line-height:1.35;min-height:19px}.atlasMeta{margin-top:4px;font-size:7px;color:#9fc6ff;line-height:1.35}.atlasDiscovery{margin-top:5px;padding:5px 6px;border-radius:7px;background:rgba(72,192,165,.09);color:#a9f4e4;font-size:7px}.atlasDiscovery strong{display:block;font-size:inherit}.atlasDiscoveryNote{margin-top:2px;color:#c8e1dc;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.atlasPlan{width:100%;margin-top:6px}.atlasPlan:disabled{opacity:.46}@media(max-width:360px){.atlasGrid{grid-template-columns:1fr}}';
     document.head.append(style);
   }
   let card=document.querySelector('#starAtlas');
@@ -145,7 +145,13 @@ function render(force=false){
     else if(visited)meta.textContent=(stat.journeys?`最近日誌 ${stat.journeys} 次`:'已到訪')+(stat.last?` · 最近 ${formatStamp(stat.last)}`:'');
     else meta.textContent='尚未到訪';
     row.append(top,tag,landmark,meta);
-    if(discovery){const badge=document.createElement('div');badge.className='atlasDiscovery';badge.textContent='發現 · '+discovery;row.append(badge)}
+    if(discovery){
+      const badge=document.createElement('div');badge.className='atlasDiscovery';
+      const discoveryTitle=document.createElement('strong');discoveryTitle.textContent='發現 · '+discovery;
+      const note=document.createElement('div');note.className='atlasDiscoveryNote';
+      note.textContent=system.discovery?`${system.discovery.kind} · ${system.discovery.note}`:'';
+      badge.append(discoveryTitle,note);row.append(badge);
+    }
     const plan=document.createElement('button');plan.type='button';plan.className='atlasPlan';plan.dataset.destination=system.id;
     const blocked=!!(model.state?.flying||model.state?.contextLost);
     plan.disabled=current||blocked;
@@ -167,7 +173,7 @@ import('./tau-ring-profiler.js').then(()=>render(true)).catch(()=>{});
 import('./sirius-relay-calibration.js').then(()=>render(true)).catch(()=>{});
 import('./prox-starport-alignment.js').then(()=>render(true)).catch(()=>{});
 window.WarpStarAtlas={
-  snapshot(){const model=buildModel();return{visited:[...model.visited],discoveries:Object.fromEntries(model.discoveries),systems:SYSTEMS.map(system=>({...system,journeys:model.stats[system.id].journeys,last:model.stats[system.id].last}))}},
+  snapshot(){const model=buildModel();return{visited:[...model.visited],discoveries:Object.fromEntries(model.discoveries),systems:SYSTEMS.map(system=>({...system,...(system.discovery?{discovery:{...system.discovery}}:{}),journeys:model.stats[system.id].journeys,last:model.stats[system.id].last}))}},
   render(){render(true)}
 };
 })();
