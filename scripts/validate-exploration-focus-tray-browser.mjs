@@ -66,7 +66,7 @@ async function waitHttp(url){
 }
 
 class CdpClient{
-  constructor(url){this.url=url;this.nextId=0;this.pending=new Map();this.ws=null}
+  constructor(url){this.url=url;this.nextId=0;this.pending=new Map();this.eventWaiters=new Map();this.ws=null}
   async connect(){
     this.ws=new WebSocket(this.url);
     await new Promise((resolve,reject)=>{
@@ -76,7 +76,15 @@ class CdpClient{
       this.ws.addEventListener('open',open);this.ws.addEventListener('error',fail);
     });
     this.ws.addEventListener('message',event=>{
-      const message=JSON.parse(String(event.data));if(!message.id)return;
+      const message=JSON.parse(String(event.data));
+      if(!message.id){
+        const waiters=this.eventWaiters.get(message.method)||[];
+        if(waiters.length){
+          this.eventWaiters.delete(message.method);
+          for(const waiter of waiters){clearTimeout(waiter.timer);waiter.resolve(message.params||{})}
+        }
+        return;
+      }
       const pending=this.pending.get(message.id);if(!pending)return;
       this.pending.delete(message.id);clearTimeout(pending.timer);
       if(message.error)pending.reject(new Error(message.error.message||'CDP error'));else pending.resolve(message.result||{});
@@ -90,7 +98,24 @@ class CdpClient{
       this.pending.set(id,{resolve,reject,timer});this.ws.send(JSON.stringify({id,method,params}));
     });
   }
-  close(){try{this.ws?.close()}catch{}}
+  waitEvent(method,timeoutMs=10000){
+    return new Promise((resolve,reject)=>{
+      const waiter={resolve,reject,timer:null};
+      waiter.timer=setTimeout(()=>{
+        const queue=this.eventWaiters.get(method)||[],next=queue.filter(item=>item!==waiter);
+        if(next.length)this.eventWaiters.set(method,next);else this.eventWaiters.delete(method);
+        reject(new Error(`CDP event timed out: ${method}`));
+      },timeoutMs);
+      const queue=this.eventWaiters.get(method)||[];queue.push(waiter);this.eventWaiters.set(method,queue);
+    });
+  }
+  close(){
+    for(const pending of this.pending.values()){clearTimeout(pending.timer);pending.reject(new Error('CDP socket closed'))}
+    this.pending.clear();
+    for(const waiters of this.eventWaiters.values())for(const waiter of waiters){clearTimeout(waiter.timer);waiter.reject(new Error('CDP socket closed'))}
+    this.eventWaiters.clear();
+    try{this.ws?.close()}catch{}
+  }
 }
 async function evaluate(cdp,expression){
   const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
@@ -136,19 +161,27 @@ async function inspectViewport(chrome,baseUrl,width,height){
     const debugPort=Number(readFileSync(portFile,'utf8').split(/\r?\n/)[0]);
     const target=await waitUntil(async()=>{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`),targets=await response.json();return targets.find(item=>item.type==='page'&&item.webSocketDebuggerUrl)||null},'Chrome page target',8000);
     cdp=new CdpClient(target.webSocketDebuggerUrl);await cdp.connect();
-    await cdp.send('Page.enable');await cdp.send('Runtime.enable');await cdp.send('Network.enable');
-    // Layout proof deliberately blocks only the remote Three.js module. The real production HTML/CSS and
-    // exact production Explore Hub/Focus Tray source still run in Chrome; route/travel/core behavior is covered
-    // by the repository runtime validators. Loading the local source through CDP avoids network-import flakiness
-    // without introducing a product test mode or weakening rendered-geometry assertions.
-    await cdp.send('Network.setBlockedURLs',{urls:['https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js']});
+    await cdp.send('Page.enable');await cdp.send('Runtime.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true,screenWidth:width,screenHeight:height});
     await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
+
+    // Load the exact production document and CSS while scripts are temporarily disabled. This prevents the
+    // simulator render/runtime from competing with CI software Chrome, but does not modify the product page.
+    // We then execute the exact production Explore Hub + Focus Tray sources and assert rendered geometry.
+    await cdp.send('Emulation.setScriptExecutionDisabled',{value:true});
+    const loaded=cdp.waitEvent('Page.loadEventFired',10000);
     await cdp.send('Page.navigate',{url:baseUrl});
+    await loaded;
+    await cdp.send('Emulation.setScriptExecutionDisabled',{value:false});
     await waitExpression(cdp,"document.readyState==='complete'&&!!document.querySelector('#app')&&!!document.querySelector('#exploreCard')",'production page DOM');
-    await evaluate(cdp,`(()=>{window.WarpSim={state:()=>({current:'LUNA',selected:null,route:[],phase:'observe',flying:false,exploring:true,contextLost:false}),select:()=>{},launch:()=>{},abort:()=>{}};const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');document.querySelector('#loading')?.remove();return true})()`);
-    if(!await evaluate(cdp,'!!window.WarpExploreHub'))await evaluate(cdp,hubSource);
-    if(!await evaluate(cdp,'!!window.WarpExplorationFocusTray'))await evaluate(cdp,traySource);
+
+    // Bootstrap the production modules while the page is still inactive, matching normal module startup.
+    await evaluate(cdp,`(()=>{window.WarpSim={state:()=>({current:'LUNA',selected:null,route:[],phase:'observe',flying:false,exploring:true,contextLost:false}),select:()=>{},launch:()=>{},abort:()=>{}};document.querySelector('#loading')?.remove();return true})()`);
+    await evaluate(cdp,hubSource);
+    await evaluate(cdp,traySource);
+
+    // Enter final exploration only after observers/listeners are mounted, matching the real lifecycle.
+    await evaluate(cdp,`(()=>{const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');return true})()`);
     await waitExpression(cdp,"!!window.WarpExploreHub&&!!window.WarpExplorationFocusTray&&document.querySelector('#app')?.classList.contains('exploreHubMobile')&&!!document.querySelector('#exploreRailToggle')",'production Explore Hub browser bootstrap');
 
     await clickSelector(cdp,'#exploreRailToggle');
