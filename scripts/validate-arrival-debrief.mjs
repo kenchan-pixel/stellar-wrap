@@ -30,7 +30,7 @@ ok(journal.includes('distance:activeSession.distance'),'completed journal entry 
 ok(journal.includes("recordedDistance.toFixed(1)+' LY'"),'travel journal surfaces cumulative recorded route distance');
 ok(debrief.includes("addEventListener('stellarwarp:journey-complete',onJourneyComplete)"),'debrief is driven by completion events');
 ok(debrief.includes('state.current===destination&&state.exploring&&!state.flying&&!state.contextLost'),'debrief is gated to safe final exploration');
-ok(debrief.includes("landmark.insertAdjacentElement('beforebegin',card)")&&debrief.includes("desc.insertAdjacentElement('afterend',card)"),'arrival summary is repositioned ahead of destination landmark/task content when shown');
+ok(debrief.includes("if(card.previousElementSibling!==desc)desc.insertAdjacentElement('afterend',card)")&&debrief.includes("new MutationObserver(()=>placeCard())")&&debrief.includes("orderObserver.observe(parent,{childList:true})"),'arrival summary owns a deterministic post-description slot across late destination module loads');
 ok(debrief.includes("document.querySelector('#openPanel')?.click()"),'debrief provides a next-destination handoff');
 ok(debrief.includes("document.querySelector('#space')?.addEventListener('webglcontextlost',hide)"),'debrief hides on WebGL context loss');
 ok(debrief.includes("entry.distance.toFixed(1)+' LY'"),'debrief reports the planner-owned journal distance');
@@ -43,6 +43,7 @@ ok(debrief.includes("scrollIntoView?.({block:'nearest',behavior:'smooth'})"),'ar
 ok(debrief.includes('.arrivalDebriefActions button{min-height:44px'),'arrival handoff uses the 44 px mobile touch baseline');
 ok(responsive.includes('#app .arrivalDebriefRoute,#app .arrivalDebriefObjective')&&responsive.includes('#app .arrivalDebriefActions button{min-height:44px'),'desktop readability covers the new objective text and preserves 44 px actions');
 ok(runtime.includes('runArrivalHandoff')&&runtime.includes('arrival handoff scrolls the real destination interaction into view'),'phone runtime harness executes the production arrival-to-exploration handoff');
+ok(runtime.includes('HANDOFF_SPECS')&&runtime.includes('runHandoffChild')&&runtime.includes("LUNA:{module:'exploration-survey.js'")&&runtime.includes("VEGA:{module:'vega-survey.js'")&&runtime.includes("PROX:{module:'prox-starport-alignment.js'"),'phone runtime harness executes late-load ordering checks across all seven destination modules');
 ok(!/localStorage|sessionStorage/.test(debrief),'debrief adds no persistence store');
 ok(!/fetch\(|XMLHttpRequest|WebSocket/.test(debrief),'debrief adds no network/backend path');
 ok(!/setInterval|requestAnimationFrame/.test(debrief),'debrief adds no polling or render-loop work');
