@@ -6,6 +6,8 @@ import {join} from 'node:path';
 import {createServer as createTcpServer} from 'node:net';
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const hubSource=readFileSync('explore-hub.js','utf8');
+const traySource=readFileSync('exploration-focus-tray.js','utf8');
 
 function commandPath(name){
   if(!name)return'';
@@ -136,15 +138,17 @@ async function inspectViewport(chrome,baseUrl,width,height){
     cdp=new CdpClient(target.webSocketDebuggerUrl);await cdp.connect();
     await cdp.send('Page.enable');await cdp.send('Runtime.enable');await cdp.send('Network.enable');
     // Layout proof deliberately blocks only the remote Three.js module. The real production HTML/CSS and
-    // production Explore Hub/Focus Tray modules still run in Chrome; route/travel/core behavior is covered
-    // by the repository runtime validators. This avoids CI software-WebGL stalls without a product test mode.
+    // exact production Explore Hub/Focus Tray source still run in Chrome; route/travel/core behavior is covered
+    // by the repository runtime validators. Loading the local source through CDP avoids network-import flakiness
+    // without introducing a product test mode or weakening rendered-geometry assertions.
     await cdp.send('Network.setBlockedURLs',{urls:['https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js']});
     await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true,screenWidth:width,screenHeight:height});
     await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
     await cdp.send('Page.navigate',{url:baseUrl});
     await waitExpression(cdp,"document.readyState==='complete'&&!!document.querySelector('#app')&&!!document.querySelector('#exploreCard')",'production page DOM');
-    const boot=JSON.stringify(baseUrl);
-    await evaluate(cdp,`(async()=>{window.WarpSim={state:()=>({current:'LUNA',selected:null,route:[],phase:'observe',flying:false,exploring:true,contextLost:false}),select:()=>{},launch:()=>{},abort:()=>{}};const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');document.querySelector('#loading')?.remove();await import(${boot}+'explore-hub.js?browser-layout=1');await import(${boot}+'exploration-focus-tray.js?browser-layout=1');return true})()`);
+    await evaluate(cdp,`(()=>{window.WarpSim={state:()=>({current:'LUNA',selected:null,route:[],phase:'observe',flying:false,exploring:true,contextLost:false}),select:()=>{},launch:()=>{},abort:()=>{}};const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');document.querySelector('#loading')?.remove();return true})()`);
+    if(!await evaluate(cdp,'!!window.WarpExploreHub'))await evaluate(cdp,hubSource);
+    if(!await evaluate(cdp,'!!window.WarpExplorationFocusTray'))await evaluate(cdp,traySource);
     await waitExpression(cdp,"!!window.WarpExploreHub&&!!window.WarpExplorationFocusTray&&document.querySelector('#app')?.classList.contains('exploreHubMobile')&&!!document.querySelector('#exploreRailToggle')",'production Explore Hub browser bootstrap');
 
     await clickSelector(cdp,'#exploreRailToggle');
