@@ -6,7 +6,18 @@ import { dirname, resolve } from 'node:path';
 
 const filePath=fileURLToPath(import.meta.url);
 const root=resolve(dirname(filePath),'..');
+const mutationObservers=new Set();
 
+function notifyChildList(target){
+  for(const observer of [...mutationObservers]){
+    if(observer.target===target&&observer.options?.childList)observer.callback([{type:'childList',target}],observer);
+  }
+}
+class MiniMutationObserver {
+  constructor(callback){this.callback=callback;this.target=null;this.options=null}
+  observe(target,options={}){this.target=target;this.options=options;mutationObservers.add(this)}
+  disconnect(){mutationObservers.delete(this);this.target=null;this.options=null}
+}
 class MiniText {
   constructor(value=''){this.nodeType=3;this.parentNode=null;this.value=String(value)}
   get textContent(){return this.value}
@@ -40,6 +51,12 @@ class MiniElement extends EventTarget {
     this.classList=new MiniClassList(this);
   }
   get parentElement(){return this.parentNode?.nodeType===1?this.parentNode:null}
+  get previousElementSibling(){
+    const parent=this.parentElement;if(!parent)return null;
+    const index=parent.children.indexOf(this);
+    for(let i=index-1;i>=0;i--)if(parent.children[i]?.nodeType===1)return parent.children[i];
+    return null;
+  }
   get id(){return this.attributes.id||''}
   set id(value){this.attributes.id=String(value)}
   get className(){return this._className}
@@ -63,22 +80,30 @@ class MiniElement extends EventTarget {
   getAttribute(name){return this.attributes[String(name)]??null}
   append(...nodes){
     if(this._text){const prior=new MiniText(this._text);prior.parentNode=this;this.children.push(prior);this._text=''}
+    let changed=false;
     for(let node of nodes){
       if(node===null||node===undefined)continue;
       if(typeof node==='string')node=new MiniText(node);
-      if(node.parentNode&&node.parentNode!==this){const prior=node.parentNode.children?.indexOf(node)??-1;if(prior>=0)node.parentNode.children.splice(prior,1)}
+      if(node.parentNode&&node.parentNode!==this){const prior=node.parentNode.children?.indexOf(node)??-1;if(prior>=0){node.parentNode.children.splice(prior,1);notifyChildList(node.parentNode)}}
       node.parentNode=this;
-      this.children.push(node);
+      this.children.push(node);changed=true;
     }
+    if(changed)notifyChildList(this);
   }
   appendChild(node){this.append(node);return node}
-  replaceChildren(...nodes){this.children=[];this._text='';this.append(...nodes)}
+  replaceChildren(...nodes){
+    if(this.children.length)for(const child of this.children)child.parentNode=null;
+    const changed=this.children.length>0||this._text!==''||nodes.length>0;
+    this.children=[];this._text='';
+    if(nodes.length)this.append(...nodes);else if(changed)notifyChildList(this);
+  }
   insertAdjacentElement(position,element){
     if(!['afterend','beforebegin'].includes(position)||!this.parentNode)return null;
-    if(element.parentNode){const oldIndex=element.parentNode.children.indexOf(element);if(oldIndex>=0)element.parentNode.children.splice(oldIndex,1)}
-    const siblings=this.parentNode.children,index=siblings.indexOf(this);
+    const targetParent=this.parentNode;
+    if(element.parentNode){const oldParent=element.parentNode,oldIndex=oldParent.children.indexOf(element);if(oldIndex>=0){oldParent.children.splice(oldIndex,1);if(oldParent!==targetParent)notifyChildList(oldParent)}}
+    const siblings=targetParent.children,index=siblings.indexOf(this);
     if(index<0)return null;
-    element.parentNode=this.parentNode;siblings.splice(position==='beforebegin'?index:index+1,0,element);return element;
+    element.parentNode=targetParent;siblings.splice(position==='beforebegin'?index:index+1,0,element);notifyChildList(targetParent);return element;
   }
   scrollIntoView(){this.scrolled=true}
   querySelector(selector){return querySelectorAllFrom(this,selector,false)[0]||null}
@@ -154,13 +179,15 @@ class MiniStorage {
   snapshot(){return Object.fromEntries(this.data)}
 }
 function installPage(target,seed){
+  mutationObservers.clear();
   const document=new MiniDocument(390,844);
   const app=document.createElement('main');app.id='app';
   const exploreCard=document.createElement('section');exploreCard.id='exploreCard';
+  const body=document.createElement('div');body.className='exploreBody';
   const desc=document.createElement('div');desc.id='exploreDesc';
   const landmark=document.createElement('section');landmark.id='landmarkGuide';
   const actions=document.createElement('div');actions.className='exploreActions';
-  exploreCard.append(desc,landmark,actions);
+  body.append(desc,landmark,actions);exploreCard.append(body);
   const journal=document.createElement('section');journal.id='travelJournal';
   app.append(exploreCard,journal);document.body.append(app);
   const events=new EventTarget(),intervals=[],storage=new MiniStorage(seed),state={current:target,exploring:true,flying:false,contextLost:false};
@@ -170,6 +197,7 @@ function installPage(target,seed){
   Object.defineProperty(globalThis,'innerHeight',{value:844,writable:true,configurable:true});
   Object.defineProperty(globalThis,'localStorage',{value:storage,configurable:true});
   Object.defineProperty(globalThis,'navigator',{value:{vibrate(){}},configurable:true});
+  Object.defineProperty(globalThis,'MutationObserver',{value:MiniMutationObserver,configurable:true});
   globalThis.addEventListener=(...args)=>events.addEventListener(...args);
   globalThis.removeEventListener=(...args)=>events.removeEventListener(...args);
   globalThis.dispatchEvent=event=>events.dispatchEvent(event);
@@ -190,6 +218,15 @@ function dispatchClick(element){element.dispatchEvent(new Event('click'))}
 const SPECS={
   CYG:{api:'WarpCygBeacon',section:'#cygBeaconScan',range:'#cygRange',action:'#cygLock',progress:'#cygProgress',discoveryEl:'#cygDiscovery',field:'locked',method:'lock',outside:0,boundary:34,targets:[42,166,292],discovery:'雙星航標三角場'},
   ORION:{api:'WarpOrionSpectrum',section:'#orionSpectrograph',range:'#orionRange',action:'#orionCapture',progress:'#orionProgress',discoveryEl:'#orionDiscovery',field:'captured',method:'capture',outside:470,boundary:482,targets:[486,501,656],discovery:'三線發射殼層'}
+};
+const HANDOFF_SPECS={
+  LUNA:{module:'exploration-survey.js',section:'#lunaSurvey'},
+  VEGA:{module:'vega-survey.js',section:'#vegaSurvey'},
+  CYG:{module:'cyg-beacon-scan.js',section:'#cygBeaconScan'},
+  ORION:{module:'orion-spectrograph.js',section:'#orionSpectrograph'},
+  TAU:{module:'tau-ring-profiler.js',section:'#tauRingProfiler'},
+  SIRIUS:{module:'sirius-relay-calibration.js',section:'#siriusRelayCalibration'},
+  PROX:{module:'prox-starport-alignment.js',section:'#proxAlignment'}
 };
 async function loadProduction(spec){
   await import(pathToFileURL(resolve(root,'star-atlas.js')).href);
@@ -260,17 +297,45 @@ async function runPage(target,phase){
   }else throw new Error(`unknown phase ${phase}`);
   console.log(`STORAGE_B64:${Buffer.from(JSON.stringify(page.storage.snapshot()),'utf8').toString('base64')}`);
 }
+async function runHandoffPage(target){
+  const config=HANDOFF_SPECS[target];assert(config,`unknown handoff target ${target}`);
+  const page=installPage(target,{});
+  globalThis.WarpStarAtlas={snapshot(){return{discoveries:{}}}};
+  await import(pathToFileURL(resolve(root,'arrival-debrief.js')).href);
+  await waitFor(()=>globalThis.WarpArrivalDebrief,'WarpArrivalDebrief');
+  assert.equal(globalThis.WarpArrivalDebrief.show(arrivalEntry(target)),true,`${target} debrief opens before late destination module load`);
+  await import(pathToFileURL(resolve(root,config.module)).href);
+  const section=await (async()=>{await waitFor(()=>page.document.querySelector(config.section),`${target} production exploration section`);return page.document.querySelector(config.section)})();
+  page.tick();
+  const desc=page.document.querySelector('#exploreDesc'),debrief=page.document.querySelector('#arrivalDebrief'),landmark=page.document.querySelector('#landmarkGuide'),explore=page.document.querySelector('#arrivalDebriefExplore');
+  assert(desc&&debrief&&landmark&&section&&explore,`${target} handoff DOM exists`);
+  const siblings=debrief.parentElement.children;
+  assert.equal(debrief.previousElementSibling,desc,`${target} debrief retains the immediate post-description slot after late module insertion`);
+  assert(siblings.indexOf(debrief)<siblings.indexOf(landmark),`${target} debrief precedes Landmark Guide`);
+  assert(siblings.indexOf(debrief)<siblings.indexOf(section),`${target} debrief precedes the actual destination task`);
+  assert.equal(explore.textContent,'開始探索',`${target} unfinished discovery exposes exploration action`);
+  dispatchClick(explore);
+  assert.equal(section.scrolled,true,`${target} exploration action scrolls the actual production task into view`);
+  console.log(`HANDOFF_OK:${target}`);
+}
 function runChild(target,phase,storage=''){
   const result=spawnSync(process.execPath,[filePath,'--page',target,phase],{encoding:'utf8',timeout:10000,env:{...process.env,STELLAR_RUNTIME_STORAGE:storage}});
   if(result.status!==0)throw new Error(`${target} ${phase} runtime failed\n${result.stdout}\n${result.stderr}`);
   const marker=result.stdout.match(/STORAGE_B64:([A-Za-z0-9+/=]+)/);assert(marker,`${target} ${phase} emitted storage snapshot`);return marker[1];
 }
+function runHandoffChild(target){
+  const result=spawnSync(process.execPath,[filePath,'--handoff',target],{encoding:'utf8',timeout:10000,env:{...process.env}});
+  if(result.status!==0)throw new Error(`${target} handoff runtime failed\n${result.stdout}\n${result.stderr}`);
+  assert(result.stdout.includes(`HANDOFF_OK:${target}`),`${target} handoff runtime completed`);
+}
 
 if(process.argv[2]==='--page')await runPage(process.argv[3],process.argv[4]);
+else if(process.argv[2]==='--handoff')await runHandoffPage(process.argv[3]);
 else{
   const packageJson=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8'));
   assert(packageJson.scripts?.check?.includes('node scripts/validate-destination-runtime.mjs'),'npm run check includes executable destination runtime validation');
   let passes=2;
   for(const target of Object.keys(SPECS)){const storage=runChild(target,'fresh');passes++;runChild(target,'reload',storage);passes++}
-  console.log(`\nDestination interaction runtime: ${passes}/${passes} checks passed (production DOM/event integration + arrival handoff, 390×844 harness).`);
+  for(const target of Object.keys(HANDOFF_SPECS)){runHandoffChild(target);passes++}
+  console.log(`\nDestination interaction runtime: ${passes}/${passes} checks passed (production DOM/event integration + seven-destination load-order handoff, 390×844 harness).`);
 }

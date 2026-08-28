@@ -15,6 +15,7 @@ const IDS=new Set(Object.keys(SYSTEM_NAMES));
 let uiReady=false;
 let visible=false;
 let currentEntry=null;
+let orderObserver=null;
 
 function normalise(entry){
   if(!entry||!Array.isArray(entry.route))return null;
@@ -38,13 +39,21 @@ function discoveryAt(destination){
 function placeCard(){
   const card=document.querySelector('#arrivalDebrief');
   if(!card)return false;
-  const landmark=document.querySelector('#landmarkGuide');
-  if(landmark){landmark.insertAdjacentElement('beforebegin',card);return true}
   const desc=document.querySelector('#exploreDesc');
-  if(desc){desc.insertAdjacentElement('afterend',card);return true}
+  if(desc){
+    if(card.previousElementSibling!==desc)desc.insertAdjacentElement('afterend',card);
+    return true;
+  }
   const actions=document.querySelector('#exploreCard .exploreActions');
   if(actions){actions.insertAdjacentElement('beforebegin',card);return true}
   return false;
+}
+function ensureOrderObserver(){
+  if(orderObserver||typeof MutationObserver!=='function')return;
+  const parent=document.querySelector('#exploreDesc')?.parentElement;
+  if(!parent)return;
+  orderObserver=new MutationObserver(()=>placeCard());
+  orderObserver.observe(parent,{childList:true});
 }
 function explorationHandoff(destination){
   const config=EXPLORATION[destination];
@@ -52,7 +61,7 @@ function explorationHandoff(destination){
   return{...config,discovery:discoveryAt(destination)};
 }
 function ensureUi(){
-  if(uiReady&&document.querySelector('#arrivalDebrief'))return true;
+  if(uiReady&&document.querySelector('#arrivalDebrief')){placeCard();ensureOrderObserver();return true}
   const actions=document.querySelector('#exploreCard .exploreActions');
   if(!actions)return false;
   if(!document.querySelector('#arrivalDebriefStyle')){
@@ -78,6 +87,8 @@ function ensureUi(){
     });
   }
   uiReady=true;
+  placeCard();
+  ensureOrderObserver();
   return true;
 }
 function render(entry){

@@ -30,10 +30,12 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Fixed
 
+- Fixed Arrival Debrief load-order instability: independently loaded LUNA／VEGA or later destination modules can no longer insert ahead of the voyage summary. Debrief now owns the immediate post-description slot and reclaims it through a direct-child-only `MutationObserver`, keeping the arrival-first mobile reading flow deterministic without polling or render-loop work.
 - Hardened CYG beacon locking and ORION spectral capture so progress mutations now re-check the live safe final-exploration state at action time. Hidden or diagnostic actions are rejected while flying, during WebGL context loss, or outside the intended destination instead of relying only on UI visibility.
 
 ### Validation
 
+- Expanded the executable 390×844 handoff regression to late-load each of the seven real production destination modules after Debrief is already visible, asserting the summary remains immediately after `#exploreDesc`, precedes both Landmark Guide and the actual task element, and scrolls the correct task into view.
 - Extended the executable 390×844 production DOM/event harness to cover the arrival-to-exploration handoff: CYG arrival now proves the Debrief is placed before destination content, unfinished exploration exposes `開始探索`, the action scrolls to the real scanner, same-tab discovery completion switches to `查看發現`, and a fresh-process reload keeps the completed handoff state.
 - Added focused PROX alignment validation covering JavaScript syntax, three unique two-axis approach windows, simultaneous ±3 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, seven-discovery completion UI, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused SIRIUS relay validation covering JavaScript syntax, three unique dual-axis 0–100 windows, simultaneous ±4 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
