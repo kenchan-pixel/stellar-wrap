@@ -27,7 +27,7 @@
 2. 點擊 handle 才展開五個工具；再次點擊可收起，`aria-expanded` 必須同步反映狀態。
 3. 選定 `概覽`／`探索`／`發現` 後，五工具群組收起並離開輔助／焦點導覽，只打開一個內容面板。
 4. 手機 `探索` pane 必須使用底部 Focus Tray，而不是佔據大部分畫面寬度的高身側欄；390×844 以 `42vh` 上限，360×800 以 `44vh` 上限驗證。
-5. Focus Tray 必須尊重 `--safeL / --safeR / --safeB`，並保留至少約 56–58% 垂直畫面作 3D 景觀。
+5. Focus Tray 必須尊重 `--safeL / --safeR / --safeB`，並保留至少約 56–58% 垂直畫面不被托盤覆蓋。
 6. `概覽` 與 `發現` 保持既有 drawer 行為；只有 `探索` pane 使用 Instrument Tray。
 7. LUNA、VEGA、CYG、ORION、TAU、SIRIUS、PROX 的既有探索模組仍由原模組負責狀態、儲存及完成判定。
 8. Photo Mode、Star Map、Arrival Debrief、Discovery Debrief 繼續使用現有 authority。
@@ -52,9 +52,10 @@ Explore Hub 仍只使用固定 DOM 控制。Compact／expanded 狀態由使用�
 ## Validation evidence required
 
 - `npm run check` 包含 Explore Hub 及 Exploration Focus Tray focused validator。
-- Production runtime harness 於 390×844 及 360×800 驗證 compact rail 既有流程，再驗證 `探索` pane 啟用 Focus Tray、`概覽`／`發現` 不啟用，以及收起後 tray inactive。
-- Focus Tray contract 鎖定 safe area、42/44vh 高度上限、Reduced Motion、prepared offline shell 及零 timer／polling／storage／network／Three.js authority。
-- Exact-HEAD GitHub Actions 與 Preview 必須成功；CI 不等同實機 60 fps 或實際可見面積驗收。
+- 零依賴 production-module MiniDOM harness 於 390×844 及 360×800 驗證 compact rail、pane state、Arrival／Photo／Map handoff、transit／desktop cleanup 及 accessibility 狀態；這層只證明互動與 authority，不冒充瀏覽器排版證據。
+- **真實 production-page browser harness** 以 headless Chrome 載入實際 `index.html`，在 390×844 及 360×800 透過真正 `探索` 控制開啟各 pane，使用 `getBoundingClientRect()`／`getComputedStyle()` 驗證 Focus Tray 的 42/44vh 高度上限、safe-area 邊界、56–58% 未遮擋高度，以及 `概覽`／`發現` 仍保持原本 drawer 幾何。
+- Browser harness 只使用 Node 內建功能、現有 `scripts/serve.mjs` 與 Chrome DevTools Protocol；不新增 runtime dependency 或產品權限。
+- Exact-HEAD GitHub Actions 必須成功；Preview 若可用應檢查，但 CI／headless Chrome 仍不等同實機 iPhone、VoiceOver 或 sustained 60 fps 驗收。
 
 ## Manual checks still required
 
@@ -69,4 +70,4 @@ Explore Hub 仍只使用固定 DOM 控制。Compact／expanded 狀態由使用�
 
 ## Completion signal
 
-Focus Tray 實作、兩個手機 runtime viewport、完整 repository validation、prepared offline integration 及 exact-HEAD review 全部通過，persistent Draft PR 保持未合併狀態；實機遮景、單手操作、VoiceOver 及 sustained FPS 仍屬 owner manual gate。
+Focus Tray 實作、兩個手機 production-module state viewport、兩個真實 production-page browser layout viewport、完整 repository validation、prepared offline integration 及 exact-HEAD review 全部通過，persistent Draft PR 保持未合併狀態；實機遮景、單手操作、VoiceOver 及 sustained FPS 仍屬 owner manual gate。

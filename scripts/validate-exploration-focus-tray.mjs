@@ -28,7 +28,14 @@ check(!/setInterval\s*\(|setTimeout\s*\(|requestAnimationFrame\s*\(|localStorage
 has(loader,"import('./exploration-focus-tray.js').catch(()=>{});",'existing navigation bootstrap loads the focus tray');
 has(sw,"'./exploration-focus-tray.js'",'prepared offline shell includes the focus tray');
 check(String(pkg.scripts?.check||'').includes('validate-exploration-focus-tray.mjs'),'repository check includes focused tray validation');
-check(fs.existsSync('scripts/validate-exploration-focus-tray-runtime.mjs'),'focus-tray production runtime harness exists');
+check(fs.existsSync('scripts/validate-exploration-focus-tray-runtime.mjs'),'focus-tray production-module MiniDOM harness exists');
+check(fs.existsSync('scripts/validate-exploration-focus-tray-browser.mjs'),'focus-tray real-browser harness exists');
+const browserHarness=fs.readFileSync('scripts/validate-exploration-focus-tray-browser.mjs','utf8');
+has(browserHarness,"['scripts/serve.mjs']",'real-browser harness serves the actual production page');
+has(browserHarness,'getBoundingClientRect()','real-browser harness measures rendered geometry');
+has(browserHarness,'getComputedStyle','real-browser harness reads computed production CSS');
+has(browserHarness,"'Input.dispatchMouseEvent'",'real-browser harness drives actual pointer input through CDP');
+has(browserHarness,'[[390,844],[360,800]]','real-browser harness covers both phone acceptance viewports');
 
 for(const [width,height] of [[390,844],[360,800]]){
   const runtime=spawnSync(process.execPath,['scripts/validate-exploration-focus-tray-runtime.mjs'],{
@@ -36,8 +43,16 @@ for(const [width,height] of [[390,844],[360,800]]){
   });
   if(runtime.stdout)process.stdout.write(runtime.stdout);
   if(runtime.stderr)process.stderr.write(runtime.stderr);
-  check(runtime.status===0,`production Exploration Focus Tray runtime passes at ${width}x${height}`);
+  check(runtime.status===0,`production-module Exploration Focus Tray state runtime passes at ${width}x${height}`);
 }
 
+const browser=spawnSync(process.execPath,['scripts/validate-exploration-focus-tray-browser.mjs'],{
+  encoding:'utf8',timeout:120000,
+  env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}
+});
+if(browser.stdout)process.stdout.write(browser.stdout);
+if(browser.stderr)process.stderr.write(browser.stderr);
+check(browser.status===0,'real production-page Focus Tray browser layout passes at both phone viewports');
+
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`Exploration Focus Tray: ${pass} / ${pass} checks passed plus two production runtime viewports`);
+console.log(`Exploration Focus Tray: ${pass} / ${pass} checks passed plus two production-module state viewports and two real-browser layout viewports`);
