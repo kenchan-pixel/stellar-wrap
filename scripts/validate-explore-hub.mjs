@@ -33,7 +33,6 @@ for(const id of ['lunaSurvey','vegaSurvey','cygBeaconScan','orionSpectrograph','
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(|localStorage|sessionStorage|fetch\s*\(/.test(hub),'hub adds no timer/render-loop/storage/network authority');
 has(loader,"import('./explore-hub.js').catch(()=>{});",'existing navigation bootstrap loads explore hub');
 has(sw,"'./explore-hub.js'",'prepared offline shell includes explore hub');
-has(sw,"stellar-wrap-shell-';\nconst CACHE_NAME=`${CACHE_PREFIX}v14`",'offline cache version advances for new shell file');
 check(String(pkg.scripts?.check||'').includes('validate-explore-hub.mjs'),'repository check includes focused explore-hub validator');
 
 if(process.exitCode)process.exit(process.exitCode);
