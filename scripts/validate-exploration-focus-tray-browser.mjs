@@ -37,9 +37,27 @@ async function waitUntil(fn,label,timeoutMs=12000){
 }
 async function stopChild(child){
   if(!child||child.exitCode!==null)return;
-  const exited=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');
+  const exited=new Promise(resolve=>child.once('exit',resolve));
+  child.kill('SIGTERM');
   await Promise.race([exited,sleep(800)]);
-  if(child.exitCode===null){child.kill('SIGKILL');await sleep(100)}
+  if(child.exitCode===null){
+    child.kill('SIGKILL');
+    await Promise.race([exited,sleep(1200)]);
+  }
+}
+async function removeTree(path){
+  const retryable=new Set(['EBUSY','ENOTEMPTY','EPERM']);let lastError=null;
+  for(let attempt=0;attempt<8;attempt++){
+    try{
+      rmSync(path,{recursive:true,force:true,maxRetries:2,retryDelay:80});
+      return;
+    }catch(error){
+      lastError=error;
+      if(!retryable.has(error?.code))throw error;
+      await sleep(100*(attempt+1));
+    }
+  }
+  throw lastError;
 }
 async function waitHttp(url){
   return waitUntil(async()=>{const response=await fetch(url,{cache:'no-store'});return response.ok},`local server ${url}`,8000);
@@ -147,7 +165,11 @@ async function inspectViewport(chrome,baseUrl,width,height){
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='discovery'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Discovery drawer open');
     assertDrawer(await snapshot(cdp),'discovery',tray,metrics);
     console.log(`Exploration Focus Tray real browser ${width}x${height}: passed`);
-  }finally{cdp?.close();await stopChild(browser);rmSync(profile,{recursive:true,force:true})}
+  }finally{
+    cdp?.close();
+    await stopChild(browser);
+    await removeTree(profile);
+  }
 }
 
 const chrome=findChrome();
