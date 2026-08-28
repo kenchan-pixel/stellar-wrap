@@ -5,7 +5,8 @@
 - **V5 候選垂直切片**
 - 目的：完成目的地探索後，立即把「發現已收錄」變成清楚的旅程節點，而不是只在任務卡內改一行文字。
 - 已加入 **Discovery Field Notes + Photo Handoff**：發現附上簡短分類與觀測註記，並可直接進入既有攝影模式留影。
-- 本輪加入 **Expedition Continuation｜探索遠征續行**：完成一站後，直接指出並預選下一個尚未完成探索的外站，減少「完成 → 開圖 → 再找未探索站」的操作斷點。
+- 已加入 **Expedition Continuation｜探索遠征續行**：完成一站後，直接指出並預選下一個尚未完成探索的外站，減少「完成 → 開圖 → 再找未探索站」的操作斷點。
+- 本輪修正 completion event 早於 Star Atlas snapshot 時的進度一致性，避免第七個 discovery 顯示 `6 / 7` 但同時已進入 `探索檔案完成` 的矛盾狀態。
 - 不改 V4.1.0 航線、相機、renderer、航行時間或 3D 場景。
 
 ## Goal／使用效果
@@ -18,7 +19,7 @@
 2. **查看星區圖鑑**：開啟現有控制面板並展開 Star Atlas。
 3. **下一個未探索 · {星區}**：按現有七外站 catalog 的循環順序找出下一個尚未收錄 discovery 的站，呼叫既有 `WarpSim.select(destination)` 建立正式航線，再打開原有星圖供使用者檢查及自行按「啟動航行」。
 
-當七個外站 discovery 全部完成，第三個 action 會變成不可按的 **「探索檔案完成」**，不會再製造虛假下一站。
+當七個外站 discovery 全部完成，第三個 action 會變成不可按的 **「探索檔案完成」**，進度同時必須顯示 **`7 / 7`**，不會再製造虛假下一站或出現終局／計數矛盾。
 
 完整流程變成：
 
@@ -29,6 +30,7 @@
 - 發現是否完成仍由現有各目的地模組及 `WarpStarAtlas.snapshot().discoveries` 擁有。
 - 七個外站的 **field-note metadata** 是 Star Atlas 的靜態展示資料（name／kind／note），不是新進度來源。
 - Discovery Debrief 只由 `WarpStarAtlas.snapshot().systems` 讀取 field note；不建立第二套 discovery store。
+- 即時 completion event 可以比 Star Atlas snapshot 早一個更新節拍；Debrief 會把已接受的當前 completion 視為較新證據，使用 bounded、單調不倒退的顯示計數，並在 `stellarwarp:atlas-change` 後重新與 Star Atlas 對齊。
 - 「下一個未探索」每次由 live Star Atlas discovery snapshot 即時計算，不保存 itinerary、mission progress 或推薦結果。
 - 探索續行順序只沿用現有七個外站 catalog 的固定展示次序；**不複製座標、6.0 LY edge table、Dijkstra 或 route graph**。
 - 真正航線仍只由 core `WarpSim.select(destination)`／現有 route planner 計算；本功能不會直接 `launch()`，使用者仍需在星圖確認後啟航。
@@ -42,6 +44,7 @@
 - 七個外站各有一份固定、目的地專屬 field-note profile；SOL 維持母港語意，不造一個假 discovery 湊數。
 - 新 discovery 在安全最終探索狀態完成時顯示 completion handoff。
 - 顯示正確目的地、發現名稱、分類／觀測註記及 `x / 7` 進度。
+- 若 completion event 比 Star Atlas snapshot 更早到達，顯示進度不得倒退到舊 snapshot；第七個 discovery 必須立即顯示 `7 / 7`，並在 Atlas catch-up 後保持 `7 / 7`。
 - 「留影記錄」只在既有 Photo Mode API 可用時啟用；成功進入後才收起 completion handoff。
 - 「查看星區圖鑑」開啟現有控制面板、展開 Star Atlas 並帶到圖鑑。
 - 尚有未探索外站時，第三個 action 必須直接顯示下一個目標名稱，例如 `下一個未探索 · 金牛塵海`。
@@ -67,8 +70,8 @@
 ## Validation
 
 - `node --check discovery-debrief.js` 及完整 `npm run check`。
-- focused validator 檢查：七個 field-note profiles、Star Atlas/debrief metadata handoff、安全 gate、44 px／全闊 Photo action、既有 Photo Mode、既有 `WarpSim.select()` handoff、terminal 7/7 狀態、零 route/coordinate duplication、零新 persistence/network/render-loop。
-- no-dependency runtime 驗證：persisted baseline 不重播、legacy discovery fallback、field-note 顯示、即時 discovery event、Photo Mode 只進入一次、圖鑑 action、`ORION → TAU` 下一未探索站預選、7/7 terminal disabled，以及航行中拒絕顯示。
+- focused validator 檢查：七個 field-note profiles、Star Atlas/debrief metadata handoff、安全 gate、44 px／全闊 Photo action、既有 Photo Mode、既有 `WarpSim.select()` handoff、terminal 7/7 狀態、事件領先 snapshot 時的 non-regressing progress、Atlas catch-up refresh、零 route/coordinate duplication、零新 persistence/network/render-loop。
+- no-dependency runtime 驗證：persisted baseline 不重播、legacy discovery fallback、field-note 顯示、即時 discovery event、Photo Mode 只進入一次、圖鑑 action、`ORION → TAU` 下一未探索站預選、event-before-snapshot 的 `7 / 7` 終局一致性、Atlas catch-up 後仍維持 `7 / 7`，以及航行中拒絕顯示。
 - V4.0 hash、既有 SOL→ORION／SOL→TAU route baseline、完整 flight phases 與 arrival profile 必須保持。
 
 ## Manual verification
@@ -78,6 +81,6 @@
 3. 按「留影記錄」，確認 completion handoff 消失、現有 Photo Mode 正常隱藏 HUD，畫面仍停留於剛完成探索的目的地。
 4. Photo Mode 返回後，原本探索卡可正常繼續操作；不應自動重新彈出 discovery completion。
 5. 完成 LUNA 或 VEGA，確認最遲約 1 秒內出現摘要及正確 field note／下一未探索站。
-6. 完成第 7 個外站 discovery 後，確認顯示 `探索檔案完成`，只保留圖鑑／留影選項，不會選出已完成目的地。
+6. 完成第 7 個外站 discovery 後，確認同一畫面立即顯示 `7 / 7`＋`探索檔案完成`；Star Atlas 稍後刷新後兩者仍一致，只保留圖鑑／留影選項，不會選出已完成目的地。
 7. prepared offline reload 後完成 discovery，確認 field note、Photo handoff 與下一站預選仍存在。
 8. 實機確認新增文字及按鈕沒有可感知 FPS／DPR 影響；本輪沒有新增 timer 或 renderer-loop 工作。
