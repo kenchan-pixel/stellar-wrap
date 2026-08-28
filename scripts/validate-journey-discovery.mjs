@@ -27,7 +27,10 @@ ok(atlas.includes('const changed=signature!==lastSignature')&&atlas.includes("if
 ok(atlas.includes("import('./vega-survey.js').then(()=>render(true)).catch(()=>{})")&&atlas.includes("import('./prox-starport-alignment.js').then(()=>render(true)).catch(()=>{})"),'late destination module loads re-evaluate the Star Atlas model');
 ok(journal.includes("localStorage.setItem(KEY,JSON.stringify({version:2,entries:journal.entries.slice(0,LIMIT),visited:normaliseVisited(journal.visited,journal.entries)}))"),'journal persistence schema remains route/visited-only without copied discovery state');
 
-ok(journal.includes('function restoreDockedLocation()')&&journal.includes('const latest=journal.entries[0]'),'reload continuity derives the resume point from the newest validated completed journey');
+ok(journal.includes('function normaliseRestoreEntry(entry)')&&journal.includes('entry.route.some(id=>!IDS.has(id))'),'authoritative reload restore rejects any route containing an unknown system ID');
+ok(journal.includes('endedAt<=startedAt||seconds<=0'),'authoritative reload restore rejects impossible completion chronology');
+ok(journal.includes('const restoreEntry=rawEntries.length?normaliseRestoreEntry(rawEntries[0]):null')&&journal.includes('const latest=restoreEntry'),'reload authority is derived from the untouched newest persisted entry before tolerant journal sanitization');
+ok(journal.includes('function restoreDockedLocation()')&&journal.includes('const latest=restoreEntry'),'reload continuity derives the resume point only from the strict newest completed-journey candidate');
 ok(journal.includes("typeof api.state!=='function'||typeof api.jumpTo!=='function'")&&journal.includes('api.jumpTo(destination)'),'location restore delegates to the existing WarpSim state transition instead of duplicating scene/camera authority');
 ok(journal.includes("state.current!=='SOL'||busy")&&journal.includes('state.selected')&&journal.includes('state.route.length'),'restore refuses to overwrite active, selected, travelling or already-restored runtime state');
 ok(journal.includes("document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending)restoreDockedLocation()}")&&journal.includes('if(locationRestorePending&&restoreDockedLocation())'),'restore attempts after core startup and reuses the existing bounded journal sampler as fallback');
@@ -56,6 +59,7 @@ assert.deepEqual(jumps,${JSON.stringify(expected.jumps)});
 assert.equal(state.current,${JSON.stringify(expected.current)});
 assert.equal(!!state.exploring,${JSON.stringify(expected.exploring)});
 if(${JSON.stringify(!!expected.visited)})assert.deepEqual(new Set(globalThis.WarpTravelJournal.visited()),new Set(${JSON.stringify(expected.visited||[])}));
+if(${JSON.stringify(!!expected.entryRoute)})assert.deepEqual(globalThis.WarpTravelJournal.entries()[0]?.route,${JSON.stringify(expected.entryRoute||[])});
 `;
   const result=spawnSync(process.execPath,['--input-type=module','--eval',code],{encoding:'utf8',timeout:10000});
   ok(result.status===0,`${name} runtime continuity${result.stderr?`: ${result.stderr.trim()}`:''}`);
@@ -65,7 +69,9 @@ const idle={current:'SOL',selected:null,route:[],phase:'idle',flying:false,explo
 runRuntimeCase('completed journey restores TAU',{version:2,entries:[validEntry],visited:['SOL','SIRIUS','TAU']},idle,{jumps:['TAU'],current:'TAU',exploring:true,visited:['SOL','SIRIUS','TAU']});
 runRuntimeCase('fresh session stays at SOL',{version:2,entries:[],visited:['SOL']},idle,{jumps:[],current:'SOL',exploring:false});
 runRuntimeCase('selected route blocks late restore',{version:2,entries:[validEntry],visited:['SOL','SIRIUS','TAU']},{...idle,selected:'LUNA',route:['SOL','LUNA']},{jumps:[],current:'SOL',exploring:false});
-runRuntimeCase('malformed history cannot restore',{version:2,entries:[{route:['SOL','NOPE'],startedAt:100,endedAt:200,seconds:8}],visited:['SOL','NOPE']},idle,{jumps:[],current:'SOL',exploring:false});
+runRuntimeCase('malformed terminal history cannot restore',{version:2,entries:[{route:['SOL','NOPE'],startedAt:100,endedAt:200,seconds:8}],visited:['SOL','NOPE']},idle,{jumps:[],current:'SOL',exploring:false});
+runRuntimeCase('embedded unknown newest route fails closed',{version:2,entries:[{route:['SOL','NOPE','TAU'],startedAt:100,endedAt:200,seconds:8,distance:9.2},{route:['SOL','LUNA'],startedAt:10,endedAt:20,seconds:5,distance:3.1}],visited:['SOL','TAU','LUNA']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','TAU']});
+runRuntimeCase('invalid completion chronology fails closed',{version:2,entries:[{route:['SOL','LUNA'],startedAt:300,endedAt:200,seconds:8,distance:3.1}],visited:['SOL','LUNA']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','LUNA']});
 
 const journalTimers=(journal.match(/setInterval\(/g)||[]).length;
 const atlasTimers=(atlas.match(/setInterval\(/g)||[]).length;

@@ -18,6 +18,16 @@ function normaliseEntry(entry){
   if(rawDistance!==undefined&&rawDistance!==null){distance=Number(rawDistance);if(!Number.isFinite(distance)||distance<=0||distance>10000)return null;distance=Math.round(distance*10)/10}
   return{route,startedAt,endedAt,seconds:Math.max(1,Math.min(86400,Math.round(seconds))),...(distance===null?{}:{distance})};
 }
+function normaliseRestoreEntry(entry){
+  if(!entry||!Array.isArray(entry.route)||entry.route.length<2)return null;
+  if(entry.route.some(id=>!IDS.has(id)))return null;
+  const startedAt=Number(entry.startedAt),endedAt=Number(entry.endedAt),seconds=Number(entry.seconds);
+  if(!Number.isFinite(startedAt)||!Number.isFinite(endedAt)||!Number.isFinite(seconds))return null;
+  if(startedAt<0||endedAt<=startedAt||seconds<=0)return null;
+  const normalised=normaliseEntry(entry);
+  if(!normalised||normalised.route.length!==entry.route.length)return null;
+  return normalised;
+}
 function normaliseVisited(raw,entries=[]){
   const visited=new Set(['SOL']);
   if(Array.isArray(raw))for(const id of raw)if(IDS.has(id))visited.add(id);
@@ -27,12 +37,16 @@ function normaliseVisited(raw,entries=[]){
 function load(){
   try{
     const parsed=JSON.parse(localStorage.getItem(KEY)||'{}');
-    const entries=Array.isArray(parsed.entries)?parsed.entries.map(normaliseEntry).filter(Boolean).slice(0,LIMIT):[];
-    return{entries,visited:normaliseVisited(parsed.visited,entries)};
-  }catch{return{entries:[],visited:['SOL']}}
+    const rawEntries=Array.isArray(parsed.entries)?parsed.entries:[];
+    const entries=rawEntries.map(normaliseEntry).filter(Boolean).slice(0,LIMIT);
+    const restoreEntry=rawEntries.length?normaliseRestoreEntry(rawEntries[0]):null;
+    return{entries,visited:normaliseVisited(parsed.visited,entries),restoreEntry};
+  }catch{return{entries:[],visited:['SOL'],restoreEntry:null}}
 }
-let journal=load();
-locationRestorePending=journal.entries.length>0;
+const loaded=load();
+let journal={entries:loaded.entries,visited:loaded.visited};
+let restoreEntry=loaded.restoreEntry;
+locationRestorePending=!!restoreEntry;
 function save(){try{localStorage.setItem(KEY,JSON.stringify({version:2,entries:journal.entries.slice(0,LIMIT),visited:normaliseVisited(journal.visited,journal.entries)}))}catch{}}
 function formatStamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
 function name(id){return NAMES[id]||id}
@@ -132,17 +146,18 @@ function recordCompleted(activeSession,state){
 }
 function restoreDockedLocation(){
   if(!locationRestorePending)return false;
-  const latest=journal.entries[0];
+  const latest=restoreEntry;
   const destination=latest?.route?.[latest.route.length-1];
-  if(!IDS.has(destination)){locationRestorePending=false;return false}
+  if(!IDS.has(destination)){locationRestorePending=false;restoreEntry=null;return false}
   const api=window.WarpSim;
   if(!api||typeof api.state!=='function'||typeof api.jumpTo!=='function')return false;
   let state;try{state=api.state()}catch{return false}
   if(!state)return false;
   const busy=!!(state.flying||state.exploring||state.contextLost||state.selected||(Array.isArray(state.route)&&state.route.length));
-  if(state.current!=='SOL'||busy){locationRestorePending=false;return false}
-  try{api.jumpTo(destination)}catch{locationRestorePending=false;return false}
+  if(state.current!=='SOL'||busy){locationRestorePending=false;restoreEntry=null;return false}
+  try{api.jumpTo(destination)}catch{locationRestorePending=false;restoreEntry=null;return false}
   locationRestorePending=false;
+  restoreEntry=null;
   currentId=destination;
   render();
   dispatchEvent(new CustomEvent('stellarwarp:location-restored',{detail:{current:destination,visited:normaliseVisited(journal.visited,journal.entries)}}));
