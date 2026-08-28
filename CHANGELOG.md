@@ -29,6 +29,8 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Travel Journal now forms a **journey → discovery continuity** layer: each retained completed journey shows the destination's current exploration outcome as `發現 · 名稱`, `探索未完成`, or SOL home-system semantics, while the journal summary exposes the same `x / 7 發現` progress used by Star Atlas.
+- Journey discovery status reads only `WarpStarAtlas.snapshot().discoveries`; it does not copy discovery data into journal storage, so completing a discovery later updates older journey entries immediately through the existing discovery event and after reload/storage refresh, without adding a new timer, backend or network path.
 - Arrival Debrief now forms a direct **arrival → exploration handoff**: on a true final arrival it is repositioned ahead of Landmark Guide and destination task content, shows whether the current destination still has an unfinished exploration objective, and changes its primary action between `開始探索`, `查看發現` and SOL `自由探索`.
 - The handoff reads the existing Star Atlas discovery snapshot instead of creating another persistence authority, scrolls only to the real destination exploration module, keeps the normal `下一目的地` map action, and raises both Debrief actions to the 44 px mobile touch baseline without changing route, camera, renderer or flight timing.
 
@@ -39,6 +41,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Extended exploration-continuity validation for journey discovery outcomes: Star Atlas remains the sole discovery aggregation authority, Journal distinguishes completed/pending/home outcomes, same-tab discovery events refresh immediately, Star Atlas bootstrap triggers a post-load refresh, and the journal summary uses the seven-external-destination collection count without adding persistence or a new polling loop.
 - Added focused Exploration-Aware Navigation validation: JavaScript syntax, existing Star Atlas authority, direct-child-only map redraw observation, microtask coalescing, same-tab discovery refresh, offline-shell/bootstrap integration and zero persistence/network/render-loop work, plus executable DOM coverage for `2 / 7 → 3 / 7`, selected complete/pending/SOL states and marker restoration after a real core-style SVG rebuild.
 - Added focused Discovery Completion Handoff validation: JavaScript syntax, immediate event + bounded 1 Hz legacy fallback, Star Atlas authority, safe-final-exploration gating, 44 px mobile actions, existing navigation/atlas handoff, offline-shell inclusion, zero persistence/network/render-loop work, plus executable runtime coverage for silent reload priming, legacy completion detection, collection progress and unsafe-flight rejection.
 - Expanded the executable 390×844 handoff regression to late-load each of the seven real production destination modules after Debrief is already visible, asserting the summary remains immediately after `#exploreDesc`, precedes both Landmark Guide and the actual task element, and scrolls the correct task into view.
