@@ -37,9 +37,9 @@ Field note **不代表新的科學數據模型**，亦不影響 discovery 是否
 ## Reload World Continuity
 
 - 最近位置只由旅行日誌**原始最新一筆** completed journey 推導；不建立第二個 `current location` storage key。位置 restore 會在寬鬆的日誌展示／migration parser 之前獨立做嚴格檢查：原 route 每一個 ID 都必須屬於現有八站、route 至少兩站、開始／完成時間必須有效且完成時間較後、活躍航行秒數必須大於 0。任一條件不成立即 fail closed，亦不會跳過損壞最新紀錄改用較舊紀錄猜測位置。
-- client core ready 後，Travel Journal 只在仍是乾淨 SOL idle state 時呼叫既有 `WarpSim.jumpTo(destination)`，讓原有 scene／camera／exploration transition 成為唯一位置切換 authority。
+- client core ready 後，Travel Journal 先透過 `WarpSim.isRouteValid(route)` 讀取 core 同一份 6.0 LY `G` route graph，逐段確認 persisted route 拓撲仍屬合法航線；Travel Journal 不複製座標或 edge table。只有 route 合法且仍是乾淨 SOL idle state，才呼叫既有 `WarpSim.jumpTo(destination)`，讓原有 scene／camera／exploration transition 成為唯一位置切換 authority。
 - 若使用者已選航線、已在探索、正在飛行、WebGL context lost，或 runtime 已由其他機制切到非 SOL，restore 會放棄，不會遲到覆蓋使用者操作。
-- fresh session、沒有有效 completed journey、含未知中途 route ID、時間次序不可能或其他損壞紀錄一律維持 SOL。
+- fresh session、沒有有效 completed journey、含未知中途 route ID、已知 ID 但存在超過 6.0 LY／core graph 不相連的 route leg、時間次序不可能或其他損壞紀錄一律維持 SOL。
 - 星圖的歷史 `visited` 只讀 `WarpTravelJournal.visited()`，並只**補上**持久到訪 class，不刪除 core 本 session 已建立的 live visited state。
 - reload 不恢復半途航程；中止或未完成的 flight 沒有 journal completion，所以只會回到上一次真正停泊點。
 
@@ -48,7 +48,7 @@ Field note **不代表新的科學數據模型**，亦不影響 discovery 是否
 Star Atlas **不建立第二套航行或持久資料來源**：
 
 - 累積到訪資料：由旅行日誌同一個 `stellar-warp-travel-journal-v1` 記錄保存 `visited` IDs。
-- 最近停泊位置：由同一記錄中原始最新一筆通過嚴格完整性／完成時間檢查的 completed journey route destination 推導；寬鬆日誌顯示 parser 不具有位置 authority。
+- 最近停泊位置：由同一記錄中原始最新一筆通過嚴格完整性／完成時間檢查，並再由 core `WarpSim.isRouteValid()` 對 authoritative 6.0 LY graph 驗證拓撲的 completed journey route destination 推導；寬鬆日誌顯示 parser 不具有位置 authority。
 - 目前位置／航行狀態：只讀 `WarpSim.state()`；實際 reload restore 只使用既有 `WarpSim.jumpTo()`。
 - 各站 discovery completion：只讀各自 exploration module 的 `progress()`；Star Atlas 自己不保存 discovery。
 - LUNA：`WarpLunaSurvey`；VEGA：`WarpVegaSurvey`；CYG：`WarpCygBeacon`；ORION：`WarpOrionSpectrum`；TAU：`WarpTauRings`；SIRIUS：`WarpSiriusRelay`；PROX：`WarpProxAlignment`。
@@ -82,7 +82,7 @@ Star Atlas **不建立第二套航行或持久資料來源**：
 - Journal storage schema 不增加 discovery 或另一個 current-location 欄位／key。
 - 完成 TAU 等外站航程後 reload，runtime 由該站探索模式繼續，之後 `WarpSim.select()` 由恢復後的目前站規劃。
 - reload 後星圖重新顯示所有 journal visited 星區；core 本 session 的 live visited 狀態不可被 overlay 刪除。
-- fresh session、損壞 history、含未知中途 ID 的 route、完成時間早於開始時間、已選航線或飛行中狀態不可被 reload restore 誤覆蓋；損壞最新紀錄不可自動 fallback 到較舊紀錄猜測目前位置。
+- fresh session、損壞 history、含未知中途 ID 的 route、只含已知 ID 但存在不可能 direct leg（例如 `SOL → ORION`）、完成時間早於開始時間、已選航線或飛行中狀態不可被 reload restore 誤覆蓋；損壞最新紀錄不可自動 fallback 到較舊紀錄猜測目前位置。
 - 航行中、WebGL context lost、或目標等於目前位置時不可重新規劃。
 - 「規劃前往」只使用原有 planner，沒有第二套 route graph／座標表。
 - Offline shell 繼續使用已快取的 Travel Journal／Navigation runtime；沒有新增 runtime dependency。

@@ -6,8 +6,10 @@ import { spawnSync } from 'node:child_process';
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const journalPath=resolve(root,'travel-journal.js');
 const atlasPath=resolve(root,'star-atlas.js');
+const indexPath=resolve(root,'index.html');
 const journal=readFileSync(journalPath,'utf8');
 const atlas=readFileSync(atlasPath,'utf8');
+const index=readFileSync(indexPath,'utf8');
 const failures=[];
 const passes=[];
 const ok=(condition,message)=>(condition?passes:failures).push(message);
@@ -31,7 +33,8 @@ ok(journal.includes('function normaliseRestoreEntry(entry)')&&journal.includes('
 ok(journal.includes('endedAt<=startedAt||seconds<=0'),'authoritative reload restore rejects impossible completion chronology');
 ok(journal.includes('const restoreEntry=rawEntries.length?normaliseRestoreEntry(rawEntries[0]):null')&&journal.includes('const latest=restoreEntry'),'reload authority is derived from the untouched newest persisted entry before tolerant journal sanitization');
 ok(journal.includes('function restoreDockedLocation()')&&journal.includes('const latest=restoreEntry'),'reload continuity derives the resume point only from the strict newest completed-journey candidate');
-ok(journal.includes("typeof api.state!=='function'||typeof api.jumpTo!=='function'")&&journal.includes('api.jumpTo(destination)'),'location restore delegates to the existing WarpSim state transition instead of duplicating scene/camera authority');
+ok(index.includes('isRouteValid(r){')&&index.includes("G[r[i]]?.some(([id])=>id===r[i+1])"),'core exposes a read-only route validator backed by the authoritative 6.0 LY graph');
+ok(journal.includes("typeof api.state!=='function'||typeof api.jumpTo!=='function'||typeof api.isRouteValid!=='function'")&&journal.includes('api.isRouteValid(latest.route)')&&journal.includes('api.jumpTo(destination)'),'location restore validates topology through core authority before delegating to the existing WarpSim transition');
 ok(journal.includes("state.current!=='SOL'||busy")&&journal.includes('state.selected')&&journal.includes('state.route.length'),'restore refuses to overwrite active, selected, travelling or already-restored runtime state');
 ok(journal.includes("document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending)restoreDockedLocation()}")&&journal.includes('if(locationRestorePending&&restoreDockedLocation())'),'restore attempts after core startup and reuses the existing bounded journal sampler as fallback');
 ok(journal.includes("dispatchEvent(new CustomEvent('stellarwarp:location-restored'"),'successful restore emits one focused UI refresh event');
@@ -53,7 +56,8 @@ globalThis.dispatchEvent=event=>events.dispatchEvent(event);
 globalThis.CustomEvent=class CustomEvent extends Event{constructor(type,init={}){super(type);this.detail=init.detail}};
 let state=${JSON.stringify(initial)};
 const jumps=[];
-globalThis.WarpSim={state(){return{...state,route:Array.isArray(state.route)?[...state.route]:[]}},jumpTo(id){jumps.push(id);state={...state,current:id,selected:null,route:[],flying:false,exploring:true,contextLost:false}}};
+const validEdges=new Set(['SOL>SIRIUS','SIRIUS>SOL','SIRIUS>TAU','TAU>SIRIUS','SOL>LUNA','LUNA>SOL']);
+globalThis.WarpSim={state(){return{...state,route:Array.isArray(state.route)?[...state.route]:[]}},isRouteValid(route){return Array.isArray(route)&&route.length>1&&route.slice(1).every((id,i)=>validEdges.has(route[i]+'>'+id))},jumpTo(id){jumps.push(id);state={...state,current:id,selected:null,route:[],flying:false,exploring:true,contextLost:false}}};
 await import(${JSON.stringify(pathToFileURL(journalPath).href)}+'?runtime='+${JSON.stringify(name)}+'-'+Date.now());
 assert.deepEqual(jumps,${JSON.stringify(expected.jumps)});
 assert.equal(state.current,${JSON.stringify(expected.current)});
@@ -72,6 +76,7 @@ runRuntimeCase('selected route blocks late restore',{version:2,entries:[validEnt
 runRuntimeCase('malformed terminal history cannot restore',{version:2,entries:[{route:['SOL','NOPE'],startedAt:100,endedAt:200,seconds:8}],visited:['SOL','NOPE']},idle,{jumps:[],current:'SOL',exploring:false});
 runRuntimeCase('embedded unknown newest route fails closed',{version:2,entries:[{route:['SOL','NOPE','TAU'],startedAt:100,endedAt:200,seconds:8,distance:9.2},{route:['SOL','LUNA'],startedAt:10,endedAt:20,seconds:5,distance:3.1}],visited:['SOL','TAU','LUNA']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','TAU']});
 runRuntimeCase('invalid completion chronology fails closed',{version:2,entries:[{route:['SOL','LUNA'],startedAt:300,endedAt:200,seconds:8,distance:3.1}],visited:['SOL','LUNA']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','LUNA']});
+runRuntimeCase('known IDs with impossible direct leg fail closed',{version:2,entries:[{route:['SOL','ORION'],startedAt:100,endedAt:200,seconds:8,distance:12.7}],visited:['SOL','ORION']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','ORION']});
 
 const journalTimers=(journal.match(/setInterval\(/g)||[]).length;
 const atlasTimers=(atlas.match(/setInterval\(/g)||[]).length;

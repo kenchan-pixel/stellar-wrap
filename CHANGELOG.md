@@ -42,11 +42,13 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Fixed
 
+- Hardened Reload World Continuity against topology-corrupted local history: a newest completed journey made only of known system IDs can no longer restore through an impossible leg such as direct `SOL → ORION`. Restore now asks the core `WarpSim.isRouteValid()` authority backed by the existing 6.0 LY graph before any `jumpTo()`, without copying coordinates or edge tables into Travel Journal.
 - Fixed Arrival Debrief load-order instability: independently loaded LUNA／VEGA or later destination modules can no longer insert ahead of the voyage summary. Debrief now owns the immediate post-description slot and reclaims it through a direct-child-only `MutationObserver`, keeping the arrival-first mobile reading flow deterministic without polling or render-loop work.
 - Hardened CYG beacon locking and ORION spectral capture so progress mutations now re-check the live safe final-exploration state at action time. Hidden or diagnostic actions are rejected while flying, during WebGL context loss, or outside the intended destination instead of relying only on UI visibility.
 
 ### Validation
 
+- Extended reload-integrity validation with a known-ID but topology-impossible `SOL → ORION` regression, while retaining the valid `SOL → SIRIUS → TAU` restore path and proving Travel Journal delegates route topology to the core 6.0 LY graph.
 - Extended journey-continuity validation with executable fresh-process cases for completed-destination restore, fresh SOL startup, selected-route protection and malformed-history rejection; restore adds no new timer, storage key, network or duplicated scene/camera transition.
 - Extended navigation runtime validation to prove persisted visited systems are reapplied on initial mount and after a real core-style SVG redraw while discovery markers and route-card exploration status remain correct.
 - Extended Discovery Completion validation for exactly seven field-note profiles, Star Atlas/debrief metadata handoff, safe Photo Mode reuse, full-width mobile action layout, runtime note rendering and zero new storage/network/render-loop work.

@@ -150,11 +150,12 @@ function restoreDockedLocation(){
   const destination=latest?.route?.[latest.route.length-1];
   if(!IDS.has(destination)){locationRestorePending=false;restoreEntry=null;return false}
   const api=window.WarpSim;
-  if(!api||typeof api.state!=='function'||typeof api.jumpTo!=='function')return false;
+  if(!api||typeof api.state!=='function'||typeof api.jumpTo!=='function'||typeof api.isRouteValid!=='function')return false;
   let state;try{state=api.state()}catch{return false}
   if(!state)return false;
   const busy=!!(state.flying||state.exploring||state.contextLost||state.selected||(Array.isArray(state.route)&&state.route.length));
   if(state.current!=='SOL'||busy){locationRestorePending=false;restoreEntry=null;return false}
+  if(!api.isRouteValid(latest.route)){locationRestorePending=false;restoreEntry=null;return false}
   try{api.jumpTo(destination)}catch{locationRestorePending=false;restoreEntry=null;return false}
   locationRestorePending=false;
   restoreEntry=null;
