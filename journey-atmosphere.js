@@ -12,10 +12,29 @@ const PROFILES=Object.freeze({
   SIRIUS:{name:'天狼中繼站',corridor:'冰藍中繼航道',signature:'雙星光場 · 冰質碎片'},
   PROX:{name:'比鄰星港',corridor:'赤矮星港邊界',signature:'紅矮星風 · 熔岩航標'}
 });
+const CORRIDORS=Object.freeze({
+  'SOL>LUNA':{name:'地月影錐',signature:'地球反照 · 月影弧線'},
+  'SOL>SIRIUS':{name:'冰藍剪切層',signature:'遠距藍白光 · 冰晶航跡'},
+  'SOL>PROX':{name:'紅矮星風交界',signature:'磁弧微光 · 赤色粒流'},
+  'LUNA>VEGA':{name:'星門引導弧',signature:'月背暗域 · 藍白導引環'},
+  'LUNA>PROX':{name:'月背碎岩航帶',signature:'冷灰碎岩 · 紅光漸入'},
+  'VEGA>CYG':{name:'藍紫導引束',signature:'星門餘輝 · 雙星導引線'},
+  'CYG>ORION':{name:'獵戶發射雲絲',signature:'藍紫航標 · 赤紅雲絲'},
+  'TAU>SIRIUS':{name:'冰晶塵海交界',signature:'粉紫塵層 · 冰藍碎光'},
+  'SIRIUS>PROX':{name:'中繼碎星帶',signature:'中繼環餘光 · 赤矮星塵'}
+});
 const IDS=new Set(Object.keys(PROFILES));
 const PHASES=new Set(['turn','accelerate','warpEntry','warp','warpExit','decelerate','approach','observe']);
 let lastLegKey='',lastPhase='';
-let lastSnapshot={active:false,from:null,to:null,phase:null,leg:0,total:0};
+let lastSnapshot={active:false,from:null,to:null,phase:null,leg:0,total:0,corridorId:null,corridor:null,transit:null};
+
+function corridorFor(from,to){
+  const direct=`${from}>${to}`;
+  if(CORRIDORS[direct])return{id:direct,profile:CORRIDORS[direct]};
+  const reverse=`${to}>${from}`;
+  if(CORRIDORS[reverse])return{id:reverse,profile:CORRIDORS[reverse]};
+  return null;
+}
 
 function ensureStyle(){
   if(document.querySelector('#journeyAtmosphereStyle'))return;
@@ -48,6 +67,48 @@ function ensureStyle(){
 #journeyAtmosphere[data-system="TAU"] .journeyTrace{background:radial-gradient(ellipse at 20% 64%,rgba(var(--journey-rgb),.16),transparent 36%),radial-gradient(ellipse at 83% 32%,rgba(var(--journey-alt-rgb),.13),transparent 42%)}
 #journeyAtmosphere[data-system="SIRIUS"] .journeyTrace{background:linear-gradient(68deg,transparent 0 22%,rgba(var(--journey-alt-rgb),.07) 23%,transparent 24% 63%,rgba(var(--journey-rgb),.08) 64%,transparent 65%)}
 #journeyAtmosphere[data-system="PROX"] .journeyTrace{background:radial-gradient(circle at 50% 118%,rgba(var(--journey-rgb),.2),transparent 48%),linear-gradient(90deg,rgba(var(--journey-alt-rgb),.08),transparent 20% 80%,rgba(var(--journey-rgb),.1))}
+#journeyTransit{position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .34s ease}
+#journeyTransit span{position:absolute;display:block;pointer-events:none;opacity:.82}
+#journeyTransit .journeyTransitFar{left:-8vw;top:23vh;width:clamp(92px,26vw,220px);height:clamp(92px,26vw,220px)}
+#journeyTransit .journeyTransitMid{right:-7vw;top:43vh;width:clamp(82px,23vw,190px);height:clamp(82px,23vw,190px)}
+#journeyTransit .journeyTransitNear{left:20vw;bottom:9vh;width:clamp(52px,15vw,126px);height:clamp(52px,15vw,126px)}
+#journeyAtmosphere[data-phase="warpEntry"] #journeyTransit{opacity:.26}
+#journeyAtmosphere[data-phase="warp"] #journeyTransit{opacity:.76}
+#journeyAtmosphere[data-phase="warpExit"] #journeyTransit{opacity:.14}
+#journeyAtmosphere[data-phase="decelerate"] #journeyTransit,#journeyAtmosphere[data-phase="approach"] #journeyTransit,#journeyAtmosphere[data-phase="observe"] #journeyTransit{opacity:0}
+#journeyAtmosphere[data-phase="warp"] #journeyTransit .journeyTransitFar{animation:journeyTransitDriftA 4.8s ease-in-out infinite alternate}
+#journeyAtmosphere[data-phase="warp"] #journeyTransit .journeyTransitMid{animation:journeyTransitDriftB 5.6s ease-in-out infinite alternate}
+#journeyAtmosphere[data-phase="warp"] #journeyTransit .journeyTransitNear{animation:journeyTransitDriftC 4.2s ease-in-out infinite alternate}
+@keyframes journeyTransitDriftA{from{transform:translate3d(-2px,-4px,0) rotate(-3deg)}to{transform:translate3d(8px,5px,0) rotate(4deg)}}
+@keyframes journeyTransitDriftB{from{transform:translate3d(3px,6px,0) rotate(2deg)}to{transform:translate3d(-7px,-5px,0) rotate(-4deg)}}
+@keyframes journeyTransitDriftC{from{transform:translate3d(-3px,2px,0) scale(.96)}to{transform:translate3d(7px,-4px,0) scale(1.05)}}
+#journeyTransit[data-corridor="SOL>LUNA"] .journeyTransitFar{border:1px solid rgba(var(--journey-alt-rgb),.52);border-left-color:transparent;border-radius:50%;transform:rotate(22deg)}
+#journeyTransit[data-corridor="SOL>LUNA"] .journeyTransitMid{background:radial-gradient(circle at 38% 36%,rgba(230,240,255,.7) 0 13%,rgba(var(--journey-rgb),.16) 31%,transparent 58%);border-radius:50%}
+#journeyTransit[data-corridor="SOL>LUNA"] .journeyTransitNear{border:1px solid rgba(var(--journey-rgb),.34);border-right-color:transparent;border-radius:50%}
+#journeyTransit[data-corridor="SOL>SIRIUS"] .journeyTransitFar{border:1px solid rgba(var(--journey-alt-rgb),.32);transform:rotate(29deg);background:linear-gradient(135deg,rgba(var(--journey-rgb),.04),transparent 62%)}
+#journeyTransit[data-corridor="SOL>SIRIUS"] .journeyTransitMid{border:1px solid rgba(var(--journey-rgb),.38);transform:rotate(-24deg);background:linear-gradient(30deg,rgba(var(--journey-alt-rgb),.07),transparent 68%)}
+#journeyTransit[data-corridor="SOL>SIRIUS"] .journeyTransitNear{width:clamp(32px,9vw,76px);height:clamp(80px,22vw,170px);border-left:1px solid rgba(var(--journey-alt-rgb),.36);transform:rotate(18deg)}
+#journeyTransit[data-corridor="SOL>PROX"] .journeyTransitFar{border:1px solid rgba(var(--journey-rgb),.42);border-bottom-color:transparent;border-radius:50%;transform:rotate(-18deg)}
+#journeyTransit[data-corridor="SOL>PROX"] .journeyTransitMid{border:1px solid rgba(var(--journey-alt-rgb),.34);border-top-color:transparent;border-radius:50%;transform:rotate(28deg)}
+#journeyTransit[data-corridor="SOL>PROX"] .journeyTransitNear{background:radial-gradient(ellipse at center,rgba(var(--journey-rgb),.18),transparent 64%);border-radius:50%}
+#journeyTransit[data-corridor="LUNA>VEGA"] .journeyTransitFar{background:radial-gradient(circle,transparent 0 48%,rgba(var(--journey-alt-rgb),.28) 49% 51%,transparent 52% 68%,rgba(var(--journey-rgb),.22) 69% 71%,transparent 72%)}
+#journeyTransit[data-corridor="LUNA>VEGA"] .journeyTransitMid{background:radial-gradient(circle,transparent 0 40%,rgba(var(--journey-rgb),.32) 41% 44%,transparent 45%);border-radius:50%}
+#journeyTransit[data-corridor="LUNA>VEGA"] .journeyTransitNear{border-top:1px solid rgba(var(--journey-alt-rgb),.42);border-bottom:1px solid rgba(var(--journey-rgb),.24);transform:rotate(-19deg)}
+#journeyTransit[data-corridor="LUNA>PROX"] .journeyTransitFar{border-radius:58% 42% 65% 35%;background:radial-gradient(circle at 32% 35%,rgba(201,215,235,.14),transparent 31%),linear-gradient(145deg,rgba(116,132,159,.16),transparent 72%)}
+#journeyTransit[data-corridor="LUNA>PROX"] .journeyTransitMid{border-radius:37% 63% 43% 57%;background:linear-gradient(40deg,rgba(var(--journey-rgb),.13),rgba(92,100,119,.08),transparent 75%)}
+#journeyTransit[data-corridor="LUNA>PROX"] .journeyTransitNear{border-radius:63% 37% 54% 46%;background:radial-gradient(circle at 68% 34%,rgba(var(--journey-alt-rgb),.16),rgba(71,78,93,.08) 42%,transparent 66%)}
+#journeyTransit[data-corridor="VEGA>CYG"] .journeyTransitFar{left:-4vw;top:28vh;width:42vw;height:2px;background:linear-gradient(90deg,transparent,rgba(var(--journey-alt-rgb),.42),transparent);transform:rotate(13deg)}
+#journeyTransit[data-corridor="VEGA>CYG"] .journeyTransitMid{right:-4vw;top:50vh;width:38vw;height:2px;background:linear-gradient(90deg,transparent,rgba(var(--journey-rgb),.4),transparent);transform:rotate(-11deg)}
+#journeyTransit[data-corridor="VEGA>CYG"] .journeyTransitNear{left:28vw;bottom:16vh;width:25vw;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--journey-alt-rgb),.34),transparent);transform:rotate(8deg)}
+#journeyTransit[data-corridor="CYG>ORION"] .journeyTransitFar{width:clamp(130px,38vw,310px);height:clamp(60px,18vw,145px);border-radius:54% 46% 63% 37%;background:radial-gradient(ellipse at 45% 52%,rgba(var(--journey-rgb),.18),transparent 68%)}
+#journeyTransit[data-corridor="CYG>ORION"] .journeyTransitMid{width:clamp(120px,34vw,280px);height:clamp(54px,15vw,125px);border-radius:40% 60% 36% 64%;background:radial-gradient(ellipse at 58% 48%,rgba(var(--journey-alt-rgb),.14),transparent 66%)}
+#journeyTransit[data-corridor="CYG>ORION"] .journeyTransitNear{background:radial-gradient(ellipse at center,rgba(var(--journey-rgb),.14),transparent 67%);border-radius:50%}
+#journeyTransit[data-corridor="TAU>SIRIUS"] .journeyTransitFar{border:1px solid rgba(var(--journey-rgb),.32);border-right-color:transparent;border-radius:50%;transform:rotate(-22deg)}
+#journeyTransit[data-corridor="TAU>SIRIUS"] .journeyTransitMid{border:1px solid rgba(var(--journey-alt-rgb),.36);transform:rotate(34deg);background:linear-gradient(120deg,rgba(var(--journey-alt-rgb),.07),transparent 60%)}
+#journeyTransit[data-corridor="TAU>SIRIUS"] .journeyTransitNear{width:clamp(26px,7vw,64px);height:clamp(76px,20vw,155px);border-left:1px solid rgba(var(--journey-alt-rgb),.4);border-right:1px solid rgba(var(--journey-rgb),.18);transform:rotate(-14deg)}
+#journeyTransit[data-corridor="SIRIUS>PROX"] .journeyTransitFar{background:radial-gradient(circle,transparent 0 48%,rgba(var(--journey-alt-rgb),.28) 49% 52%,transparent 53%);border-radius:50%}
+#journeyTransit[data-corridor="SIRIUS>PROX"] .journeyTransitMid{border:1px solid rgba(var(--journey-rgb),.32);border-left-color:transparent;border-radius:50%;transform:rotate(31deg)}
+#journeyTransit[data-corridor="SIRIUS>PROX"] .journeyTransitNear{background:radial-gradient(circle at 42% 40%,rgba(var(--journey-rgb),.28) 0 12%,rgba(var(--journey-alt-rgb),.08) 34%,transparent 62%);border-radius:50%}
 #journeyVista{position:absolute;inset:0;opacity:0;transform:scale(.94);transform-origin:center;transition:opacity .58s ease,transform .82s cubic-bezier(.2,.7,.2,1);pointer-events:none}
 #journeyVista .journeyVistaPrimary,#journeyVista .journeyVistaSecondary{position:absolute;display:block;border-radius:50%;opacity:.92;transition:transform .82s cubic-bezier(.2,.7,.2,1),opacity .58s ease}
 #journeyVista .journeyVistaPrimary{width:clamp(110px,34vw,280px);height:clamp(110px,34vw,280px);right:-8vw;top:15vh}
@@ -83,7 +144,7 @@ function ensureStyle(){
 #journeyRegion .journeyRegionMeta{margin-top:2px;font-size:7px;line-height:1.3;color:rgba(229,239,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:430px){#journeyVista .journeyVistaPrimary{top:18vh}#journeyVista .journeyVistaSecondary{top:57vh}#journeyAtmosphere[data-phase="approach"] #journeyVista{opacity:.64}}
 @media (min-width:900px){#journeyRegion{top:calc(max(16px,var(--safeT)) + 94px);left:max(18px,var(--safeL));max-width:min(30vw,360px);padding:8px 10px}#journeyRegion .journeyRegionKicker{font-size:var(--ui-xs,11px)}#journeyRegion .journeyRegionTitle{font-size:var(--ui-sm,12px)}#journeyRegion .journeyRegionMeta{font-size:var(--ui-xs,11px)}}
-@media (prefers-reduced-motion:reduce){#journeyAtmosphere,#journeyRegion,#journeyVista,#journeyVista .journeyVistaPrimary,#journeyVista .journeyVistaSecondary{transition:none}}
+@media (prefers-reduced-motion:reduce){#journeyAtmosphere,#journeyRegion,#journeyVista,#journeyVista .journeyVistaPrimary,#journeyVista .journeyVistaSecondary{transition:none}#journeyTransit span{animation:none!important}}
 `;
   document.head.append(style);
 }
@@ -102,6 +163,17 @@ function ensureUi(){
     atmosphere.append(medium,trace);
     const warp=document.querySelector('#warpFx');
     if(warp?.parentElement===app)app.insertBefore(atmosphere,warp);else app.append(atmosphere);
+  }
+  let transit=atmosphere.querySelector('#journeyTransit');
+  if(!transit){
+    transit=document.createElement('div');
+    transit.id='journeyTransit';
+    transit.setAttribute('aria-hidden','true');
+    const far=document.createElement('span');far.className='journeyTransitFar';
+    const mid=document.createElement('span');mid.className='journeyTransitMid';
+    const near=document.createElement('span');near.className='journeyTransitNear';
+    transit.append(far,mid,near);
+    atmosphere.append(transit);
   }
   let vista=atmosphere.querySelector('#journeyVista');
   if(!vista){
@@ -123,7 +195,7 @@ function ensureUi(){
     region.innerHTML='<div id="journeyRegionKicker" class="journeyRegionKicker"></div><div id="journeyRegionTitle" class="journeyRegionTitle"></div><div id="journeyRegionMeta" class="journeyRegionMeta"></div>';
     app.append(region);
   }
-  return{app,atmosphere,vista,region};
+  return{app,atmosphere,transit,vista,region};
 }
 
 function activeLeg(state){
@@ -137,20 +209,21 @@ function activeLeg(state){
 }
 
 function hide(){
-  const app=document.querySelector('#app'),atmosphere=document.querySelector('#journeyAtmosphere'),vista=document.querySelector('#journeyVista'),region=document.querySelector('#journeyRegion');
+  const app=document.querySelector('#app'),atmosphere=document.querySelector('#journeyAtmosphere'),transit=document.querySelector('#journeyTransit'),vista=document.querySelector('#journeyVista'),region=document.querySelector('#journeyRegion');
   app?.classList.remove('journeyAtmosphereActive');
   app?.removeAttribute('data-journey-system');
-  atmosphere?.removeAttribute('data-system');atmosphere?.removeAttribute('data-phase');
+  atmosphere?.removeAttribute('data-system');atmosphere?.removeAttribute('data-phase');atmosphere?.removeAttribute('data-corridor');
+  transit?.removeAttribute('data-corridor');
   vista?.removeAttribute('data-vista-system');
   region?.classList.remove('show');
   lastLegKey='';lastPhase='';
-  lastSnapshot={active:false,from:null,to:null,phase:null,leg:0,total:0};
+  lastSnapshot={active:false,from:null,to:null,phase:null,leg:0,total:0,corridorId:null,corridor:null,transit:null};
 }
 
 function render(state){
   const leg=activeLeg(state);
   if(!leg){hide();return false}
-  const ui=ensureUi(),profile=PROFILES[leg.to];
+  const ui=ensureUi(),profile=PROFILES[leg.to],corridor=corridorFor(leg.from,leg.to);
   if(!ui||!profile){hide();return false}
   const phase=PHASES.has(state.phase)?state.phase:'turn';
   const legKey=`${leg.from}>${leg.to}:${leg.index}/${leg.total}`;
@@ -158,16 +231,18 @@ function render(state){
     ui.app.classList.add('journeyAtmosphereActive');
     ui.app.setAttribute('data-journey-system',leg.to);
     ui.atmosphere.setAttribute('data-system',leg.to);
+    if(corridor){ui.atmosphere.setAttribute('data-corridor',corridor.id);ui.transit.setAttribute('data-corridor',corridor.id)}
+    else{ui.atmosphere.removeAttribute('data-corridor');ui.transit.removeAttribute('data-corridor')}
     ui.vista.setAttribute('data-vista-system',leg.to);
     ui.region.classList.add('show');
     const kicker=document.querySelector('#journeyRegionKicker'),title=document.querySelector('#journeyRegionTitle'),meta=document.querySelector('#journeyRegionMeta');
-    if(kicker)kicker.textContent='航區識別 · '+profile.corridor;
-    if(title)title.textContent=profile.signature;
-    if(meta)meta.textContent=`${PROFILES[leg.from]?.name||leg.from} → ${profile.name} · ${leg.index}/${leg.total} 航段`;
+    if(kicker)kicker.textContent='航道識別 · '+(corridor?.profile.name||profile.corridor);
+    if(title)title.textContent=corridor?.profile.signature||profile.signature;
+    if(meta)meta.textContent=`${PROFILES[leg.from]?.name||leg.from} → ${profile.name} · ${leg.index}/${leg.total} 航段 · ${profile.signature}`;
     lastLegKey=legKey;
   }
   if(lastPhase!==phase){ui.atmosphere.setAttribute('data-phase',phase);lastPhase=phase}
-  lastSnapshot={active:true,from:leg.from,to:leg.to,phase,leg:leg.index,total:leg.total,corridor:profile.corridor,signature:profile.signature};
+  lastSnapshot={active:true,from:leg.from,to:leg.to,phase,leg:leg.index,total:leg.total,corridorId:corridor?.id||null,corridor:corridor?.profile.name||profile.corridor,transit:corridor?.profile.signature||null,signature:profile.signature};
   return true;
 }
 
@@ -184,6 +259,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)sample()})
 window.WarpJourneyAtmosphere={
   render(){return sample()},
   snapshot(){return{...lastSnapshot}},
-  profiles(){return Object.fromEntries(Object.entries(PROFILES).map(([id,profile])=>[id,{...profile}]))}
+  profiles(){return Object.fromEntries(Object.entries(PROFILES).map(([id,profile])=>[id,{...profile}]))},
+  corridors(){return Object.fromEntries(Object.entries(CORRIDORS).map(([id,profile])=>[id,{...profile}]))}
 };
 })();
