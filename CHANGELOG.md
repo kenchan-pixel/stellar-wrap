@@ -23,7 +23,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 - TAU ring features can only be recorded inside a bounded ±3 window. Completing the inner sparse band, moon resonance gap and outer density wave unlocks the local-only Star Atlas discovery `三層環隙共振`; the radial values are interaction indices rather than physical kilometres.
 - TAU progress survives reloads through a versioned local record, mutation re-checks live safe final-exploration state, Star Atlas refreshes from the existing discovery event, and the module is included in prepared offline shell cache v9 without adding renderer-loop or network work.
 - Added a V5-candidate **ORION Nebula Spectrograph** exploration slice: after a true final arrival at ORION, users can sweep a 470–680 nm narrow-band control and locate three simplified emission peaks at Hβ 486 nm, [O III] 501 nm and Hα 656 nm.
-- Spectral lines can only be recorded inside a bounded ±4 nm window, turning ORION into an active wavelength-search interaction rather than another fixed observation checklist. Completing all three unlocks the local-only Star Atlas discovery `三線發射殼層`.
+- Spectral lines can only be recorded inside a bounded ±4 nm window, turning ORION into an active wavelength-search interaction rather than another three-button observation checklist. Completing all three unlocks the local-only Star Atlas discovery `三線發射殼層`.
 - ORION spectrum progress survives reloads through a versioned local record, refreshes Star Atlas immediately in the same tab, adds no backend/network/render-loop work, and is included in the prepared offline shell. The wavelength values are simplified interaction references, not a physical model of the fictional ORION scene.
 - Added a V5-candidate **CYG Beacon Triangulation** exploration slice: after a true final arrival at CYG, users can sweep a 0–359° signal sensor and locate three distinct peaks from the blue star, violet companion and artificial beacon ring.
 - Signal sources only lock inside a bounded ±8° window, making CYG a short active-search interaction rather than another three-button observation checklist. All three locks unlock the local-only Star Atlas discovery `雙星航標三角場`.
@@ -31,6 +31,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Reload World Continuity now keeps a temporary `恢復上次停泊點…` veil over the default SOL scene whenever a strict completed-journey restore candidate is waiting for core authority. The veil sits below the existing startup loading/recovery layer, is removed only after the authoritative destination `jumpTo()` finishes or a definitive fail-closed decision settles at the real runtime state, and adds no timer, observer or render-loop work.
 - Added **Reload World Continuity**: when a device already has a validated completed journey, reloading now resumes at that journey's final destination in the existing safe exploration state instead of silently resetting the simulated location to SOL.
 - Reload continuity reuses the Travel Journal as the sole persistence authority and delegates the actual scene/location transition to existing `WarpSim.jumpTo()`; it will not overwrite an active flight, exploration state, selected route, WebGL recovery state or a runtime that has already moved away from SOL.
 - The navigation map now reapplies cumulative `WarpTravelJournal.visited()` systems after a core SVG redraw, so historical visited markers survive reload without deleting current-session live visited state.
@@ -48,6 +49,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Extended reload-continuity validation with delayed-core restore-veil lifecycle cases: a valid persisted `SOL → SIRIUS → TAU` journey stays covered until core authority exists and the TAU transition completes, while a topology-impossible `SOL → ORION` candidate settles the same veil at SOL with no jump.
 - Extended reload-integrity validation with a known-ID but topology-impossible `SOL → ORION` regression, while retaining the valid `SOL → SIRIUS → TAU` restore path and proving Travel Journal delegates route topology to the core 6.0 LY graph.
 - Extended journey-continuity validation with executable fresh-process cases for completed-destination restore, fresh SOL startup, selected-route protection and malformed-history rejection; restore adds no new timer, storage key, network or duplicated scene/camera transition.
 - Extended navigation runtime validation to prove persisted visited systems are reapplied on initial mount and after a real core-style SVG redraw while discovery markers and route-card exploration status remain correct.

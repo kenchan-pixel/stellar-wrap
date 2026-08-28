@@ -36,8 +36,12 @@ ok(journal.includes('function restoreDockedLocation()')&&journal.includes('const
 ok(index.includes('isRouteValid(r){')&&index.includes("G[r[i]]?.some(([id])=>id===r[i+1])"),'core exposes a read-only route validator backed by the authoritative 6.0 LY graph');
 ok(journal.includes("typeof api.state!=='function'||typeof api.jumpTo!=='function'||typeof api.isRouteValid!=='function'")&&journal.includes('api.isRouteValid(latest.route)')&&journal.includes('api.jumpTo(destination)'),'location restore validates topology through core authority before delegating to the existing WarpSim transition');
 ok(journal.includes("state.current!=='SOL'||busy")&&journal.includes('state.selected')&&journal.includes('state.route.length'),'restore refuses to overwrite active, selected, travelling or already-restored runtime state');
-ok(journal.includes("document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending)restoreDockedLocation()}")&&journal.includes('if(locationRestorePending&&restoreDockedLocation())'),'restore attempts after core startup and reuses the existing bounded journal sampler as fallback');
+ok(journal.includes("document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending){ensureRestoreVeil();restoreDockedLocation()}")&&journal.includes('if(locationRestorePending&&restoreDockedLocation())'),'restore attempts after core startup and reuses the existing bounded journal sampler as fallback');
 ok(journal.includes("dispatchEvent(new CustomEvent('stellarwarp:location-restored'"),'successful restore emits one focused UI refresh event');
+ok(journal.includes("veil.id='locationRestoreVeil'")&&journal.includes("veil.textContent='恢復上次停泊點…'"),'pending reload continuity masks the transient default SOL scene with a focused restore veil');
+ok(journal.includes("z-index:19")&&index.includes('#loading{position:absolute;z-index:20'),'restore veil stays below the existing startup loading/recovery layer');
+ok(journal.includes("try{api.jumpTo(destination)}catch{settleLocationRestore();return false}\n  settleLocationRestore();"),'successful restore removes the veil only after the existing destination transition completes');
+ok(journal.includes("if(!api.isRouteValid(latest.route)){settleLocationRestore();return false}")&&journal.includes("state.current!=='SOL'||busy){settleLocationRestore();return false"),'definitive fail-closed decisions also settle the restore veil instead of trapping the UI');
 
 function runRuntimeCase(name,payload,initial,expected){
   const code=`
@@ -68,6 +72,47 @@ if(${JSON.stringify(!!expected.entryRoute)})assert.deepEqual(globalThis.WarpTrav
   const result=spawnSync(process.execPath,['--input-type=module','--eval',code],{encoding:'utf8',timeout:10000});
   ok(result.status===0,`${name} runtime continuity${result.stderr?`: ${result.stderr.trim()}`:''}`);
 }
+function runRestoreVeilCase(name,payload,validRoute,expected){
+  const code=`
+import assert from 'node:assert/strict';
+const payload=${JSON.stringify(payload)};
+const store=new Map([['stellar-warp-travel-journal-v1',JSON.stringify(payload)]]);
+const children=[];
+const app={append(node){node.parentNode=this;children.push(node)}};
+const makeNode=()=>({id:'',textContent:'',style:{cssText:''},removed:false,setAttribute(){},remove(){this.removed=true}});
+globalThis.window=globalThis;
+globalThis.document={
+  hidden:false,
+  addEventListener(){},
+  querySelector(selector){if(selector==='#app')return app;if(selector==='#locationRestoreVeil')return children.find(node=>node.id==='locationRestoreVeil'&&!node.removed)||null;return null},
+  createElement(){return makeNode()}
+};
+globalThis.localStorage={getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,String(value))};
+globalThis.performance={now:()=>1000};
+globalThis.setInterval=()=>0;
+const events=new EventTarget();
+globalThis.addEventListener=(...args)=>events.addEventListener(...args);
+globalThis.removeEventListener=(...args)=>events.removeEventListener(...args);
+globalThis.dispatchEvent=event=>events.dispatchEvent(event);
+globalThis.CustomEvent=class CustomEvent extends Event{constructor(type,init={}){super(type);this.detail=init.detail}};
+await import(${JSON.stringify(pathToFileURL(journalPath).href)}+'?veil='+${JSON.stringify(name)}+'-'+Date.now());
+const pending=document.querySelector('#locationRestoreVeil');
+assert.ok(pending,'restore veil should exist while core authority is unavailable');
+assert.equal(pending.textContent,'恢復上次停泊點…');
+assert.equal(globalThis.WarpTravelJournal.restorePending(),true);
+let state={current:'SOL',selected:null,route:[],phase:'idle',flying:false,exploring:false,contextLost:false};
+const jumps=[];
+globalThis.WarpSim={state(){return{...state,route:[...state.route]}},isRouteValid(){return ${JSON.stringify(validRoute)}},jumpTo(id){jumps.push(id);state={...state,current:id,route:[],exploring:true}}};
+const restored=globalThis.WarpTravelJournal.restoreLocation();
+assert.equal(restored,${JSON.stringify(expected.restored)});
+assert.deepEqual(jumps,${JSON.stringify(expected.jumps)});
+assert.equal(state.current,${JSON.stringify(expected.current)});
+assert.equal(globalThis.WarpTravelJournal.restorePending(),false);
+assert.equal(document.querySelector('#locationRestoreVeil'),null,'veil should be removed after restore is settled');
+`;
+  const result=spawnSync(process.execPath,['--input-type=module','--eval',code],{encoding:'utf8',timeout:10000});
+  ok(result.status===0,`${name} restore-veil lifecycle${result.stderr?`: ${result.stderr.trim()}`:''}`);
+}
 const validEntry={route:['SOL','SIRIUS','TAU'],startedAt:100,endedAt:200,seconds:8,distance:9.2};
 const idle={current:'SOL',selected:null,route:[],phase:'idle',flying:false,exploring:false,contextLost:false};
 runRuntimeCase('completed journey restores TAU',{version:2,entries:[validEntry],visited:['SOL','SIRIUS','TAU']},idle,{jumps:['TAU'],current:'TAU',exploring:true,visited:['SOL','SIRIUS','TAU']});
@@ -77,6 +122,8 @@ runRuntimeCase('malformed terminal history cannot restore',{version:2,entries:[{
 runRuntimeCase('embedded unknown newest route fails closed',{version:2,entries:[{route:['SOL','NOPE','TAU'],startedAt:100,endedAt:200,seconds:8,distance:9.2},{route:['SOL','LUNA'],startedAt:10,endedAt:20,seconds:5,distance:3.1}],visited:['SOL','TAU','LUNA']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','TAU']});
 runRuntimeCase('invalid completion chronology fails closed',{version:2,entries:[{route:['SOL','LUNA'],startedAt:300,endedAt:200,seconds:8,distance:3.1}],visited:['SOL','LUNA']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','LUNA']});
 runRuntimeCase('known IDs with impossible direct leg fail closed',{version:2,entries:[{route:['SOL','ORION'],startedAt:100,endedAt:200,seconds:8,distance:12.7}],visited:['SOL','ORION']},idle,{jumps:[],current:'SOL',exploring:false,entryRoute:['SOL','ORION']});
+runRestoreVeilCase('valid docked restore stays covered until TAU transition',{version:2,entries:[validEntry],visited:['SOL','SIRIUS','TAU']},true,{restored:true,jumps:['TAU'],current:'TAU'});
+runRestoreVeilCase('invalid topology settles cover at SOL',{version:2,entries:[{route:['SOL','ORION'],startedAt:100,endedAt:200,seconds:8,distance:12.7}],visited:['SOL','ORION']},false,{restored:false,jumps:[],current:'SOL'});
 
 const journalTimers=(journal.match(/setInterval\(/g)||[]).length;
 const atlasTimers=(atlas.match(/setInterval\(/g)||[]).length;

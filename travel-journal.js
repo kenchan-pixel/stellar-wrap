@@ -47,6 +47,30 @@ const loaded=load();
 let journal={entries:loaded.entries,visited:loaded.visited};
 let restoreEntry=loaded.restoreEntry;
 locationRestorePending=!!restoreEntry;
+let restoreVeil=null;
+function ensureRestoreVeil(){
+  if(!locationRestorePending)return false;
+  const app=document.querySelector?.('#app');
+  if(!app||typeof document.createElement!=='function')return false;
+  let veil=document.querySelector?.('#locationRestoreVeil');
+  if(!veil){
+    veil=document.createElement('div');
+    veil.id='locationRestoreVeil';
+    veil.setAttribute('role','status');
+    veil.setAttribute('aria-live','polite');
+    veil.setAttribute('aria-label','恢復停泊位置');
+    veil.textContent='恢復上次停泊點…';
+    veil.style.cssText='position:absolute;z-index:19;inset:0;display:grid;place-items:center;padding:24px;background:#02040a;color:#eaf2ff;font-size:11px;line-height:1.5;text-align:center;pointer-events:auto';
+    app.append(veil);
+  }
+  restoreVeil=veil;return true;
+}
+function settleLocationRestore(){
+  locationRestorePending=false;restoreEntry=null;
+  const veil=restoreVeil||document.querySelector?.('#locationRestoreVeil');
+  veil?.remove?.();restoreVeil=null;
+}
+if(locationRestorePending)ensureRestoreVeil();
 function save(){try{localStorage.setItem(KEY,JSON.stringify({version:2,entries:journal.entries.slice(0,LIMIT),visited:normaliseVisited(journal.visited,journal.entries)}))}catch{}}
 function formatStamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
 function name(id){return NAMES[id]||id}
@@ -148,17 +172,16 @@ function restoreDockedLocation(){
   if(!locationRestorePending)return false;
   const latest=restoreEntry;
   const destination=latest?.route?.[latest.route.length-1];
-  if(!IDS.has(destination)){locationRestorePending=false;restoreEntry=null;return false}
+  if(!IDS.has(destination)){settleLocationRestore();return false}
   const api=window.WarpSim;
-  if(!api||typeof api.state!=='function'||typeof api.jumpTo!=='function'||typeof api.isRouteValid!=='function')return false;
+  if(!api||typeof api.state!=='function'||typeof api.jumpTo!=='function'||typeof api.isRouteValid!=='function'){ensureRestoreVeil();return false}
   let state;try{state=api.state()}catch{return false}
   if(!state)return false;
   const busy=!!(state.flying||state.exploring||state.contextLost||state.selected||(Array.isArray(state.route)&&state.route.length));
-  if(state.current!=='SOL'||busy){locationRestorePending=false;restoreEntry=null;return false}
-  if(!api.isRouteValid(latest.route)){locationRestorePending=false;restoreEntry=null;return false}
-  try{api.jumpTo(destination)}catch{locationRestorePending=false;restoreEntry=null;return false}
-  locationRestorePending=false;
-  restoreEntry=null;
+  if(state.current!=='SOL'||busy){settleLocationRestore();return false}
+  if(!api.isRouteValid(latest.route)){settleLocationRestore();return false}
+  try{api.jumpTo(destination)}catch{settleLocationRestore();return false}
+  settleLocationRestore();
   currentId=destination;
   render();
   dispatchEvent(new CustomEvent('stellarwarp:location-restored',{detail:{current:destination,visited:normaliseVisited(journal.visited,journal.entries)}}));
@@ -166,6 +189,7 @@ function restoreDockedLocation(){
 }
 function sample(){
   ensureUi();
+  if(locationRestorePending)ensureRestoreVeil();
   const api=window.WarpSim;if(!api||typeof api.state!=='function')return;
   const sampleAt=performance.now();
   let state;try{state=api.state()}catch{return}
@@ -189,13 +213,14 @@ function sample(){
 }
 setInterval(sample,500);
 sample();
-document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending)restoreDockedLocation()},{once:true});
+document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending){ensureRestoreVeil();restoreDockedLocation()}},{once:true});
 addEventListener('stellarwarp:discovery-change',()=>render());
 addEventListener('stellarwarp:atlas-change',()=>render());
 addEventListener('storage',()=>render());
 window.WarpTravelJournal={
   entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))},
   visited(){return normaliseVisited(journal.visited,journal.entries)},
+  restorePending(){return locationRestorePending},
   restoreLocation(){return restoreDockedLocation()}
 };
 import('./responsive-ui.js').catch(()=>{});
