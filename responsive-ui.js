@@ -112,6 +112,101 @@ style.textContent=`
   #app .fallbackRoute strong{font-size:var(--ui-md)}
   #app .fallbackNode text{font-size:var(--ui-xs)}
 }
+
+/* Journey Cinematics · Warp Threshold */
+#app.journeyAtmosphereActive #journeyAtmosphere::before,
+#app.journeyAtmosphereActive #journeyAtmosphere::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  pointer-events:none;
+  border-radius:50%;
+  opacity:0;
+  transform:translate(-50%,-50%) scale(.55);
+  transform-origin:center;
+  will-change:transform,opacity;
+}
+#app.journeyAtmosphereActive #journeyAtmosphere::before{
+  width:min(78vmin,680px);
+  aspect-ratio:1;
+  border:1px solid rgba(var(--journey-alt-rgb),.5);
+  background:radial-gradient(circle at center,transparent 0 68%,rgba(var(--journey-rgb),.035) 69% 73%,rgba(var(--journey-alt-rgb),.12) 74%,transparent 76%);
+  box-shadow:0 0 22px rgba(var(--journey-rgb),.18),inset 0 0 18px rgba(var(--journey-alt-rgb),.12);
+}
+#app.journeyAtmosphereActive #journeyAtmosphere::after{
+  width:min(58vmin,520px);
+  aspect-ratio:1;
+  border:2px solid transparent;
+  border-top-color:rgba(var(--journey-alt-rgb),.72);
+  border-bottom-color:rgba(var(--journey-rgb),.55);
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpEntry"]::before{
+  animation:journeyThresholdIngress .82s cubic-bezier(.16,.82,.24,1) both;
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpEntry"]::after{
+  animation:journeyThresholdLock .72s cubic-bezier(.18,.76,.3,1) both;
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warp"]::before{
+  opacity:.16;
+  transform:translate(-50%,-50%) scale(1.34);
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warp"]::after{
+  opacity:.08;
+  transform:translate(-50%,-50%) rotate(18deg) scale(1.18);
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpExit"]::before{
+  animation:journeyThresholdEgress .68s cubic-bezier(.32,0,.68,1) both;
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpExit"]::after{
+  animation:journeyThresholdRelease .62s cubic-bezier(.32,0,.68,1) both;
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="decelerate"]::before,
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="decelerate"]::after,
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="approach"]::before,
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="approach"]::after,
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="observe"]::before,
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="observe"]::after{
+  opacity:0;
+  animation:none;
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpEntry"] ~ #journeyRegion{
+  border-left-width:2px;
+  background:linear-gradient(90deg,rgba(3,7,15,.76),rgba(var(--journey-rgb),.07),transparent);
+  box-shadow:-7px 0 18px rgba(var(--journey-rgb),.08);
+}
+#app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpExit"] ~ #journeyRegion{
+  border-left-width:2px;
+  background:linear-gradient(90deg,rgba(3,7,15,.7),rgba(var(--journey-alt-rgb),.055),transparent);
+}
+@keyframes journeyThresholdIngress{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.44)}
+  42%{opacity:.78;transform:translate(-50%,-50%) scale(.88)}
+  100%{opacity:.18;transform:translate(-50%,-50%) scale(1.34)}
+}
+@keyframes journeyThresholdLock{
+  0%{opacity:0;transform:translate(-50%,-50%) rotate(-34deg) scale(.4)}
+  52%{opacity:.68;transform:translate(-50%,-50%) rotate(6deg) scale(.9)}
+  100%{opacity:.1;transform:translate(-50%,-50%) rotate(18deg) scale(1.18)}
+}
+@keyframes journeyThresholdEgress{
+  0%{opacity:.16;transform:translate(-50%,-50%) scale(1.3)}
+  52%{opacity:.74;transform:translate(-50%,-50%) scale(.9)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(.56)}
+}
+@keyframes journeyThresholdRelease{
+  0%{opacity:.08;transform:translate(-50%,-50%) rotate(18deg) scale(1.16)}
+  48%{opacity:.58;transform:translate(-50%,-50%) rotate(-8deg) scale(.84)}
+  100%{opacity:0;transform:translate(-50%,-50%) rotate(-28deg) scale(.5)}
+}
+@media (prefers-reduced-motion:reduce){
+  #app.journeyAtmosphereActive #journeyAtmosphere::before,
+  #app.journeyAtmosphereActive #journeyAtmosphere::after{animation:none!important;transition:none!important}
+  #app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpEntry"]::before{opacity:.2;transform:translate(-50%,-50%) scale(1.2)}
+  #app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpEntry"]::after{opacity:.1;transform:translate(-50%,-50%) rotate(12deg) scale(1.08)}
+  #app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpExit"]::before,
+  #app.journeyAtmosphereActive #journeyAtmosphere[data-phase="warpExit"]::after{opacity:.08}
+}
 `;
 document.head.append(style);
 })();
