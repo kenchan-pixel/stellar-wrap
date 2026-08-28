@@ -23,12 +23,18 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 - Signal sources only lock inside a bounded ±8° window, making CYG a short active-search interaction rather than another three-button observation checklist. All three locks unlock the local-only Star Atlas discovery `雙星航標三角場`.
 - CYG scan progress survives reloads through a versioned local record, refreshes Star Atlas immediately in the same tab, adds no backend/network/render-loop work, and is included in the prepared offline shell.
 
+### Improved
+
+- Arrival Debrief now forms a direct **arrival → exploration handoff**: on a true final arrival it is repositioned ahead of Landmark Guide and destination task content, shows whether the current destination still has an unfinished exploration objective, and changes its primary action between `開始探索`, `查看發現` and SOL `自由探索`.
+- The handoff reads the existing Star Atlas discovery snapshot instead of creating another persistence authority, scrolls only to the real destination exploration module, keeps the normal `下一目的地` map action, and raises both Debrief actions to the 44 px mobile touch baseline without changing route, camera, renderer or flight timing.
+
 ### Fixed
 
 - Hardened CYG beacon locking and ORION spectral capture so progress mutations now re-check the live safe final-exploration state at action time. Hidden or diagnostic actions are rejected while flying, during WebGL context loss, or outside the intended destination instead of relying only on UI visibility.
 
 ### Validation
 
+- Extended the executable 390×844 production DOM/event harness to cover the arrival-to-exploration handoff: CYG arrival now proves the Debrief is placed before destination content, unfinished exploration exposes `開始探索`, the action scrolls to the real scanner, same-tab discovery completion switches to `查看發現`, and a fresh-process reload keeps the completed handoff state.
 - Added focused PROX alignment validation covering JavaScript syntax, three unique two-axis approach windows, simultaneous ±3 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, seven-discovery completion UI, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused SIRIUS relay validation covering JavaScript syntax, three unique dual-axis 0–100 windows, simultaneous ±4 locking, real production two-slider input/click execution, unsafe-state rejection, local persistence across a fresh process, production Star Atlas integration, 44 px mobile controls, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
 - Added focused TAU ring validation covering JavaScript syntax, three unique normalized ring anomalies, ±3 capture gating, production range-input/click execution, unsafe-state rejection, local persistence across a fresh process, Star Atlas integration, shared desktop typography, offline-shell inclusion, and absence of network/render-loop work.
