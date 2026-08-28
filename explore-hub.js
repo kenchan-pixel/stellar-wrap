@@ -34,6 +34,12 @@ function setA11yHidden(node,hidden){
   if(hidden){node.setAttribute('aria-hidden','true');node.setAttribute('inert','')}
   else{node.removeAttribute('aria-hidden');node.removeAttribute('inert')}
 }
+function setClassState(node,name,next){
+  if(!node)return false;
+  next=!!next;
+  if(node.classList.contains(name)===next)return false;
+  node.classList.toggle(name,next);return true;
+}
 function clearStatus(){
   const mounted=statusCard?.isConnected?statusCard:document.querySelector('#exploreHubStatus');
   mounted?.remove();statusCard=null;
@@ -195,7 +201,7 @@ function updateRail(){
   }
 }
 function closeDrawer(){
-  const card=document.querySelector('#exploreCard');card?.classList.remove('hubOpen');
+  const card=document.querySelector('#exploreCard');setClassState(card,'hubOpen',false);
   clearStatus();setA11yHidden(card,finalExplore());
   const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='⌄';collapse.setAttribute('aria-label','收起觀景資訊')}
   updateRail();return true;
@@ -209,7 +215,7 @@ function open(next=pane){
   if(!PANES.has(next)||!finalExplore())return false;
   pane=next;setRailExpanded(false);
   const card=document.querySelector('#exploreCard');if(!card)return false;
-  card.classList.remove('collapsed');card.classList.add('hubOpen');setA11yHidden(card,false);
+  setClassState(card,'collapsed',false);setClassState(card,'hubOpen',true);setA11yHidden(card,false);
   const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='×';collapse.setAttribute('aria-label','關閉探索面板')}
   applyPane();return true;
 }
@@ -237,16 +243,16 @@ function activate(action){
 function sync(){
   if(!ensureRail())return;
   const active=finalExplore(),app=document.querySelector('#app'),card=document.querySelector('#exploreCard'),photo=!!app?.classList.contains('photoMode');
-  app?.classList.toggle('exploreHubMobile',active);
+  setClassState(app,'exploreHubMobile',active);
   setA11yHidden(rail,!active||photo);
   if(active){
-    card?.classList.remove('collapsed');
+    setClassState(card,'collapsed',false);
     if(photo){closeDrawer();setRailExpanded(false)}
     else if(!wasActive){pane='overview';closeDrawer();setRailExpanded(false)}
     else if(card?.classList.contains('hubOpen')){setA11yHidden(card,false);applyPane()}
     else setA11yHidden(card,true);
   }else{
-    card?.classList.remove('hubOpen');clearStatus();restoreChildren();setA11yHidden(card,false);setRailExpanded(false);
+    if(card?.classList.contains('hubOpen'))card?.classList.remove('hubOpen');clearStatus();restoreChildren();setA11yHidden(card,false);setRailExpanded(false);
   }
   wasActive=active;updateRail();
 }
