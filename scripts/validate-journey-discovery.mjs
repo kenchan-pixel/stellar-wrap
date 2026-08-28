@@ -26,7 +26,9 @@ ok(journal.includes("addEventListener('stellarwarp:atlas-change',()=>render())")
 ok(atlas.includes('const changed=signature!==lastSignature')&&atlas.includes("if(changed)dispatchEvent(new CustomEvent('stellarwarp:atlas-change'"),'Star Atlas emits a focused refresh only when its authoritative model changes');
 ok(atlas.includes("import('./vega-survey.js').then(()=>render(true)).catch(()=>{})")&&atlas.includes("import('./prox-starport-alignment.js').then(()=>render(true)).catch(()=>{})"),'late destination module loads re-evaluate the Star Atlas model');
 ok(journal.includes("localStorage.setItem(KEY,JSON.stringify({version:2,entries:journal.entries.slice(0,LIMIT),visited:normaliseVisited(journal.visited,journal.entries)}))"),'journal persistence schema remains route/visited-only without copied discovery state');
-ok((journal.match(/setInterval\(/g)||[]).length===1&&(atlas.match(/setInterval\(/g)||[]).length===1,'journey discovery continuity adds no new polling loop');
+const journalTimers=(journal.match(/setInterval\(/g)||[]).length;
+const atlasTimers=(atlas.match(/setInterval\(/g)||[]).length;
+ok(journalTimers===1&&atlasTimers===1,'journey discovery continuity adds no new polling loop');
 ok(!/fetch\(|XMLHttpRequest|WebSocket/.test(journal+atlas),'journey discovery continuity adds no network/backend path');
 
 for(const message of passes)console.log(`✓ ${message}`);
