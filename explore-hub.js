@@ -10,6 +10,9 @@ const PANES=new Set(['overview','explore','discovery']);
 let pane='overview';
 let wasActive=false;
 let rail=null;
+let railToggle=null;
+let railTools=null;
+let railExpanded=false;
 let statusCard=null;
 let appObserver=null;
 let bodyObserver=null;
@@ -82,6 +85,19 @@ function ensureRail(){
     position:relative;width:40px;min-height:44px;padding:2px;border:1px solid transparent;border-radius:11px;
     background:transparent;color:rgba(230,240,255,.7);font-size:9px;font-weight:780;line-height:1.15
   }
+  #app.exploreHubMobile #exploreRailToggle{
+    min-height:46px;color:#f2f8ff;border-color:rgba(143,209,255,.28);background:rgba(104,169,229,.1)
+  }
+  #app.exploreHubMobile #exploreRail.railExpanded #exploreRailToggle{
+    border-color:rgba(143,209,255,.48);background:rgba(104,169,229,.2)
+  }
+  #app.exploreHubMobile #exploreRailTools{
+    display:grid;gap:5px;max-height:0;opacity:0;overflow:hidden;transform:translateY(-5px);pointer-events:none;
+    transition:max-height .2s cubic-bezier(.2,.8,.2,1),opacity .14s ease,transform .18s ease
+  }
+  #app.exploreHubMobile #exploreRail.railExpanded #exploreRailTools{
+    max-height:245px;opacity:1;transform:none;pointer-events:auto
+  }
   #app.exploreHubMobile #exploreRail button[aria-pressed="true"]{
     color:#fff;border-color:rgba(143,209,255,.38);background:rgba(104,169,229,.13)
   }
@@ -112,7 +128,8 @@ function ensureRail(){
   #app.exploreHubMobile #exploreCard:not(.transit){left:calc(var(--safeL) + 54px);width:min(calc(100vw - var(--safeL) - var(--safeR) - 66px),300px)}
 }
 @media (prefers-reduced-motion:reduce){
-  #app.exploreHubMobile #exploreCard:not(.transit){transition:none}
+  #app.exploreHubMobile #exploreCard:not(.transit),
+  #app.exploreHubMobile #exploreRailTools{transition:none}
 }
 `;
     document.head.append(style);
@@ -120,15 +137,30 @@ function ensureRail(){
   rail=document.querySelector('#exploreRail');
   if(!rail){
     rail=document.createElement('nav');rail.id='exploreRail';rail.setAttribute('aria-label','到站探索工具');rail.setAttribute('aria-hidden','true');rail.setAttribute('inert','');
+    railToggle=document.createElement('button');railToggle.id='exploreRailToggle';railToggle.type='button';railToggle.textContent='探索';railToggle.setAttribute('aria-label','展開探索工具');railToggle.setAttribute('aria-expanded','false');railToggle.setAttribute('aria-controls','exploreRailTools');
+    railTools=document.createElement('div');railTools.id='exploreRailTools';railTools.className='exploreRailTools';railTools.setAttribute('aria-hidden','true');railTools.setAttribute('inert','');
     const buttons=[
       ['overview','概覽',false],['explore','探索',false],['discovery','發現',false],['photo','攝影',true],['map','星圖',true]
     ];
     for(const [action,label,direct] of buttons){
-      const button=document.createElement('button');button.type='button';button.dataset.hubAction=action;button.dataset.direct=direct?'true':'false';button.textContent=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>activate(action));rail.append(button);
+      const button=document.createElement('button');button.type='button';button.dataset.hubAction=action;button.dataset.direct=direct?'true':'false';button.textContent=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed','false');button.addEventListener('click',()=>activate(action));railTools.append(button);
     }
-    app.append(rail);
+    railToggle.addEventListener('click',toggleRail);
+    rail.append(railToggle,railTools);app.append(rail);
+  }else{
+    railToggle=rail.querySelector('#exploreRailToggle');railTools=rail.querySelector('#exploreRailTools');
   }
   return true;
+}
+function setRailExpanded(next){
+  if(!rail)return false;
+  const app=document.querySelector('#app');
+  railExpanded=!!next&&finalExplore()&&!app?.classList.contains('photoMode');
+  rail.classList.toggle('railExpanded',railExpanded);
+  railToggle?.setAttribute('aria-expanded',railExpanded?'true':'false');
+  if(railToggle)railToggle.setAttribute('aria-label',railExpanded?'收起探索工具':'展開探索工具');
+  setA11yHidden(railTools,!railExpanded);
+  return railExpanded;
 }
 function classify(child){
   if(child.id==='exploreMeta')return'overview';
@@ -162,19 +194,27 @@ function updateRail(){
     button.setAttribute('aria-pressed',open&&action===pane&&PANES.has(action)?'true':'false');
   }
 }
+function closeDrawer(){
+  const card=document.querySelector('#exploreCard');card?.classList.remove('hubOpen');
+  clearStatus();setA11yHidden(card,finalExplore());
+  const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='⌄';collapse.setAttribute('aria-label','收起觀景資訊')}
+  updateRail();return true;
+}
+function toggleRail(){
+  if(!finalExplore())return false;
+  if(railExpanded){setRailExpanded(false);return true}
+  closeDrawer();setRailExpanded(true);return true;
+}
 function open(next=pane){
   if(!PANES.has(next)||!finalExplore())return false;
-  pane=next;
+  pane=next;setRailExpanded(false);
   const card=document.querySelector('#exploreCard');if(!card)return false;
   card.classList.remove('collapsed');card.classList.add('hubOpen');setA11yHidden(card,false);
   const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='×';collapse.setAttribute('aria-label','關閉探索面板')}
   applyPane();return true;
 }
 function close(){
-  const card=document.querySelector('#exploreCard');card?.classList.remove('hubOpen');
-  clearStatus();setA11yHidden(card,finalExplore());
-  const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='⌄';collapse.setAttribute('aria-label','收起觀景資訊')}
-  updateRail();return true;
+  closeDrawer();setRailExpanded(false);return true;
 }
 function openPhoto(){
   close();
@@ -196,16 +236,17 @@ function activate(action){
 }
 function sync(){
   if(!ensureRail())return;
-  const active=finalExplore(),app=document.querySelector('#app'),card=document.querySelector('#exploreCard');
+  const active=finalExplore(),app=document.querySelector('#app'),card=document.querySelector('#exploreCard'),photo=!!app?.classList.contains('photoMode');
   app?.classList.toggle('exploreHubMobile',active);
-  setA11yHidden(rail,!active||!!app?.classList.contains('photoMode'));
+  setA11yHidden(rail,!active||photo);
   if(active){
     card?.classList.remove('collapsed');
-    if(!wasActive){pane='overview';close()}
+    if(photo){closeDrawer();setRailExpanded(false)}
+    else if(!wasActive){pane='overview';closeDrawer();setRailExpanded(false)}
     else if(card?.classList.contains('hubOpen')){setA11yHidden(card,false);applyPane()}
     else setA11yHidden(card,true);
   }else{
-    card?.classList.remove('hubOpen');clearStatus();restoreChildren();setA11yHidden(card,false);
+    card?.classList.remove('hubOpen');clearStatus();restoreChildren();setA11yHidden(card,false);setRailExpanded(false);
   }
   wasActive=active;updateRail();
 }
@@ -232,5 +273,5 @@ document.querySelector('#arrivalDebriefNext')?.addEventListener('click',()=>{
 addEventListener('keydown',event=>{if(event.key==='Escape'&&finalExplore())close()});
 addEventListener('stellarwarp:journey-complete',()=>queueMicrotask(sync));
 addEventListener('stellarwarp:discovery-change',()=>{updateStatus();if(pane==='discovery'&&finalExplore())applyPane()});
-window.WarpExploreHub={open,close,activate,active(){return finalExplore()},activePane(){return pane}};
+window.WarpExploreHub={open,close,activate,toggleRail,active(){return finalExplore()},activePane(){return pane},menuExpanded(){return railExpanded}};
 })();
