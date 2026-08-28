@@ -3,6 +3,7 @@
 
 const SYSTEM_NAMES={LUNA:'月環基地',VEGA:'織女星門',CYG:'天鵝航標',ORION:'獵戶前哨',TAU:'金牛塵海',SIRIUS:'天狼中繼站',PROX:'比鄰星港'};
 const IDS=new Set(Object.keys(SYSTEM_NAMES));
+const EXPEDITION_ORDER=Object.keys(SYSTEM_NAMES);
 const TOTAL=7;
 let uiReady=false;
 let visible=false;
@@ -20,9 +21,26 @@ function readSnapshot(){
 function readDiscoveries(){
   return readSnapshot()?.discoveries||null;
 }
+function nextUndiscovered(fromSystem){
+  const discoveries=readDiscoveries()||{};
+  const start=Math.max(0,EXPEDITION_ORDER.indexOf(fromSystem));
+  for(let step=1;step<EXPEDITION_ORDER.length;step++){
+    const candidate=EXPEDITION_ORDER[(start+step)%EXPEDITION_ORDER.length];
+    if(typeof discoveries[candidate]!=='string'||!discoveries[candidate].trim())return candidate;
+  }
+  return null;
+}
 function updatePhotoAvailability(){
   const photo=document.querySelector('#discoveryDebriefPhoto');
   if(photo)photo.disabled=typeof window.WarpPhotoMode?.enter!=='function';
+}
+function updateNextAction(system){
+  const next=document.querySelector('#discoveryDebriefNext');
+  if(!next)return;
+  const target=nextUndiscovered(system);
+  next.dataset.destination=target||'';
+  next.disabled=!target||typeof window.WarpSim?.select!=='function';
+  next.textContent=target?`下一個未探索 · ${SYSTEM_NAMES[target]}`:'探索檔案完成';
 }
 function readProfile(system){
   const systems=readSnapshot()?.systems;
@@ -51,7 +69,7 @@ function ensureUi(){
   const actionRow=document.createElement('div');actionRow.className='discoveryDebriefActions';
   const photo=document.createElement('button');photo.id='discoveryDebriefPhoto';photo.className='discoveryPhoto';photo.type='button';photo.textContent='留影記錄';
   const atlas=document.createElement('button');atlas.id='discoveryDebriefAtlas';atlas.className='discoveryAtlas';atlas.type='button';atlas.textContent='查看星區圖鑑';
-  const next=document.createElement('button');next.id='discoveryDebriefNext';next.className='discoveryNext';next.type='button';next.textContent='下一目的地';
+  const next=document.createElement('button');next.id='discoveryDebriefNext';next.className='discoveryNext';next.type='button';next.textContent='下一個未探索';
   actionRow.append(photo,atlas,next);card.append(kicker,title,name,note,progress,actionRow);actions.insertAdjacentElement('beforebegin',card);
   photo.addEventListener('click',openPhoto);atlas.addEventListener('click',openAtlas);next.addEventListener('click',openNext);
   uiReady=true;return true;
@@ -68,7 +86,7 @@ function render(detail){
   name.textContent='已收錄「'+detail.discovery+'」';
   const profile=readProfile(detail.system);
   note.textContent=profile?.note?`${profile.kind||'模擬觀測'} · ${profile.note}`:'模擬觀測已完成，詳細紀錄可在星區圖鑑查看。';
-  updatePhotoAvailability();
+  updatePhotoAvailability();updateNextAction(detail.system);
   const count=Number.isFinite(detail.count)?Math.max(0,Math.min(TOTAL,Math.round(detail.count))):null;
   progress.textContent=count===null?'發現已寫入本機星區圖鑑':`${count} / ${TOTAL} 外站發現已收錄`;
   return true;
@@ -103,7 +121,15 @@ function openAtlas(){
     setTimeout(()=>atlas.scrollIntoView?.({block:'nearest',behavior:'smooth'}),0);
   }
 }
-function openNext(){hide();document.querySelector('#openPanel')?.click()}
+function openNext(){
+  if(!current||!safeState(current.system))return false;
+  const target=nextUndiscovered(current.system);
+  const api=window.WarpSim;
+  if(!target||typeof api?.select!=='function')return false;
+  try{api.select(target)}catch{return false}
+  hide();document.querySelector('#openPanel')?.click();
+  return true;
+}
 function accept(detail){
   if(!detail?.discovery||!IDS.has(detail.system))return false;
   known.set(detail.system,detail.discovery);
@@ -113,6 +139,7 @@ function accept(detail){
 }
 function sample(){
   updatePhotoAvailability();
+  if(current&&visible)updateNextAction(current.system);
   const discoveries=readDiscoveries();if(!discoveries)return;
   const entries=Object.entries(discoveries).filter(([system,discovery])=>IDS.has(system)&&typeof discovery==='string'&&discovery);
   if(!primed){known=new Map(entries);primed=true;return}
@@ -126,6 +153,6 @@ addEventListener('stellarwarp:discovery-change',event=>accept(event.detail));
 addEventListener('stellarwarp:journey-complete',hide);
 document.querySelector('#space')?.addEventListener('webglcontextlost',hide);
 ensureUi();sample();setInterval(sample,1000);
-window.WarpDiscoveryDebrief={show,hide,visible(){return visible},entry(){return current?{...current}:null},sample,openPhoto};
+window.WarpDiscoveryDebrief={show,hide,visible(){return visible},entry(){return current?{...current}:null},sample,openPhoto,openNext,nextTarget(){return current?nextUndiscovered(current.system):null}};
 import('./navigation-discovery-status.js').catch(()=>{});
 })();
