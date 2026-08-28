@@ -109,3 +109,4 @@ window.WarpNavigationDiscovery={
 };
 })();
 import('./explore-hub.js').catch(()=>{});
+import('./exploration-focus-tray.js').catch(()=>{});
