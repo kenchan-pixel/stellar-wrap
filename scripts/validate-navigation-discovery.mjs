@@ -18,11 +18,14 @@ const ok=(condition,message)=>(condition?passes:failures).push(message);
 const parse=spawnSync(process.execPath,['--check',modulePath],{encoding:'utf8'});
 ok(parse.status===0,`navigation discovery JavaScript parses${parse.stderr?`: ${parse.stderr.trim()}`:''}`);
 ok(source.includes('window.WarpStarAtlas?.snapshot?.()'),'navigation status reads existing Star Atlas authority');
+ok(source.includes('window.WarpTravelJournal?.visited?.()'),'navigation map reuses the travel journal visited-system authority');
+ok(source.includes("if(visited.has(id))node.classList.add('visited')"),'persisted visits are layered onto core map nodes without erasing current-session visit state');
 ok(source.includes("observer.observe(map,{childList:true})")&&!source.includes('subtree:true'),'map redraw observer is direct-child-only');
 ok(source.includes("addEventListener('stellarwarp:discovery-change',schedule)"),'same-tab discovery changes trigger navigation refresh');
+ok(source.includes("addEventListener('stellarwarp:location-restored',schedule)"),'restored location triggers a focused map refresh when navigation is already mounted');
 ok(source.includes('queueMicrotask'),'map redraw refreshes are microtask-coalesced');
 ok(!/localStorage|sessionStorage|fetch\(|XMLHttpRequest|WebSocket|requestAnimationFrame|setInterval/.test(source),'navigation status adds no persistence, network, render-loop or polling work');
-ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v12`"),'offline shell generation advances for navigation discovery status');
+ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v12`"),'offline shell generation remains on the current navigation-aware cache generation');
 ok(sw.includes("'./navigation-discovery-status.js'"),'offline shell includes navigation discovery status');
 ok(discoveryDebrief.includes("import('./navigation-discovery-status.js').catch(()=>{})"),'discovery continuity bootstrap loads navigation discovery status');
 ok(pkg.scripts?.check?.includes('node scripts/validate-navigation-discovery.mjs'),'npm run check includes focused navigation discovery validation');
@@ -113,6 +116,7 @@ function redraw(selected='CYG'){map.replaceChildren(...Object.keys(names).map(id
 redraw();
 
 let discoveries={CYG:'雙星航標三角場',ORION:'三線發射殼層'};
+const persistentVisited=['SOL','LUNA','CYG','ORION'];
 const globalEvents=new EventTarget();
 Object.defineProperty(globalThis,'window',{value:globalThis,configurable:true});
 Object.defineProperty(globalThis,'document',{value:document,configurable:true});
@@ -120,7 +124,8 @@ Object.defineProperty(globalThis,'MutationObserver',{value:MiniMutationObserver,
 globalThis.addEventListener=(...args)=>globalEvents.addEventListener(...args);
 globalThis.removeEventListener=(...args)=>globalEvents.removeEventListener(...args);
 globalThis.dispatchEvent=event=>globalEvents.dispatchEvent(event);
-globalThis.WarpStarAtlas={snapshot(){return{visited:['SOL','CYG','ORION'],discoveries:{...discoveries},systems:[]}}};
+globalThis.WarpStarAtlas={snapshot(){return{visited:[...persistentVisited],discoveries:{...discoveries},systems:[]}}};
+globalThis.WarpTravelJournal={visited(){return[...persistentVisited]}};
 
 await import(pathToFileURL(modulePath).href+`?test=${Date.now()}`);
 await new Promise(resolve=>setImmediate(resolve));
@@ -130,6 +135,7 @@ ok(progress?.textContent.includes('2 / 7'),'initial navigation summary reflects 
 ok(detail?.textContent.includes('雙星航標三角場'),'selected discovered destination names its recorded finding');
 ok(document.querySelectorAll('.mapNode.discovered').length===2,'existing discovered destinations are visibly marked on the map');
 ok(document.querySelectorAll('.navDiscoveryMark').length===2,'discovered map nodes receive one compact check marker each');
+ok(document.querySelectorAll('.mapNode.visited').length===4,'persisted travel-journal visits are restored onto the navigation map');
 
 destination.textContent='月環基地';globalThis.WarpNavigationDiscovery.render();
 ok(detail.textContent==='尚未完成本站探索','selected unfinished destination is explicitly identified before route launch');
@@ -144,10 +150,12 @@ ok(document.querySelectorAll('.mapNode.discovered').length===3,'same-tab complet
 redraw('VEGA');destination.textContent='織女星門';
 await new Promise(resolve=>setImmediate(resolve));
 ok(document.querySelectorAll('.mapNode.discovered').length===3,'map redraw observer reapplies all discovery markers after core SVG rebuild');
+ok(document.querySelectorAll('.mapNode.visited').length===4,'map redraw observer reapplies persisted visited systems after core SVG rebuild');
 ok(detail.textContent==='尚未完成本站探索','redrawn selected unfinished destination keeps route-card exploration context');
 
 destination.textContent='地球近軌';globalThis.WarpNavigationDiscovery.render();
 ok(detail.textContent==='母港 · 無外站發現','SOL is clearly treated as the home system rather than a missing discovery');
+ok(new Set(globalThis.WarpNavigationDiscovery.snapshot().visited).size===4,'navigation diagnostic snapshot exposes the same persistent visited authority');
 
 for(const message of passes)console.log(`✓ ${message}`);
 if(failures.length){console.error(`\n${failures.length} navigation discovery validation failure(s):`);for(const message of failures)console.error(`✗ ${message}`);process.exit(1)}

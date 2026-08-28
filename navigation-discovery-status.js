@@ -18,6 +18,12 @@ function readDiscoveries(){
   const raw=readSnapshot()?.discoveries;
   return raw&&typeof raw==='object'?raw:{};
 }
+function readVisited(){
+  try{
+    const raw=window.WarpTravelJournal?.visited?.();
+    return new Set(Array.isArray(raw)?raw.filter(id=>IDS.has(id)):['SOL']);
+  }catch{return new Set(['SOL'])}
+}
 function selectedSystem(){
   const routeName=document.querySelector('#destinationName')?.textContent?.trim();
   if(ID_BY_NAME.has(routeName))return ID_BY_NAME.get(routeName);
@@ -54,9 +60,11 @@ function createSvgText(){
 }
 function markNodes(found){
   const map=document.querySelector('#map');if(!map)return;
+  const visited=readVisited();
   for(const node of map.querySelectorAll('.mapNode')){
     const label=node.querySelector('text')?.textContent?.trim();
     const id=ID_BY_NAME.get(label);if(!id)continue;
+    if(visited.has(id))node.classList.add('visited');
     const discovery=id!=='SOL'&&typeof found[id]==='string'?found[id].trim():'';
     const complete=!!discovery;
     node.classList.toggle('discovered',complete);
@@ -92,10 +100,11 @@ function schedule(){
 }
 
 addEventListener('stellarwarp:discovery-change',schedule);
+addEventListener('stellarwarp:location-restored',schedule);
 addEventListener('storage',schedule);
 ensureUi();render();
 window.WarpNavigationDiscovery={
   render,
-  snapshot(){const found=readDiscoveries();return{selected:selectedSystem(),discoveries:{...found}}}
+  snapshot(){const found=readDiscoveries();return{selected:selectedSystem(),discoveries:{...found},visited:[...readVisited()]}}
 };
 })();

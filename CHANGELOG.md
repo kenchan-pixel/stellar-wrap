@@ -31,6 +31,9 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Added **Reload World Continuity**: when a device already has a validated completed journey, reloading now resumes at that journey's final destination in the existing safe exploration state instead of silently resetting the simulated location to SOL.
+- Reload continuity reuses the Travel Journal as the sole persistence authority and delegates the actual scene/location transition to existing `WarpSim.jumpTo()`; it will not overwrite an active flight, exploration state, selected route, WebGL recovery state or a runtime that has already moved away from SOL.
+- The navigation map now reapplies cumulative `WarpTravelJournal.visited()` systems after a core SVG redraw, so historical visited markers survive reload without deleting current-session live visited state.
 - Star Atlas discovery cards now show a destination-specific field-note classification and concise observation note only after that discovery is collected; the static note metadata is exposed through `snapshot().systems` for presentation handoff but remains separate from completion/persistence authority.
 - Travel Journal now forms a **journey → discovery continuity** layer: each retained completed journey shows the destination's current exploration outcome as `發現 · 名稱`, `探索未完成`, or SOL home-system semantics, while the journal summary exposes the same `x / 7 發現` progress used by Star Atlas.
 - Journey discovery status reads only `WarpStarAtlas.snapshot().discoveries`; it does not copy discovery data into journal storage, so completing a discovery later updates older journey entries immediately through the existing discovery event and after reload/storage refresh, without adding a new timer, backend or network path.
@@ -44,6 +47,8 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Extended journey-continuity validation with executable fresh-process cases for completed-destination restore, fresh SOL startup, selected-route protection and malformed-history rejection; restore adds no new timer, storage key, network or duplicated scene/camera transition.
+- Extended navigation runtime validation to prove persisted visited systems are reapplied on initial mount and after a real core-style SVG redraw while discovery markers and route-card exploration status remain correct.
 - Extended Discovery Completion validation for exactly seven field-note profiles, Star Atlas/debrief metadata handoff, safe Photo Mode reuse, full-width mobile action layout, runtime note rendering and zero new storage/network/render-loop work.
 - Extended exploration-continuity validation for journey discovery outcomes: Star Atlas remains the sole discovery aggregation authority, Journal distinguishes completed/pending/home outcomes, same-tab discovery events refresh immediately, Star Atlas bootstrap triggers a post-load refresh, and the journal summary uses the seven-external-destination collection count without adding persistence or a new polling loop.
 - Added focused Exploration-Aware Navigation validation: JavaScript syntax, existing Star Atlas authority, direct-child-only map redraw observation, microtask coalescing, same-tab discovery refresh, offline-shell/bootstrap integration and zero persistence/network/render-loop work, plus executable DOM coverage for `2 / 7 → 3 / 7`, selected complete/pending/SOL states and marker restoration after a real core-style SVG rebuild.

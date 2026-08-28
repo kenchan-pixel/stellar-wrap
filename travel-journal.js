@@ -6,6 +6,7 @@ const DISCOVERY_TOTAL=7;
 const NAMES={SOL:'地球近軌',LUNA:'月環基地',VEGA:'織女星門',CYG:'天鵝航標',ORION:'獵戶前哨',TAU:'金牛塵海',SIRIUS:'天狼中繼站',PROX:'比鄰星港'};
 const IDS=new Set(Object.keys(NAMES));
 let previous=null,active=null,currentId='SOL',uiReady=false;
+let locationRestorePending=true;
 
 function normaliseEntry(entry){
   if(!entry||!Array.isArray(entry.route))return null;
@@ -31,6 +32,7 @@ function load(){
   }catch{return{entries:[],visited:['SOL']}}
 }
 let journal=load();
+locationRestorePending=journal.entries.length>0;
 function save(){try{localStorage.setItem(KEY,JSON.stringify({version:2,entries:journal.entries.slice(0,LIMIT),visited:normaliseVisited(journal.visited,journal.entries)}))}catch{}}
 function formatStamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
 function name(id){return NAMES[id]||id}
@@ -128,11 +130,30 @@ function recordCompleted(activeSession,state){
   dispatchEvent(new CustomEvent('stellarwarp:journey-complete',{detail:{...entry,route:[...entry.route]}}));
   return true;
 }
+function restoreDockedLocation(){
+  if(!locationRestorePending)return false;
+  const latest=journal.entries[0];
+  const destination=latest?.route?.[latest.route.length-1];
+  if(!IDS.has(destination)){locationRestorePending=false;return false}
+  const api=window.WarpSim;
+  if(!api||typeof api.state!=='function'||typeof api.jumpTo!=='function')return false;
+  let state;try{state=api.state()}catch{return false}
+  if(!state)return false;
+  const busy=!!(state.flying||state.exploring||state.contextLost||state.selected||(Array.isArray(state.route)&&state.route.length));
+  if(state.current!=='SOL'||busy){locationRestorePending=false;return false}
+  try{api.jumpTo(destination)}catch{locationRestorePending=false;return false}
+  locationRestorePending=false;
+  currentId=destination;
+  render();
+  dispatchEvent(new CustomEvent('stellarwarp:location-restored',{detail:{current:destination,visited:normaliseVisited(journal.visited,journal.entries)}}));
+  return true;
+}
 function sample(){
   ensureUi();
   const api=window.WarpSim;if(!api||typeof api.state!=='function')return;
   const sampleAt=performance.now();
   let state;try{state=api.state()}catch{return}
+  if(locationRestorePending&&restoreDockedLocation()){try{state=api.state()}catch{return}}
   currentId=IDS.has(state.current)?state.current:currentId;
   if(!previous){previous=state;if(state.flying&&Array.isArray(state.route)&&state.route.length>1)active=beginSession(state,sampleAt);render();return}
   if(state.flying&&!previous.flying)active=beginSession(state,sampleAt);
@@ -152,12 +173,14 @@ function sample(){
 }
 setInterval(sample,500);
 sample();
+document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending)restoreDockedLocation()},{once:true});
 addEventListener('stellarwarp:discovery-change',()=>render());
 addEventListener('stellarwarp:atlas-change',()=>render());
 addEventListener('storage',()=>render());
 window.WarpTravelJournal={
   entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))},
-  visited(){return normaliseVisited(journal.visited,journal.entries)}
+  visited(){return normaliseVisited(journal.visited,journal.entries)},
+  restoreLocation(){return restoreDockedLocation()}
 };
 import('./responsive-ui.js').catch(()=>{});
 import('./exploration-survey.js').catch(()=>{});

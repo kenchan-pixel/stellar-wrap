@@ -20,6 +20,7 @@
 6. 在安全待命／探索狀態直接按「規劃前往」，交回原有 `WarpSim.select()`／Dijkstra planner 建立航線。
 7. 八站全部到訪後看到「全星區巡航完成」；七個外站發現全部收錄後另外看到「探索檔案完成」。
 8. 旅行日誌亦會把每次已完成航程與**目前探索成果**連在一起：外站顯示 `發現 · 名稱` 或 `探索未完成`，摘要同步顯示 `x / 7 發現`。
+9. 有已完成航程的裝置 reload 後，會回到**最近真正完成的目的地**並進入該站探索；星圖亦重新套用旅行日誌的累積到訪標記，而不是每次重新假設仍在 SOL。
 
 SOL 是旅程出發母港，因此目前不強行加入一個人工 discovery 來湊數；外站探索集合明確為其餘七個目的地。
 
@@ -33,12 +34,22 @@ Star Atlas 為七個外站保存靜態展示 metadata：
 
 Field note **不代表新的科學數據模型**，亦不影響 discovery 是否完成。只有當既有探索模組回報 discovery 已完成時，對應卡片才顯示 note。
 
+## Reload World Continuity
+
+- 最近位置只由旅行日誌已驗證的最新 completed journey 推導；不建立第二個 `current location` storage key。
+- client core ready 後，Travel Journal 只在仍是乾淨 SOL idle state 時呼叫既有 `WarpSim.jumpTo(destination)`，讓原有 scene／camera／exploration transition 成為唯一位置切換 authority。
+- 若使用者已選航線、已在探索、正在飛行、WebGL context lost，或 runtime 已由其他機制切到非 SOL，restore 會放棄，不會遲到覆蓋使用者操作。
+- fresh session、沒有有效 completed journey、或損壞／未知 route ID 一律維持 SOL。
+- 星圖的歷史 `visited` 只讀 `WarpTravelJournal.visited()`，並只**補上**持久到訪 class，不刪除 core 本 session 已建立的 live visited state。
+- reload 不恢復半途航程；中止或未完成的 flight 沒有 journal completion，所以只會回到上一次真正停泊點。
+
 ## Data authority
 
 Star Atlas **不建立第二套航行或持久資料來源**：
 
 - 累積到訪資料：由旅行日誌同一個 `stellar-warp-travel-journal-v1` 記錄保存 `visited` IDs。
-- 目前位置／航行狀態：只讀 `WarpSim.state()`。
+- 最近停泊位置：由同一記錄中最新一筆已驗證 completed journey 的 route destination 推導。
+- 目前位置／航行狀態：只讀 `WarpSim.state()`；實際 reload restore 只使用既有 `WarpSim.jumpTo()`。
 - 各站 discovery completion：只讀各自 exploration module 的 `progress()`；Star Atlas 自己不保存 discovery。
 - LUNA：`WarpLunaSurvey`；VEGA：`WarpVegaSurvey`；CYG：`WarpCygBeacon`；ORION：`WarpOrionSpectrum`；TAU：`WarpTauRings`；SIRIUS：`WarpSiriusRelay`；PROX：`WarpProxAlignment`。
 - Field-note profile 是 `SYSTEMS` 內的靜態 presentation metadata，不是 localStorage／進度 state；`snapshot().systems` 只提供拷貝予其他 UI 消費。
@@ -51,7 +62,8 @@ Star Atlas **不建立第二套航行或持久資料來源**：
 - Star Atlas 只在 DOM 層工作。
 - 最多每 1 秒重新取樣一次；資料未改變時不重建卡片。
 - Field note 只在既有 card render 時建立文字節點，不新增 timer、observer 或 WebGL 工作。
-- 旅行日誌沿用既有 2 Hz 航程取樣；探索成果只在既有 render／event／storage 流程讀取。
+- 旅行日誌沿用既有 2 Hz 航程取樣；reload restore 先在 core startup 完成後嘗試一次，若未 ready 只沿用同一個 2 Hz sampler 作 fallback，**不新增 timer**。
+- 探索成果只在既有 render／event／storage 流程讀取。
 - 不使用 `requestAnimationFrame`，不進入 WebGL 60 Hz render loop。
 
 ## Acceptance Criteria
@@ -67,14 +79,18 @@ Star Atlas **不建立第二套航行或持久資料來源**：
 - 七個外站各自完成 exploration slice 後，圖鑑只讀並顯示對應 discovery；未完成時不偽造發現。
 - 發現摘要固定顯示 `x / 7 發現`；只有七個外站 discovery 都完成才顯示探索檔案完成。
 - 同一分頁完成 discovery 後，旅行日誌及 Star Atlas 不需 reload 即更新；reload／storage 更新亦重新讀取既有 authority。
-- Journal storage schema 不增加 discovery 欄位。
+- Journal storage schema 不增加 discovery 或另一個 current-location 欄位／key。
+- 完成 TAU 等外站航程後 reload，runtime 由該站探索模式繼續，之後 `WarpSim.select()` 由恢復後的目前站規劃。
+- reload 後星圖重新顯示所有 journal visited 星區；core 本 session 的 live visited 狀態不可被 overlay 刪除。
+- fresh session／損壞 history／已選航線／飛行中狀態不可被 reload restore 誤覆蓋。
 - 航行中、WebGL context lost、或目標等於目前位置時不可重新規劃。
 - 「規劃前往」只使用原有 planner，沒有第二套 route graph／座標表。
-- Offline shell 包含 Star Atlas 及所有目前候選 discovery modules。
+- Offline shell 繼續使用已快取的 Travel Journal／Navigation runtime；沒有新增 runtime dependency。
 - `npm run check` 通過，V4.0 immutable snapshot hash 不變。
 
 ## Out of Scope
 
+- 恢復 reload 前未完成的飛行 phase／秒數／中途位置。
 - 把 discovery 結果或 field note 複製寫入每筆旅行日誌。
 - 為 SOL 人工增加一個探索發現只為達到 8 / 8 discovery。
 - 把 field note 當成真實天文學測量或物理模型。
@@ -86,12 +102,13 @@ Star Atlas **不建立第二套航行或持久資料來源**：
 
 手機 Safari 直向至少核實：
 
-1. 新 session 顯示 `1 / 8`，SOL 為目前位置且沒有 discovery field note。
-2. 完成任一外站 discovery，確認卡片才出現 `發現 · 名稱`＋分類／note，未完成卡不洩漏內容。
-3. note 在 390 px 級手機雙欄卡不會推高版面到難以掃讀；360 px 以下單欄正常。
-4. 完成各站 discovery 時，對應卡片在同一分頁即時更新，發現總數同步增加。
-5. 展開旅行日誌，確認 outcome 與 Star Atlas 的 `x / 7` 一致。
-6. reload 後各站已完成 discovery、field note 及旅行日誌 outcome 仍正確顯示。
-7. 七個外站 discovery 全部完成時顯示 `7 / 7 發現` 及「探索檔案完成」。
-8. 由圖鑑按另一星區「規劃前往」只建立原有航線，不會自動起航。
-9. Prepared offline cache 後斷網重開，Star Atlas 及 field notes 可由已快取 runtime 正常呈現。
+1. fresh session 顯示 `1 / 8`，SOL 為目前位置且沒有 discovery field note。
+2. 完成 `SOL → TAU` 或另一外站航程，停在到站探索後 reload；確認直接回到同一外站探索，而不是重置 SOL。
+3. reload 後開星圖，確認之前 completed route 的所有 visited 星區仍有到訪標記；再揀新目的地確認航線由恢復後目前站開始。
+4. reload 前只選了航線但未啟航／或沒有完成新航程時，不應把「選定目的地」誤當成目前位置。
+5. 完成任一外站 discovery，確認卡片才出現 `發現 · 名稱`＋分類／note，未完成卡不洩漏內容。
+6. note 在 390 px 級手機雙欄卡不會推高版面到難以掃讀；360 px 以下單欄正常。
+7. 完成各站 discovery 時，對應卡片在同一分頁即時更新，發現總數同步增加。
+8. 展開旅行日誌，確認 outcome 與 Star Atlas 的 `x / 7` 一致。
+9. 七個外站 discovery 全部完成時顯示 `7 / 7 發現` 及「探索檔案完成」。
+10. Prepared offline cache 後斷網重開，最近停泊點、Star Atlas、visited 標記及 field notes 可由已快取 runtime 正常呈現。

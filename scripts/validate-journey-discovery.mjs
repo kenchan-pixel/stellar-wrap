@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
@@ -26,10 +26,51 @@ ok(journal.includes("addEventListener('stellarwarp:atlas-change',()=>render())")
 ok(atlas.includes('const changed=signature!==lastSignature')&&atlas.includes("if(changed)dispatchEvent(new CustomEvent('stellarwarp:atlas-change'"),'Star Atlas emits a focused refresh only when its authoritative model changes');
 ok(atlas.includes("import('./vega-survey.js').then(()=>render(true)).catch(()=>{})")&&atlas.includes("import('./prox-starport-alignment.js').then(()=>render(true)).catch(()=>{})"),'late destination module loads re-evaluate the Star Atlas model');
 ok(journal.includes("localStorage.setItem(KEY,JSON.stringify({version:2,entries:journal.entries.slice(0,LIMIT),visited:normaliseVisited(journal.visited,journal.entries)}))"),'journal persistence schema remains route/visited-only without copied discovery state');
+
+ok(journal.includes('function restoreDockedLocation()')&&journal.includes('const latest=journal.entries[0]'),'reload continuity derives the resume point from the newest validated completed journey');
+ok(journal.includes("typeof api.state!=='function'||typeof api.jumpTo!=='function'")&&journal.includes('api.jumpTo(destination)'),'location restore delegates to the existing WarpSim state transition instead of duplicating scene/camera authority');
+ok(journal.includes("state.current!=='SOL'||busy")&&journal.includes('state.selected')&&journal.includes('state.route.length'),'restore refuses to overwrite active, selected, travelling or already-restored runtime state');
+ok(journal.includes("document.addEventListener('DOMContentLoaded',()=>{if(locationRestorePending)restoreDockedLocation()}")&&journal.includes('if(locationRestorePending&&restoreDockedLocation())'),'restore attempts after core startup and reuses the existing bounded journal sampler as fallback');
+ok(journal.includes("dispatchEvent(new CustomEvent('stellarwarp:location-restored'"),'successful restore emits one focused UI refresh event');
+
+function runRuntimeCase(name,payload,initial,expected){
+  const code=`
+import assert from 'node:assert/strict';
+const payload=${JSON.stringify(payload)};
+const store=new Map([['stellar-warp-travel-journal-v1',JSON.stringify(payload)]]);
+globalThis.window=globalThis;
+globalThis.document={hidden:false,addEventListener(){},querySelector(){return null}};
+globalThis.localStorage={getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,String(value))};
+globalThis.performance={now:()=>1000};
+globalThis.setInterval=()=>0;
+const events=new EventTarget();
+globalThis.addEventListener=(...args)=>events.addEventListener(...args);
+globalThis.removeEventListener=(...args)=>events.removeEventListener(...args);
+globalThis.dispatchEvent=event=>events.dispatchEvent(event);
+globalThis.CustomEvent=class CustomEvent extends Event{constructor(type,init={}){super(type);this.detail=init.detail}};
+let state=${JSON.stringify(initial)};
+const jumps=[];
+globalThis.WarpSim={state(){return{...state,route:Array.isArray(state.route)?[...state.route]:[]}},jumpTo(id){jumps.push(id);state={...state,current:id,selected:null,route:[],flying:false,exploring:true,contextLost:false}}};
+await import(${JSON.stringify(pathToFileURL(journalPath).href)}+'?runtime='+${JSON.stringify(name)}+'-'+Date.now());
+assert.deepEqual(jumps,${JSON.stringify(expected.jumps)});
+assert.equal(state.current,${JSON.stringify(expected.current)});
+assert.equal(!!state.exploring,${JSON.stringify(expected.exploring)});
+if(${JSON.stringify(!!expected.visited)})assert.deepEqual(new Set(globalThis.WarpTravelJournal.visited()),new Set(${JSON.stringify(expected.visited||[])}));
+`;
+  const result=spawnSync(process.execPath,['--input-type=module','--eval',code],{encoding:'utf8',timeout:10000});
+  ok(result.status===0,`${name} runtime continuity${result.stderr?`: ${result.stderr.trim()}`:''}`);
+}
+const validEntry={route:['SOL','SIRIUS','TAU'],startedAt:100,endedAt:200,seconds:8,distance:9.2};
+const idle={current:'SOL',selected:null,route:[],phase:'idle',flying:false,exploring:false,contextLost:false};
+runRuntimeCase('completed journey restores TAU',{version:2,entries:[validEntry],visited:['SOL','SIRIUS','TAU']},idle,{jumps:['TAU'],current:'TAU',exploring:true,visited:['SOL','SIRIUS','TAU']});
+runRuntimeCase('fresh session stays at SOL',{version:2,entries:[],visited:['SOL']},idle,{jumps:[],current:'SOL',exploring:false});
+runRuntimeCase('selected route blocks late restore',{version:2,entries:[validEntry],visited:['SOL','SIRIUS','TAU']},{...idle,selected:'LUNA',route:['SOL','LUNA']},{jumps:[],current:'SOL',exploring:false});
+runRuntimeCase('malformed history cannot restore',{version:2,entries:[{route:['SOL','NOPE'],startedAt:100,endedAt:200,seconds:8}],visited:['SOL','NOPE']},idle,{jumps:[],current:'SOL',exploring:false});
+
 const journalTimers=(journal.match(/setInterval\(/g)||[]).length;
 const atlasTimers=(atlas.match(/setInterval\(/g)||[]).length;
-ok(journalTimers===1&&atlasTimers===1,'journey discovery continuity adds no new polling loop');
-ok(!/fetch\(|XMLHttpRequest|WebSocket/.test(journal+atlas),'journey discovery continuity adds no network/backend path');
+ok(journalTimers===1&&atlasTimers===1,'journey discovery and reload continuity add no new polling loop');
+ok(!/fetch\(|XMLHttpRequest|WebSocket/.test(journal+atlas),'journey discovery and reload continuity add no network/backend path');
 
 for(const message of passes)console.log(`✓ ${message}`);
 if(failures.length){
