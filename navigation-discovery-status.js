@@ -108,3 +108,4 @@ window.WarpNavigationDiscovery={
   snapshot(){const found=readDiscoveries();return{selected:selectedSystem(),discoveries:{...found},visited:[...readVisited()]}}
 };
 })();
+import('./explore-hub.js').catch(()=>{});
