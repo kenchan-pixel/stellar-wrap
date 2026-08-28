@@ -30,6 +30,10 @@ has(hub,"new MutationObserver",'hub reacts to existing DOM/state changes without
 has(hub,"@media (prefers-reduced-motion:reduce)",'reduced-motion drawer handling exists');
 has(hub,"#app.photoMode #exploreRail",'photo mode hides the exploration rail');
 for(const id of ['lunaSurvey','vegaSurvey','cygBeaconScan','orionSpectrograph','tauRingProfiler','siriusRelayCalibration','proxAlignment','landmarkGuide'])has(hub,`'${id}'`,`exploration pane recognises ${id}`);
+has(hub,"document.querySelector('#arrivalDebriefExplore')?.addEventListener('click'",'arrival primary action is bridged into the hub');
+has(hub,"if(finalExplore())open('explore');",'arrival primary action opens the exploration pane before handoff scroll');
+check(/#arrivalDebriefExplore'[\s\S]{0,180}\{capture:true\}/.test(hub),'arrival handoff bridge runs in capture phase so hidden targets are revealed first');
+has(hub,"document.querySelector('#arrivalDebriefNext')?.addEventListener('click'",'arrival next-destination action closes the drawer before opening navigation');
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(|localStorage|sessionStorage|fetch\s*\(/.test(hub),'hub adds no timer/render-loop/storage/network authority');
 has(loader,"import('./explore-hub.js').catch(()=>{});",'existing navigation bootstrap loads explore hub');
 has(sw,"'./explore-hub.js'",'prepared offline shell includes explore hub');

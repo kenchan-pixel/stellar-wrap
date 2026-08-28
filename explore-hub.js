@@ -207,6 +207,12 @@ document.querySelector('#exploreCollapse')?.addEventListener('click',event=>{
   if(!finalExplore())return;
   event.preventDefault();event.stopImmediatePropagation();close();
 },{capture:true});
+document.querySelector('#arrivalDebriefExplore')?.addEventListener('click',()=>{
+  if(finalExplore())open('explore');
+},{capture:true});
+document.querySelector('#arrivalDebriefNext')?.addEventListener('click',()=>{
+  if(finalExplore())close();
+},{capture:true});
 addEventListener('keydown',event=>{if(event.key==='Escape'&&finalExplore())close()});
 addEventListener('stellarwarp:journey-complete',()=>queueMicrotask(sync));
 addEventListener('stellarwarp:discovery-change',()=>{updateStatus();if(pane==='discovery')applyPane()});
