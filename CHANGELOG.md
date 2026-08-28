@@ -31,6 +31,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Improved
 
+- Journey Atmosphere now adds destination-specific **Approach Vista** silhouettes during `warpExit → decelerate → approach`: Earth/Moon, VEGA gate, CYG twin stars, ORION giant/nebula, TAU ringed planet, SIRIUS relay ring and PROX red-dwarf/lava cues stage in at the screen edge, then clear before `observe` so the real 3D landmark remains authoritative. The extension reuses the existing journey presentation layer and adds no Three.js scene authority, storage/network path, dependency, filter/backdrop-filter or render-loop work.
 - Reload World Continuity now keeps a temporary `恢復上次停泊點…` veil over the default SOL scene whenever a strict completed-journey restore candidate is waiting for core authority. The veil sits below the existing startup loading/recovery layer, is removed only after the authoritative destination `jumpTo()` finishes or a definitive fail-closed decision settles at the real runtime state, and adds no timer, observer or render-loop work.
 - Added **Reload World Continuity**: when a device already has a validated completed journey, reloading now resumes at that journey's final destination in the existing safe exploration state instead of silently resetting the simulated location to SOL.
 - Reload continuity reuses the Travel Journal as the sole persistence authority and delegates the actual scene/location transition to existing `WarpSim.jumpTo()`; it will not overwrite an active flight, exploration state, selected route, WebGL recovery state or a runtime that has already moved away from SOL.
@@ -49,6 +50,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Extended Journey Atmosphere validation for the Approach Vista phase contract, all eight destination-specific visual treatments, active-leg retargeting, observe/context-loss cleanup, and the absence of storage/network/render-loop/Three.js/filter authority.
 - Extended reload-continuity validation with delayed-core restore-veil lifecycle cases: a valid persisted `SOL → SIRIUS → TAU` journey stays covered until core authority exists and the TAU transition completes, while a topology-impossible `SOL → ORION` candidate settles the same veil at SOL with no jump.
 - Extended reload-integrity validation with a known-ID but topology-impossible `SOL → ORION` regression, while retaining the valid `SOL → SIRIUS → TAU` restore path and proving Travel Journal delegates route topology to the core 6.0 LY graph.
 - Extended journey-continuity validation with executable fresh-process cases for completed-destination restore, fresh SOL startup, selected-route protection and malformed-history rejection; restore adds no new timer, storage key, network or duplicated scene/camera transition.

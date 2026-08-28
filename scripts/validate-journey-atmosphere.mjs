@@ -24,13 +24,20 @@ ok(source.includes("state.contextLost"),'context loss suppresses the journey pre
 ok(source.includes("#app.journeyAtmosphereActive #warpHalo")&&source.includes("#app.journeyAtmosphereActive #warpEdge")&&source.includes("#app.journeyAtmosphereActive #warpFlash"),'existing warp entry/exit overlays inherit destination palette without new renderer authority');
 ok(source.includes('data-journey-system')&&source.includes('journeyRegion'),'edge HUD exposes current corridor identity while central canvas remains untouched');
 ok(source.includes('data-system="VEGA"')&&source.includes('data-system="ORION"')&&source.includes('data-system="TAU"')&&source.includes('data-system="PROX"'),'major destination families have distinct peripheral atmosphere patterns');
+ok(source.includes('#journeyVista')&&source.includes('journeyVistaPrimary')&&source.includes('journeyVistaSecondary'),'approach vista uses a bounded two-layer presentation object rather than a new scene');
+ok(source.includes('data-phase="warpExit"] #journeyVista')&&source.includes('data-phase="decelerate"] #journeyVista')&&source.includes('data-phase="approach"] #journeyVista'),'destination vista stages in only across the existing arrival phases');
+ok(source.includes('data-phase="observe"] #journeyVista{opacity:0'),'approach vista clears before final destination observation so the real 3D landmark remains authoritative');
+for(const id of ['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX']){
+  ok(source.includes(`data-system="${id}"] .journeyVistaPrimary`),`${id} has a distinct approach-vista primary treatment`);
+}
 ok(!/localStorage|sessionStorage|fetch\(|XMLHttpRequest|WebSocket|requestAnimationFrame/.test(source),'journey atmosphere adds no persistence, network path or render-loop work');
 ok(!/Dijkstra|MAX_LEG|\bp:\s*\[|route graph|new THREE/.test(source),'journey atmosphere does not duplicate coordinates, route topology or Three.js scene authority');
+ok(!/filter\s*:|backdrop-filter/.test(source),'approach vista avoids blur/filter effects that would add mobile compositing cost');
 ok(responsive.includes("import('./journey-atmosphere.js').catch(()=>{})"),'existing presentation bootstrap loads journey atmosphere');
-ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v13`"),'offline shell advances to a fresh cache generation');
+ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v13`"),'offline shell remains on the current cache generation because no new shell file was added');
 ok(sw.includes("'./journey-atmosphere.js'"),'prepared offline shell includes journey atmosphere');
 ok(pkg.scripts?.check?.includes('node scripts/validate-journey-atmosphere.mjs'),'npm run check includes focused journey atmosphere validation');
-ok(doc.includes('Journey Atmosphere')&&doc.includes('Vertical Slice'),'journey atmosphere behavior and acceptance are recorded as candidate SOT');
+ok(doc.includes('Journey Atmosphere')&&doc.includes('Approach Vista'),'journey atmosphere SOT records the destination approach-vista extension');
 
 class MiniClassList{
   constructor(element){this.element=element;this.tokens=new Set()}
@@ -94,17 +101,23 @@ ok(Object.keys(api.profiles()).length===8,'all eight approved systems have a jou
 ok(app.classList.contains('journeyAtmosphereActive'),'active flight enables the atmosphere layer');
 ok(app.getAttribute('data-journey-system')==='ORION','multi-leg route resolves the next destination from current core state');
 ok(document.querySelector('#journeyAtmosphere')?.getAttribute('data-phase')==='warp','warp cruise receives the strong journey-atmosphere phase');
+ok(document.querySelector('#journeyVista')?.getAttribute('data-vista-system')==='ORION','approach-vista identity follows the real active-leg destination');
 ok(document.querySelector('#journeyRegionKicker')?.textContent.includes('赤紅星雲前緣'),'ORION leg exposes its destination-specific corridor identity');
 ok(document.querySelector('#journeyRegionTitle')?.textContent.includes('紅巨星光'),'ORION leg exposes a destination-specific travel signature');
 ok(document.querySelector('#journeyRegionMeta')?.textContent.includes('天鵝航標 → 獵戶前哨')&&document.querySelector('#journeyRegionMeta')?.textContent.includes('4/4'),'edge HUD identifies the real fourth leg without copying route planning');
 
 state={...state,current:'LUNA',phase:'approach'};api.render();
 ok(app.getAttribute('data-journey-system')==='VEGA','next intermediate leg retargets presentation to VEGA');
-ok(document.querySelector('#journeyAtmosphere')?.getAttribute('data-phase')==='approach','continuous approach keeps the target identity at a reduced phase level');
+ok(document.querySelector('#journeyAtmosphere')?.getAttribute('data-phase')==='approach','continuous approach keeps the target identity at the destination-vista phase');
+ok(document.querySelector('#journeyVista')?.getAttribute('data-vista-system')==='VEGA','approach vista retargets together with the actual next leg');
 ok(document.querySelector('#journeyRegionKicker')?.textContent.includes('藍白星門航道')&&document.querySelector('#journeyRegionMeta')?.textContent.includes('2/4'),'VEGA handoff reports the real second leg and star-gate corridor');
+
+state={...state,phase:'observe'};api.render();
+ok(document.querySelector('#journeyAtmosphere')?.getAttribute('data-phase')==='observe','final observation reaches the CSS state that fades the approach vista away');
 
 state={...state,contextLost:true};api.render();
 ok(!app.classList.contains('journeyAtmosphereActive')&&!document.querySelector('#journeyRegion')?.classList.contains('show'),'WebGL context loss removes decorative atmosphere and route cue');
+ok(document.querySelector('#journeyVista')?.getAttribute('data-vista-system')===null,'WebGL context loss also clears the destination-vista identity');
 state={...state,contextLost:false,flying:false};api.render();
 ok(api.snapshot().active===false,'idle/exploration state leaves the travel view unmodified');
 state={flying:true,contextLost:false,route:['SOL','NOPE','VEGA'],current:'SOL',phase:'warp'};api.render();
