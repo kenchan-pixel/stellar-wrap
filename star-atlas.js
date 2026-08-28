@@ -115,7 +115,8 @@ function render(force=false){
   if(!ensureUi())return;
   const model=buildModel();
   const signature=signatureOf(model);
-  if(!force&&signature===lastSignature)return;
+  const changed=signature!==lastSignature;
+  if(!force&&!changed)return;
   lastSignature=signature;
   const summary=document.querySelector('#atlasSummary');
   const progress=document.querySelector('#atlasProgressFill');
@@ -151,6 +152,7 @@ function render(force=false){
     plan.textContent=current?'目前位置':model.state?.contextLost?'圖像恢復中':model.state?.flying?'航行中':'規劃前往';
     row.append(plan);grid.append(row);
   }
+  if(changed)dispatchEvent(new CustomEvent('stellarwarp:atlas-change',{detail:{visited:model.visited.size,discoveries:discoveryCount}}));
 }
 function sample(){render(false)}
 addEventListener('stellarwarp:journey-complete',()=>render(true));
