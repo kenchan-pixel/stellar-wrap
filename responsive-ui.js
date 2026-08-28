@@ -115,3 +115,5 @@ style.textContent=`
 `;
 document.head.append(style);
 })();
+
+import('./journey-atmosphere.js').catch(()=>{});

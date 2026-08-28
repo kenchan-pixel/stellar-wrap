@@ -25,7 +25,7 @@ ok(source.includes("addEventListener('stellarwarp:discovery-change',schedule)"),
 ok(source.includes("addEventListener('stellarwarp:location-restored',schedule)"),'restored location triggers a focused map refresh when navigation is already mounted');
 ok(source.includes('queueMicrotask'),'map redraw refreshes are microtask-coalesced');
 ok(!/localStorage|sessionStorage|fetch\(|XMLHttpRequest|WebSocket|requestAnimationFrame|setInterval/.test(source),'navigation status adds no persistence, network, render-loop or polling work');
-ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v12`"),'offline shell generation remains on the current navigation-aware cache generation');
+ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v13`"),'offline shell generation advances for destination-aware journey atmosphere');
 ok(sw.includes("'./navigation-discovery-status.js'"),'offline shell includes navigation discovery status');
 ok(discoveryDebrief.includes("import('./navigation-discovery-status.js').catch(()=>{})"),'discovery continuity bootstrap loads navigation discovery status');
 ok(pkg.scripts?.check?.includes('node scripts/validate-navigation-discovery.mjs'),'npm run check includes focused navigation discovery validation');
