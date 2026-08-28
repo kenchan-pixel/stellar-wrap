@@ -30,6 +30,10 @@ has(hub,"new MutationObserver",'hub reacts to existing DOM/state changes without
 has(hub,"@media (prefers-reduced-motion:reduce)",'reduced-motion drawer handling exists');
 has(hub,"#app.photoMode #exploreRail",'photo mode hides the exploration rail');
 for(const id of ['lunaSurvey','vegaSurvey','cygBeaconScan','orionSpectrograph','tauRingProfiler','siriusRelayCalibration','proxAlignment','landmarkGuide'])has(hub,`'${id}'`,`exploration pane recognises ${id}`);
+has(hub,"function clearStatus()",'hub owns explicit status cleanup lifecycle');
+has(hub,"if(!statusNeeded()){clearStatus();return}",'status only exists while the mobile discovery drawer needs it');
+has(hub,"card?.classList.remove('hubOpen');clearStatus();restoreChildren();",'hub deactivation clears mobile-only status before restoring base card');
+check(!hub.includes('ensureRail();ensureStatus();installObservers();sync();'),'status is not mounted unconditionally at module startup');
 has(hub,"document.querySelector('#arrivalDebriefExplore')?.addEventListener('click'",'arrival primary action is bridged into the hub');
 has(hub,"if(finalExplore())open('explore');",'arrival primary action opens the exploration pane before handoff scroll');
 check(/#arrivalDebriefExplore'[\s\S]{0,180}\{capture:true\}/.test(hub),'arrival handoff bridge runs in capture phase so hidden targets are revealed first');
@@ -39,5 +43,14 @@ has(loader,"import('./explore-hub.js').catch(()=>{});",'existing navigation boot
 has(sw,"'./explore-hub.js'",'prepared offline shell includes explore hub');
 check(String(pkg.scripts?.check||'').includes('validate-explore-hub.mjs'),'repository check includes focused explore-hub validator');
 
+for(const [width,height] of [[390,844],[360,800]]){
+  const runtime=spawnSync(process.execPath,['scripts/validate-explore-hub-runtime.mjs'],{
+    encoding:'utf8',env:{...process.env,STELLAR_EXPLORE_WIDTH:String(width),STELLAR_EXPLORE_HEIGHT:String(height)}
+  });
+  if(runtime.stdout)process.stdout.write(runtime.stdout);
+  if(runtime.stderr)process.stderr.write(runtime.stderr);
+  check(runtime.status===0,`production Explore Hub runtime passes at ${width}x${height}`);
+}
+
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`Explore Hub: ${pass} / ${pass} checks passed`);
+console.log(`Explore Hub: ${pass} / ${pass} checks passed plus two production runtime viewports`);

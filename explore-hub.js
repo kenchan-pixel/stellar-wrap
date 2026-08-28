@@ -26,6 +26,14 @@ function currentState(){
 function discoveryAt(id){
   try{return window.WarpStarAtlas?.snapshot?.().discoveries?.[id]||''}catch{return''}
 }
+function clearStatus(){
+  const mounted=statusCard?.isConnected?statusCard:document.querySelector('#exploreHubStatus');
+  mounted?.remove();statusCard=null;
+}
+function statusNeeded(){
+  const card=document.querySelector('#exploreCard');
+  return finalExplore()&&pane==='discovery'&&!!card?.classList.contains('hubOpen');
+}
 function ensureStatus(){
   if(statusCard?.isConnected)return statusCard;
   const actions=document.querySelector('#exploreCard .exploreActions');
@@ -41,6 +49,7 @@ function ensureStatus(){
   return statusCard;
 }
 function updateStatus(){
+  if(!statusNeeded()){clearStatus();return}
   const status=ensureStatus();if(!status)return;
   const state=currentState(),id=state?.current;
   const discovery=id?String(discoveryAt(id)||'').trim():'';
@@ -158,6 +167,7 @@ function open(next=pane){
 }
 function close(){
   const card=document.querySelector('#exploreCard');card?.classList.remove('hubOpen');
+  clearStatus();
   const collapse=document.querySelector('#exploreCollapse');if(collapse){collapse.textContent='⌄';collapse.setAttribute('aria-label','收起觀景資訊')}
   updateRail();return true;
 }
@@ -189,7 +199,7 @@ function sync(){
     if(!wasActive){pane='overview';close()}
     else if(card?.classList.contains('hubOpen'))applyPane();
   }else{
-    card?.classList.remove('hubOpen');restoreChildren();
+    card?.classList.remove('hubOpen');clearStatus();restoreChildren();
   }
   wasActive=active;updateRail();
 }
@@ -200,7 +210,7 @@ function installObservers(){
   if(body){bodyObserver=new MutationObserver(()=>{if(finalExplore()&&card.classList.contains('hubOpen'))applyPane()});bodyObserver.observe(body,{childList:true});}
 }
 
-ensureRail();ensureStatus();installObservers();sync();
+ensureRail();installObservers();sync();
 media.addEventListener?.('change',sync);
 document.querySelector('#space')?.addEventListener('click',()=>{if(finalExplore())close()});
 document.querySelector('#exploreCollapse')?.addEventListener('click',event=>{
@@ -215,6 +225,6 @@ document.querySelector('#arrivalDebriefNext')?.addEventListener('click',()=>{
 },{capture:true});
 addEventListener('keydown',event=>{if(event.key==='Escape'&&finalExplore())close()});
 addEventListener('stellarwarp:journey-complete',()=>queueMicrotask(sync));
-addEventListener('stellarwarp:discovery-change',()=>{updateStatus();if(pane==='discovery')applyPane()});
+addEventListener('stellarwarp:discovery-change',()=>{updateStatus();if(pane==='discovery'&&finalExplore())applyPane()});
 window.WarpExploreHub={open,close,activate,active(){return finalExplore()},activePane(){return pane}};
 })();
