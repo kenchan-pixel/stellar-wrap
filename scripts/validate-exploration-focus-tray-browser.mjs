@@ -179,6 +179,10 @@ async function inspectViewport(chrome,baseUrl,width,height){
     },'Chrome page target',8000);
     cdp=new CdpClient(target.webSocketDebuggerUrl);await cdp.connect();
     await cdp.send('Page.enable');await cdp.send('Runtime.enable');
+    // CI software rendering can starve CDP while Stellar Wrap's real render loop runs at full speed.
+    // Disable only requestAnimationFrame before navigation so we can exercise the actual production DOM,
+    // CSS, responsive modules and controls without creating a product-side test mode or changing layout.
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:"window.requestAnimationFrame=()=>0;window.cancelAnimationFrame=()=>{};"});
     await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true,screenWidth:width,screenHeight:height});
     await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
     await cdp.send('Page.navigate',{url:baseUrl});
