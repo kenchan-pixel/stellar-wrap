@@ -51,15 +51,16 @@ check(!/setInterval\s*\(|setTimeout\s*\(|requestAnimationFrame\s*\(|localStorage
 has(loader,"import('./explore-hub.js').catch(()=>{});",'existing navigation bootstrap loads explore hub');
 has(sw,"'./explore-hub.js'",'prepared offline shell includes explore hub');
 check(String(pkg.scripts?.check||'').includes('validate-explore-hub.mjs'),'repository check includes focused explore-hub validator');
+check(fs.existsSync('scripts/validate-explore-rail-runtime.mjs'),'focused compact-rail runtime harness exists');
 
 for(const [width,height] of [[390,844],[360,800]]){
-  const runtime=spawnSync(process.execPath,['scripts/validate-explore-hub-runtime.mjs'],{
+  const runtime=spawnSync(process.execPath,['scripts/validate-explore-rail-runtime.mjs'],{
     encoding:'utf8',env:{...process.env,STELLAR_EXPLORE_WIDTH:String(width),STELLAR_EXPLORE_HEIGHT:String(height)}
   });
   if(runtime.stdout)process.stdout.write(runtime.stdout);
   if(runtime.stderr)process.stderr.write(runtime.stderr);
-  check(runtime.status===0,`production Explore Hub runtime passes at ${width}x${height}`);
+  check(runtime.status===0,`production scenery-first Explore Hub runtime passes at ${width}x${height}`);
 }
 
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`Explore Hub: ${pass} / ${pass} checks passed plus two production runtime viewports`);
+console.log(`Explore Hub: ${pass} / ${pass} checks passed plus two production scenery-first runtime viewports`);
