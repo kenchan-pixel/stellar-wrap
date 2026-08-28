@@ -71,9 +71,10 @@ class CdpClient{
   async connect(){
     this.ws=new WebSocket(this.url);
     await new Promise((resolve,reject)=>{
+      const timeout=setTimeout(()=>{cleanup();reject(new Error('CDP WebSocket connection timed out'))},8000);
       const onOpen=()=>{cleanup();resolve()};
       const onError=event=>{cleanup();reject(event.error||new Error('CDP WebSocket failed'))};
-      const cleanup=()=>{this.ws.removeEventListener('open',onOpen);this.ws.removeEventListener('error',onError)};
+      const cleanup=()=>{clearTimeout(timeout);this.ws.removeEventListener('open',onOpen);this.ws.removeEventListener('error',onError)};
       this.ws.addEventListener('open',onOpen);
       this.ws.addEventListener('error',onError);
     });
@@ -81,12 +82,12 @@ class CdpClient{
       const message=JSON.parse(String(event.data));
       if(!message.id)return;
       const pending=this.pending.get(message.id);if(!pending)return;
-      this.pending.delete(message.id);
+      this.pending.delete(message.id);clearTimeout(pending.timeout);
       if(message.error)pending.reject(new Error(`${message.error.message||'CDP error'} (${message.error.code||'?'})`));
       else pending.resolve(message.result||{});
     });
     this.ws.addEventListener('close',()=>{
-      for(const pending of this.pending.values())pending.reject(new Error('CDP WebSocket closed'));
+      for(const pending of this.pending.values()){clearTimeout(pending.timeout);pending.reject(new Error('CDP WebSocket closed'))}
       this.pending.clear();
     });
   }
@@ -94,7 +95,8 @@ class CdpClient{
     assert(this.ws&&this.ws.readyState===WebSocket.OPEN,`CDP socket must be open before ${method}`);
     const id=++this.nextId;
     return new Promise((resolve,reject)=>{
-      this.pending.set(id,{resolve,reject});
+      const timeout=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP command timed out: ${method}`))},10000);
+      this.pending.set(id,{resolve,reject,timeout});
       this.ws.send(JSON.stringify({id,method,params}));
     });
   }
@@ -158,6 +160,7 @@ function validateDrawer(snapshot,name,exploreSnapshot,exploreMetrics){
 }
 
 async function inspectViewport(chrome,baseUrl,width,height){
+  console.log(`Exploration Focus Tray real browser ${width}x${height}: starting`);
   const profile=mkdtempSync(join(tmpdir(),`stellar-wrap-browser-${width}-`));
   let browser=null;let cdp=null;
   try{
