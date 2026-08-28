@@ -153,6 +153,7 @@ function sample(){
 setInterval(sample,500);
 sample();
 addEventListener('stellarwarp:discovery-change',()=>render());
+addEventListener('stellarwarp:atlas-change',()=>render());
 addEventListener('storage',()=>render());
 window.WarpTravelJournal={
   entries(){return journal.entries.map(entry=>({...entry,route:[...entry.route]}))},
