@@ -96,4 +96,5 @@ addEventListener('stellarwarp:journey-complete',hide);
 document.querySelector('#space')?.addEventListener('webglcontextlost',hide);
 ensureUi();sample();setInterval(sample,1000);
 window.WarpDiscoveryDebrief={show,hide,visible(){return visible},entry(){return current?{...current}:null},sample};
+import('./navigation-discovery-status.js').catch(()=>{});
 })();

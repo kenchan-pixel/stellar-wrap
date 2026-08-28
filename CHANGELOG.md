@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Added
 
+- Added a V5-candidate **Exploration-Aware Navigation Map**: the existing 2.5D star map now marks external destinations with a compact `✓` when their discovery is already collected, while the selected route card shows current `x / 7` exploration progress and whether that destination is complete or still worth exploring.
+- Navigation discovery status reads only the existing Star Atlas discovery snapshot, reapplies markers after the core SVG map redraw through a direct-child-only microtask-coalesced observer, adds no route recommendation or itinerary logic, and is included in prepared offline shell cache v12 without persistence, network, backend, polling or render-loop work.
 - Added a V5-candidate **Discovery Completion Handoff**: completing any external destination discovery now shows a compact in-context summary with destination, discovery name and current `x / 7` collection progress, plus direct actions to open the existing Star Atlas or choose the next destination.
 - Discovery completion uses existing `stellarwarp:discovery-change` events when available and a bounded 1 Hz Star Atlas fallback for legacy LUNA／VEGA completion, primes persisted discoveries silently on reload, keeps 44 px mobile actions, and adds no new persistence, network, backend, dependency or render-loop work.
 - Added a V5-candidate **PROX Starport Alignment** exploration slice: after a true final arrival at PROX, users can tune two normalized -50–50 directional axes to locate three approach windows tied to the outer traffic beacon, lava-side thermal corridor and starport docking axis.
@@ -37,6 +39,7 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ### Validation
 
+- Added focused Exploration-Aware Navigation validation: JavaScript syntax, existing Star Atlas authority, direct-child-only map redraw observation, microtask coalescing, same-tab discovery refresh, offline-shell/bootstrap integration and zero persistence/network/render-loop work, plus executable DOM coverage for `2 / 7 → 3 / 7`, selected complete/pending/SOL states and marker restoration after a real core-style SVG rebuild.
 - Added focused Discovery Completion Handoff validation: JavaScript syntax, immediate event + bounded 1 Hz legacy fallback, Star Atlas authority, safe-final-exploration gating, 44 px mobile actions, existing navigation/atlas handoff, offline-shell inclusion, zero persistence/network/render-loop work, plus executable runtime coverage for silent reload priming, legacy completion detection, collection progress and unsafe-flight rejection.
 - Expanded the executable 390×844 handoff regression to late-load each of the seven real production destination modules after Debrief is already visible, asserting the summary remains immediately after `#exploreDesc`, precedes both Landmark Guide and the actual task element, and scrolls the correct task into view.
 - Extended the executable 390×844 production DOM/event harness to cover the arrival-to-exploration handoff: CYG arrival now proves the Debrief is placed before destination content, unfinished exploration exposes `開始探索`, the action scrolls to the real scanner, same-tab discovery completion switches to `查看發現`, and a fresh-process reload keeps the completed handoff state.
