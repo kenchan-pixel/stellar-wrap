@@ -52,6 +52,11 @@ ok(journal.includes("function normaliseVisited(raw,entries=[])")&&journal.includ
 ok(journal.includes("version:2")&&journal.includes("visited:normaliseVisited(journal.visited,journal.entries)"),'visited-system state shares the existing journal record instead of adding a new store');
 ok(journal.includes("journal.visited=normaliseVisited(journal.visited,[entry])"),'completed routes extend persistent visited-system state before capped history is saved');
 ok(journal.includes("visited(){return normaliseVisited(journal.visited,journal.entries)}"),'travel journal exposes persistent visited systems to exploration clients');
+ok(journal.includes('window.WarpStarAtlas?.snapshot?.().discoveries'),'travel journal reads discovery outcomes from the existing Star Atlas authority');
+ok(journal.includes("outcome.textContent='發現 · '+discovery")&&journal.includes("outcome.textContent='探索未完成'"),'travel journal distinguishes completed and unfinished exploration outcomes');
+ok(journal.includes("addEventListener('stellarwarp:discovery-change',()=>render())"),'travel journal refreshes immediately when a discovery completes in the same tab');
+ok(journal.includes("import('./star-atlas.js').then(()=>render()).catch(()=>{})"),'travel journal refreshes after Star Atlas authority becomes available');
+ok(journal.includes("discoveryCount+'/'+DISCOVERY_TOTAL+' 發現'"),'travel journal summary surfaces seven-discovery collection progress');
 ok(atlas.includes('window.WarpTravelJournal?.visited?.()'),'star atlas derives long-lived visit progress from the journal authority');
 ok(atlas.includes('window.WarpTravelJournal?.entries?.()'),'star atlas uses retained journal entries only for recent per-system statistics');
 ok(atlas.includes('window.WarpLunaSurvey?.progress?.()'),'star atlas consumes the existing LUNA discovery authority');
@@ -63,7 +68,6 @@ ok(atlas.includes('state.flying||state.contextLost||destination===state.current'
 ok(atlas.includes('model.visited.size===SYSTEMS.length'),'star atlas completion requires all eight systems');
 ok(atlas.includes('setInterval(sample,1000)'),'star atlas sampling is bounded to 1 Hz');
 ok(!/localStorage|fetch\(|XMLHttpRequest|WebSocket/.test(atlas),'star atlas itself adds no persistence, network or backend path');
-ok(journal.includes("import('./star-atlas.js').catch(()=>{})"),'active simulator loads star atlas through the existing client bootstrap');
 
 ok(journal.includes("import('./responsive-ui.js').catch(()=>{})"),'active simulator loads the responsive readability layer');
 ok(responsive.includes('@media (min-width:900px)'),'desktop readability changes are isolated behind a desktop-width media query');
