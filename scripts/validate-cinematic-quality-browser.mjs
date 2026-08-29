@@ -25,12 +25,12 @@ async function inspect(chrome,base,width,height){
     const loaded=cdp.waitEvent('Page.loadEventFired',15000);await cdp.send('Page.navigate',{url:base});await loaded;
     await waitUntil(()=>evalJs(cdp,"!!window.WarpSim&&!!window.WarpCinematicQuality&&document.querySelector('#app')?.classList.contains('ready')"),'production WebGL + cinematic layer',30000);
     await evalJs(cdp,"WarpSim.jumpTo('TAU');WarpSim.setQuality('standard');true");
-    await waitUntil(()=>evalJs(cdp,"WarpSim.state().current==='TAU'&&WarpSim.state().exploring&&WarpCinematicQuality.snapshot().objects===4"),'TAU cinematic objects mounted');
-    const standard=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(standard.active,false);assert.equal(standard.quality,'standard');assert.equal(standard.drawCalls,0);
+    await waitUntil(()=>evalJs(cdp,"WarpSim.state().current==='TAU'&&WarpSim.state().exploring&&WarpCinematicQuality.snapshot().quality==='standard'"),'safe TAU Standard exploration');
+    const standard=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(standard.active,false);assert.equal(standard.quality,'standard');assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);
     const standardBytes=await screenshot(cdp,`cinematic-tau-${viewport}-standard.png`);
     await evalJs(cdp,"WarpSim.setQuality('high');true");
     await waitUntil(()=>evalJs(cdp,"WarpCinematicQuality.snapshot().active===true"),'TAU High cinematic layer active',5000);
-    const high=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(high.active,true);assert.equal(high.quality,'high');assert.equal(high.objects,4);assert.equal(high.drawCalls,4);assert(high.triangles>8000&&high.triangles<14000);
+    const high=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(high.active,true);assert.equal(high.quality,'high');assert.equal(high.objects,4);assert.equal(high.drawCalls,4);assert.equal(high.triangles,8352);
     const highBytes=await screenshot(cdp,`cinematic-tau-${viewport}-high.png`);assert.notEqual(highBytes,standardBytes,'standard and High evidence should not serialize identically');
     const viewportState=await evalJs(cdp,"(()=>{const c=document.querySelector('#space'),r=c.getBoundingClientRect();return{cssWidth:r.width,cssHeight:r.height,backingWidth:c.width,backingHeight:c.height,phase:WarpSim.state().phase}})()");
     assert.equal(Math.round(viewportState.cssWidth),width);assert.equal(Math.round(viewportState.cssHeight),height);assert.equal(viewportState.phase,'idle');

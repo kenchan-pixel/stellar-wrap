@@ -76,7 +76,7 @@ function ringMaterial(){
   return new THREE.ShaderMaterial({
     uniforms:{uA:{value:new THREE.Color('#f7b4de')},uB:{value:new THREE.Color('#9d78df')},uOpacity:{value:.56},uInner:{value:inner}},
     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-    fragmentShader:`uniform vec3 uA;uniform vec3 uB;uniform float uOpacity;uniform float uInner;varying vec2 vUv;void main(){float rr=length(vUv-.5)*2.0;float q=clamp((rr-uInner)/(1.0-uInner),0.0,1.0);float band=.50+.28*sin(q*165.0)+.14*sin(q*421.0+1.7)+.08*sin(q*907.0);float gaps=smoothstep(.08,.22,abs(sin(q*58.0+2.1)));float edge=smoothstep(uInner,uInner+.018,rr)*(1.0-smoothstep(.985,1.0,rr));float alpha=clamp((.16+.42*band)*gaps,0.0,.72)*edge*uOpacity;vec3 col=mix(uA,uB,q*.72+.14*sin(q*18.0));gl_FragColor=vec4(col,alpha);}`,
+    fragmentShader:`uniform vec3 uA;uniform vec3 uB;uniform float uOpacity;uniform float uInner;varying vec2 vUv;void main(){float rr=length(vUv-.5)*2.0;float q=clamp((rr-uInner)/(1.0-uInner),0.0,1.0);float band=.50+.28*sin(q*165.0)+.14*sin(q*421.0+1.7)+.08*sin(q*907.0);float gaps=smoothstep(.08,.22,abs(sin(q*58.0+2.1)));float edge=smoothstep(uInner,uInner+.018,rr)*(1.0-smoothstep(.985,1.0,rr));float alpha=clamp((.16+.42*band)*gaps,0.0,.72)*edge*uOpacity;vec3 col=mix(uA,uB,clamp(q*.72+.14*sin(q*18.0),0.0,1.0));gl_FragColor=vec4(col,alpha);}`,
     transparent:true,blending:THREE.NormalBlending,depthWrite:false,side:THREE.DoubleSide
   });
 }
@@ -92,8 +92,9 @@ function dustGeometry(){
 }
 
 function clearRefs(){root=null;planetRoot=null;surface=null;objects=[]}
+function disposeMaterial(material){if(!material)return;material.map?.dispose?.();material.alphaMap?.dispose?.();material.dispose?.()}
 function disposeOwn(){
-  for(const o of objects){try{o.parent?.remove?.(o);o.geometry?.dispose?.();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose?.());else o.material?.dispose?.()}catch{}}
+  for(const o of objects){try{o.parent?.remove?.(o);o.geometry?.dispose?.();if(Array.isArray(o.material))o.material.forEach(disposeMaterial);else disposeMaterial(o.material)}catch{}}
   clearRefs();
 }
 
@@ -129,12 +130,13 @@ function sync(){
   const api=window.WarpSim;
   if(!api||typeof api.state!=='function')return;
   let state;try{state=api.state()}catch{return}
-  if(root&&!root.parent)clearRefs();
-  if(state.current===TARGET&&liveScene&&!root){const found=findTau(liveScene);if(found)build(found)}
+  if(root&&!root.parent)disposeOwn();
   const safe=state.current===TARGET&&state.exploring&&!state.flying&&!state.contextLost;
-  const active=!!(safe&&state.qualityMode==='high'&&objects.length);
+  const wantsHigh=safe&&state.qualityMode==='high';
+  if(wantsHigh&&liveScene&&!root){const found=findTau(liveScene);if(found)build(found)}
+  const active=!!(wantsHigh&&objects.length);
   for(const o of objects)o.visible=active;
-  lastSnapshot={active,target:TARGET,quality:state.qualityMode,objects:objects.length,triangles:active?11008:0,drawCalls:active?4:0};
+  lastSnapshot={active,target:TARGET,quality:state.qualityMode,objects:objects.length,triangles:active?8352:0,drawCalls:active?4:0};
 }
 
 captureScene();
