@@ -3,21 +3,21 @@
 ## Status
 
 - **Candidate vertical slice on `autonomous-evolution`**
-- Product direction is approved by `docs/ROADMAP.md`; each destination remains candidate until merged/released.
+- Product direction is approved by `docs/ROADMAP.md`; each destination and mode enhancement remains candidate until merged/released.
 - This document records implementation and acceptance boundaries only.
 
 ## Goal / intended user outcome
 
-Give Stellar Wrap a useful mobile exploration entrance while expanding Frontier Fiction through a small number of visually distinct original destinations rather than a large low-detail catalogue.
+Give Stellar Wrap a useful mobile exploration entrance while expanding Frontier Fiction through a small number of visually distinct original destinations, and make Gallery / Captures a useful record surface rather than a decorative summary.
 
 The top-level gateway remains exactly four actions:
 
 - **Continue Journey** — return to current/restored Real Space state without replanning.
 - **Real Space** — existing eight-system map and approved V4+ travel.
 - **Frontier Fiction** — original science-fiction exploration line.
-- **Gallery / Captures** — existing local journey/visited/discovery summary; PNG files remain local downloads.
+- **Gallery / Captures** — read-only Journey Gallery, discovery archive and current-dock Photo Mode handoff using existing local authorities.
 
-The compact always-visible strip keeps three established worlds, while a fourth **featured expedition** is presented as a separate full-width destination so 360 px phones do not compress four dense cards into one row:
+The compact always-visible Frontier strip keeps three established worlds, while a fourth **featured expedition** is presented as a separate full-width destination so 360 px phones do not compress four dense cards into one row:
 
 1. `AURELIA ARC｜曙光環域` — artificial ring habitat / megastructure.
 2. `NADIR WELL｜玄淵觀測站` — extreme-object frontier observatory around a fictional black-hole-like gravity well.
@@ -29,6 +29,41 @@ The compact always-visible strip keeps three established worlds, while a fourth 
 Real Space remains authoritative in `index.html`: existing eight-system `N` data, 6.0 LY Dijkstra graph, true-direction turns, flight phases, Hermite arrival, Travel Journal and Star Atlas.
 
 Frontier Fiction does **not** add AURELIA, NADIR, VESPER or EIDOLON to the Real Space `N` / `G` graph. None becomes a Real Space node or changes established shortest paths. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
+
+## Gallery / Captures｜Journey Gallery + Capture Handoff
+
+### Goal
+
+Turn the fourth gateway action into a genuinely useful record surface: players can review where they travelled, what they discovered and how far they have travelled, then jump directly into the existing Photo Mode when currently docked in a safe Real Space exploration state.
+
+### Scope
+
+- Read completed journeys only through `WarpTravelJournal.entries()` and `visited()`.
+- Read discoveries and their existing metadata only through `WarpStarAtlas.snapshot()`.
+- Show four compact summary metrics: completed journeys, Real Space systems visited, external discoveries and cumulative recorded LY.
+- Show at most the five most recent completed journeys with destination, route, date/time, recorded distance, active flight time and current discovery outcome.
+- Show the existing seven external-system discovery records as collected / pending cards; do not duplicate their persistence.
+- Offer `拍攝目前停泊點` only when the live Real Space state is final exploration, not flying, and not in WebGL context loss; this action delegates to the existing `WarpPhotoMode.enter()` authority.
+- Keep downloaded PNG files device-local. The browser cannot silently re-read previously downloaded PNGs, so this slice deliberately does not invent a fake image library or new file/storage permission.
+- Keep all four top-level mode actions and all four Frontier destinations unchanged.
+
+### Acceptance Criteria
+
+1. Gallery remains read-only over existing Travel Journal / Star Atlas data and introduces no new storage, network, account or backend authority.
+2. A populated Gallery renders recent journey cards, exactly seven external discovery cards, cumulative LY and discovery outcomes without horizontal overflow at 390×844 or 360×800.
+3. Recent journey rendering is bounded to five records even though the underlying journal may retain up to twelve.
+4. Close and capture controls retain at least 44 px mobile touch height.
+5. Current-dock capture is disabled outside safe final exploration.
+6. In a safe final-exploration state, trusted phone touch on the Gallery capture action hands off to the existing Photo Mode and closes the gateway.
+7. The Gallery does not claim downloaded PNG files are stored inside the app; PNG save/download remains the existing device-local behavior.
+8. Continue Journey, Real Space, Frontier Fiction, AURELIA/NADIR/VESPER/EIDOLON, V4+ route/flight/Hermite behavior, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL recovery remain unchanged.
+
+### Out of Scope
+
+- New image persistence, browser file-system permissions, cloud upload or a thumbnail database.
+- Editing, tagging or deleting downloaded PNG files.
+- A second journey/discovery store.
+- Frontier route history or Frontier progression persistence.
 
 ## AURELIA ARC｜曙光環域
 
@@ -70,18 +105,19 @@ For each Frontier runtime:
 - capture explicitly raises backing resolution, waits rendered frames, renders immediately, exports PNG, then restores normal DPR;
 - production Chromium acceptance measures actual draw calls/triangles at 390×844 and 360×800.
 
-## Acceptance Criteria
+The Mode Gateway / Journey Gallery is DOM-only presentation. It adds no render loop and no polling; records are rebuilt only when the gateway opens or existing journey/discovery/atlas events fire.
+
+## Overall Acceptance Criteria
 
 1. Top-level landing continues to expose exactly four useful mode actions with ≥44 px touch targets.
 2. Continue/Real Space preserve the existing Real Space location/route authority.
-3. Gallery remains read-only over existing local journey/discovery sources.
+3. Gallery provides Journey Gallery + discovery archive + current-dock Capture Handoff without creating a second persistence authority.
 4. The three-card compact strip remains AURELIA, NADIR and VESPER; EIDOLON is a separate featured expedition with a ≥44 px touch target.
-5. EIDOLON remains outside Real Space routing and exposes its own approach, near-field arrival and free-exploration state.
-6. Trusted phone-sized touch can enter EIDOLON and toggle its exploration control.
-7. Production Chromium at 390×844 and 360×800 proves viewport containment and bounded EIDOLON renderer work (≤16 draw calls / ≤22,000 triangles).
-8. EIDOLON high-resolution capture increases the actual backing buffer, produces non-trivial PNG data and restores the previous DPR with `preserveDrawingBuffer:false`.
-9. Existing AURELIA, NADIR, VESPER, V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
-10. All four Frontier pages remain in the existing v15 offline shell contract.
+5. All four Frontier worlds remain outside Real Space routing and retain their standalone approach / arrival / exploration behavior.
+6. Production Chromium at 390×844 and 360×800 proves viewport containment and trusted-touch interaction for affected gateway/gallery paths.
+7. Existing Frontier capture flows remain bounded, temporarily increase backing resolution and restore prior DPR with `preserveDrawingBuffer:false`.
+8. V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
+9. All four Frontier pages remain in the existing v15 offline shell contract.
 
 ## Out of Scope
 
