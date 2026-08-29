@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#03030a">
+<title>AURELIA ARC｜曙光環域 · Stellar Wrap</title>
+<style>
+:root{color-scheme:dark;--safeT:max(12px,env(safe-area-inset-top));--safeB:max(12px,env(safe-area-inset-bottom));--safeL:max(12px,env(safe-area-inset-left));--safeR:max(12px,env(safe-area-inset-right));--line:rgba(210,203,255,.22);--muted:rgba(232,233,255,.62)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#03030a;color:#f8f7ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans HK",sans-serif}button{font:inherit;color:inherit}button:focus-visible{outline:2px solid #dacbff;outline-offset:2px}
+#frontierApp{position:fixed;inset:0;overflow:hidden;background:radial-gradient(circle at 50% 42%,#101027,#03030a 68%)}#frontierSpace{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}#frontierSpace.dragging{cursor:grabbing}
+.frontierVignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 42%,rgba(1,1,6,.18) 68%,rgba(0,0,4,.72) 100%)}.frontierGrain{position:absolute;inset:0;pointer-events:none;opacity:.035;background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(255,255,255,.1) 4px)}
+.frontierUi{transition:opacity .18s}.frontierHead{position:absolute;z-index:5;top:var(--safeT);left:var(--safeL);right:var(--safeR);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;pointer-events:none;text-shadow:0 3px 18px #000}.frontierKicker{font-size:8px;letter-spacing:.18em;font-weight:850;color:rgba(218,206,255,.7)}.frontierName{margin-top:4px;font-size:18px;line-height:1.08;font-weight:800}.frontierSub{margin-top:4px;font-size:8px;color:var(--muted);line-height:1.4}.frontierPhase{min-width:92px;padding:8px 9px;border:1px solid rgba(213,201,255,.16);border-radius:12px;background:rgba(6,5,18,.35);backdrop-filter:blur(10px);text-align:right}.frontierPhase b{display:block;font-size:10px}.frontierPhase span{display:block;margin-top:3px;font-size:7px;color:var(--muted)}
+.frontierStory{position:absolute;z-index:5;left:var(--safeL);bottom:calc(var(--safeB) + 62px);width:min(76vw,330px);padding:11px;border:1px solid rgba(210,198,255,.17);border-radius:16px;background:rgba(5,5,17,.5);backdrop-filter:blur(16px);box-shadow:0 16px 44px rgba(0,0,0,.32);pointer-events:none}.frontierStory strong{font-size:12px}.frontierStory p{margin:5px 0 0;font-size:8px;line-height:1.5;color:var(--muted)}.frontierStory em{display:block;margin-top:7px;font-size:7px;letter-spacing:.11em;font-style:normal;color:#d5bdff;font-weight:800}
+.frontierControls{position:absolute;z-index:7;left:var(--safeL);right:var(--safeR);bottom:var(--safeB);display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px;padding:7px;border:1px solid rgba(208,198,255,.15);border-radius:16px;background:rgba(5,5,16,.56);backdrop-filter:blur(16px);box-shadow:0 14px 42px rgba(0,0,0,.34)}.frontierControls button{min-height:46px;border:1px solid rgba(212,204,255,.17);border-radius:11px;background:rgba(255,255,255,.055);font-size:8px;font-weight:760}.frontierControls button.primary{background:linear-gradient(180deg,rgba(178,133,255,.24),rgba(110,103,225,.12));border-color:rgba(209,181,255,.38)}.frontierControls button:disabled{opacity:.42}
+#frontierToast{position:absolute;z-index:8;left:50%;bottom:calc(var(--safeB) + 72px);transform:translateX(-50%) translateY(8px);max-width:80vw;padding:8px 11px;border-radius:999px;border:1px solid rgba(214,201,255,.18);background:rgba(5,5,16,.82);font-size:8px;color:#eee9ff;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;white-space:nowrap}#frontierToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#frontierLoading{position:absolute;z-index:20;inset:0;display:grid;place-items:center;padding:24px;text-align:center;background:#03030a;color:#eeeaff;font-size:11px;line-height:1.6;transition:opacity .35s}.ready #frontierLoading{opacity:0;pointer-events:none}
+.capturing .frontierUi,.capturing #frontierToast{opacity:0!important;pointer-events:none!important}
+@media(max-width:390px){.frontierControls{grid-template-columns:1fr 1fr}.frontierStory{bottom:calc(var(--safeB) + 112px);width:min(86vw,330px)}.frontierName{font-size:16px}}
+@media(min-width:900px){.frontierHead{left:24px;right:24px;top:24px}.frontierName{font-size:27px}.frontierKicker,.frontierSub{font-size:11px}.frontierStory{left:24px;bottom:88px;width:430px;padding:15px}.frontierStory strong{font-size:16px}.frontierStory p{font-size:11px}.frontierControls{left:auto;right:24px;bottom:24px;width:520px}.frontierControls button{font-size:10px}.frontierPhase b{font-size:13px}.frontierPhase span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.frontierUi,#frontierToast,#frontierLoading{transition:none}}
+</style>
+</head>
+<body>
+<div id="frontierApp">
+<canvas id="frontierSpace" aria-label="AURELIA ARC 曙光環域原創 3D 科幻景觀"></canvas>
+<div class="frontierVignette"></div><div class="frontierGrain"></div>
+<header class="frontierHead frontierUi"><div><div class="frontierKicker">FRONTIER FICTION · ORIGINAL EXPEDITION</div><div class="frontierName">AURELIA ARC｜曙光環域</div><div class="frontierSub">人工巨構棲息環 · 邊境文明航標 · 非 Real Space 航線</div></div><div class="frontierPhase"><b id="frontierPhaseName">深空接近</b><span id="frontierPhaseMeta">巨構輪廓正在放大</span></div></header>
+<section class="frontierStory frontierUi"><strong>曙光環域</strong><p id="frontierStoryCopy">一座沒有母星的環形棲息地，以人造晨昏帶包圍中央能源核心。接近時先看到環外冷光，抵達後才會辨認內側城市弧線。</p><em>ORIGINAL FRONTIER FICTION · AURELIA-01</em></section>
+<nav class="frontierControls frontierUi" aria-label="曙光環域操作"><button id="frontierModes" type="button">模式選擇</button><button id="frontierReal" type="button">Real Space</button><button id="frontierOrbit" type="button" aria-pressed="true">自動環繞：開</button><button id="frontierCapture" class="primary" type="button" disabled>高畫質留影</button></nav>
+<div id="frontierToast" role="status" aria-live="polite"></div>
+<div id="frontierLoading">正在建立 Frontier Fiction 巨構場景…<br><small>程序化 3D · 單一 renderer · 無外部圖像資產</small></div>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
+
+const app=document.querySelector('#frontierApp'),canvas=document.querySelector('#frontierSpace');
+const phaseName=document.querySelector('#frontierPhaseName'),phaseMeta=document.querySelector('#frontierPhaseMeta'),storyCopy=document.querySelector('#frontierStoryCopy');
+const orbitButton=document.querySelector('#frontierOrbit'),captureButton=document.querySelector('#frontierCapture'),toast=document.querySelector('#frontierToast');
+const MAX_NORMAL_DPR=1.25,MAX_CAPTURE_DPR=1.60,TEST_MODE=new URLSearchParams(location.search).get('test')==='1';
+const APPROACH_MS=TEST_MODE?1200:7600;
+let phase='approach',phaseStarted=performance.now(),autoOrbit=true,capturing=false,hidden=document.hidden,last=performance.now(),toastTimer=0;
+let targetYaw=0,targetPitch=0,lookYaw=0,lookPitch=0,dragging=false,lastX=0,lastY=0;
+
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance',stencil:false,depth:true,preserveDrawingBuffer:true});
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.setClearColor(0x03030a,1);
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x050511,.0041);
+const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,1400);camera.position.set(0,0,0);
+scene.add(new THREE.AmbientLight(0x5f668e,.42));const key=new THREE.DirectionalLight(0xcfd9ff,1.8);key.position.set(-1,1.2,1.6);scene.add(key);
+const world=new THREE.Group();world.position.set(0,0,-132);scene.add(world);
+const habitat=new THREE.Group();habitat.position.set(7,-3,0);habitat.rotation.set(.95,.17,.1);world.add(habitat);
+
+function seeded(seed){return()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296)}
+const rnd=seeded(17031);
+function glowTexture(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,1,64,64,63);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.16,'rgba(239,229,255,.86)');g.addColorStop(.48,'rgba(157,130,255,.22)');g.addColorStop(1,'rgba(80,55,210,0)');x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}const glow=glowTexture();
+function makeStars(){const count=1150,p=new Float32Array(count*3),col=new Float32Array(count*3);for(let i=0;i<count;i++){const z=-90-rnd()*850,spread=Math.max(80,Math.abs(z)*.75);p[i*3]=(rnd()-.5)*spread*2;p[i*3+1]=(rnd()-.5)*spread;p[i*3+2]=z;const c=.68+rnd()*.32;col[i*3]=c*.82;col[i*3+1]=c*.88;col[i*3+2]=c}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));const m=new THREE.PointsMaterial({size:.72,vertexColors:true,transparent:true,opacity:.84,depthWrite:false,sizeAttenuation:true});scene.add(new THREE.Points(g,m))}
+makeStars();
+function addStar(){const m=new THREE.MeshBasicMaterial({color:0xffe7bb}),s=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),m);s.position.set(-31,12,-34);s.scale.setScalar(8.5);world.add(s);const sm=new THREE.SpriteMaterial({map:glow,color:0xffd7c2,transparent:true,opacity:.72,blending:THREE.AdditiveBlending,depthWrite:false}),sp=new THREE.Sprite(sm);sp.position.copy(s.position);sp.scale.set(47,47,1);world.add(sp);const light=new THREE.PointLight(0xffd6c2,1050,340,1.55);light.position.copy(s.position);world.add(light)}
+addStar();
+const shellMat=new THREE.MeshStandardMaterial({color:0x64739a,roughness:.32,metalness:.72,emissive:0x13172d,emissiveIntensity:.7});
+const outer=new THREE.Mesh(new THREE.TorusGeometry(22,2.55,12,160),shellMat);habitat.add(outer);
+const rimMat=new THREE.MeshBasicMaterial({color:0xd7c4ff,transparent:true,opacity:.86,blending:THREE.AdditiveBlending,depthWrite:false});
+const rim=new THREE.Mesh(new THREE.TorusGeometry(22,.24,8,160),rimMat);rim.scale.set(1.002,1.002,1.002);habitat.add(rim);
+const innerRim=new THREE.Mesh(new THREE.TorusGeometry(18.9,.16,6,128),new THREE.MeshBasicMaterial({color:0x7fe8ff,transparent:true,opacity:.52,blending:THREE.AdditiveBlending,depthWrite:false}));habitat.add(innerRim);
+const spokeGeo=new THREE.BoxGeometry(.34,17,.34),spokeMat=new THREE.MeshStandardMaterial({color:0x8391b2,metalness:.78,roughness:.3,emissive:0x142545,emissiveIntensity:.65}),spokes=new THREE.InstancedMesh(spokeGeo,spokeMat,16),dummy=new THREE.Object3D();for(let i=0;i<16;i++){const a=i/16*Math.PI*2;dummy.position.set(Math.cos(a)*9.4,Math.sin(a)*9.4,0);dummy.rotation.set(0,0,a-Math.PI/2);dummy.updateMatrix();spokes.setMatrixAt(i,dummy.matrix)}habitat.add(spokes);
+const lightCount=180,lightPos=new Float32Array(lightCount*3);for(let i=0;i<lightCount;i++){const a=(i/lightCount)*Math.PI*2+(rnd()-.5)*.025,r=20.7+(rnd()-.5)*1.8;lightPos[i*3]=Math.cos(a)*r;lightPos[i*3+1]=Math.sin(a)*r;lightPos[i*3+2]=(rnd()-.5)*2.2}const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.BufferAttribute(lightPos,3));habitat.add(new THREE.Points(lg,new THREE.PointsMaterial({map:glow,color:0xaeeaff,size:1.25,transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true})));
+const coreMat=new THREE.MeshPhysicalMaterial({color:0x383b62,roughness:.46,metalness:.5,emissive:0x3d247d,emissiveIntensity:.7});const core=new THREE.Mesh(new THREE.SphereGeometry(3.8,32,20),coreMat);habitat.add(core);const coreGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glow,color:0xb48cff,transparent:true,opacity:.48,blending:THREE.AdditiveBlending,depthWrite:false}));coreGlow.scale.set(18,18,1);habitat.add(coreGlow);
+const moon=new THREE.Mesh(new THREE.SphereGeometry(4.6,28,18),new THREE.MeshStandardMaterial({color:0x8f91a8,roughness:.92,metalness:.02}));moon.position.set(35,-10,-22);world.add(moon);
+const debrisCount=150,debrisPos=new Float32Array(debrisCount*3);for(let i=0;i<debrisCount;i++){const a=rnd()*Math.PI*2,r=35+rnd()*14;debrisPos[i*3]=7+Math.cos(a)*r;debrisPos[i*3+1]=-3+(rnd()-.5)*9;debrisPos[i*3+2]=-4+Math.sin(a)*r*.32}const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(debrisPos,3));world.add(new THREE.Points(dg,new THREE.PointsMaterial({color:0xaea3cc,size:.5,transparent:true,opacity:.66,depthWrite:false})));
+const hazeCount=95,hazePos=new Float32Array(hazeCount*3);for(let i=0;i<hazeCount;i++){hazePos[i*3]=(rnd()-.5)*150;hazePos[i*3+1]=(rnd()-.5)*90;hazePos[i*3+2]=-20-rnd()*100}const hg=new THREE.BufferGeometry();hg.setAttribute('position',new THREE.BufferAttribute(hazePos,3));world.add(new THREE.Points(hg,new THREE.PointsMaterial({map:glow,color:0x8b68d4,size:16,transparent:true,opacity:.08,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true})));
+
+function normalDpr(){return Math.min(devicePixelRatio||1,innerWidth<900?MAX_NORMAL_DPR:1.45)}
+function captureDpr(){return Math.min(devicePixelRatio||1,innerWidth<900?MAX_CAPTURE_DPR:1.90)}
+function applySize(dpr=normalDpr()){renderer.setPixelRatio(dpr);renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}
+function smooth(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
+function setPhase(next){if(phase===next)return;phase=next;if(next==='arrival'){phaseName.textContent='巨構抵達';phaseMeta.textContent='晨昏環與城市弧線進入近景';storyCopy.textContent='環域以十六條主樑固定內外結構，光帶不是裝飾：它標示人工日照區與夜側港口。'}else if(next==='explore'){phaseName.textContent='自由探索';phaseMeta.textContent='拖動畫面觀察 · 可高畫質留影';storyCopy.textContent='你已停泊在曙光環域外緣。環內城市光點、中央能源核心與外圍碎屑帶形成三層深度，可自由環視或留影。';captureButton.disabled=false}}
+function updateApproach(now){if(phase==='explore')return;const u=Math.min(1,(now-phaseStarted)/APPROACH_MS);if(u<.68){setPhase('approach');const k=smooth(u/.68);world.position.z=-132+(62*k);camera.fov=62-5*k}else{setPhase('arrival');const k=smooth((u-.68)/.32);world.position.z=-70+(15*k);camera.fov=57-3*k}camera.updateProjectionMatrix();if(u>=1){world.position.z=-55;camera.fov=54;camera.updateProjectionMatrix();setPhase('explore')}}
+function showToast(message){clearTimeout(toastTimer);toast.textContent=message;toast.classList.add('show');toastTimer=setTimeout(()=>toast.classList.remove('show'),1900)}
+async function capture(download=true){
+  if(capturing||phase!=='explore')return null;capturing=true;captureButton.disabled=true;app.classList.add('capturing');
+  const before=renderer.getPixelRatio();
+  try{
+    applySize(captureDpr());
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    renderer.render(scene,camera);
+    const data=canvas.toDataURL('image/png'),bytes=Math.floor((data.length-data.indexOf(',')-1)*.75),result={width:canvas.width,height:canvas.height,cssWidth:Math.round(canvas.getBoundingClientRect().width),cssHeight:Math.round(canvas.getBoundingClientRect().height),bytes};
+    if(download){const a=document.createElement('a');a.download=`stellar-wrap-aurelia-${new Date().toISOString().replace(/[:.]/g,'-')}.png`;a.href=data;a.click();showToast(`已產生 ${result.width}×${result.height} 本機 PNG`)}
+    return result;
+  }finally{renderer.setPixelRatio(before);renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();app.classList.remove('capturing');capturing=false;captureButton.disabled=phase!=='explore'}
+}
+function frame(now){requestAnimationFrame(frame);if(hidden)return;const dt=Math.min(.05,(now-last)/1000||.016);last=now;updateApproach(now);lookYaw+=(targetYaw-lookYaw)*(1-Math.pow(.001,dt));lookPitch+=(targetPitch-lookPitch)*(1-Math.pow(.001,dt));if(phase==='explore'&&autoOrbit&&!dragging)habitat.rotation.z+=dt*.028;habitat.rotation.y=.17+lookYaw;habitat.rotation.x=.95+lookPitch;rim.material.opacity=.72+.16*Math.sin(now*.0011);coreGlow.material.opacity=.4+.12*Math.sin(now*.0016);moon.rotation.y+=dt*.018;renderer.render(scene,camera)}
+canvas.addEventListener('pointerdown',event=>{if(phase!=='explore')return;dragging=true;lastX=event.clientX;lastY=event.clientY;canvas.classList.add('dragging');canvas.setPointerCapture?.(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(!dragging)return;const dx=event.clientX-lastX,dy=event.clientY-lastY;lastX=event.clientX;lastY=event.clientY;targetYaw=Math.max(-.58,Math.min(.58,targetYaw-dx*.0042));targetPitch=Math.max(-.34,Math.min(.34,targetPitch-dy*.0042))});for(const name of['pointerup','pointercancel'])canvas.addEventListener(name,event=>{dragging=false;canvas.classList.remove('dragging');canvas.releasePointerCapture?.(event.pointerId)});canvas.addEventListener('dblclick',()=>{targetYaw=targetPitch=0});
+orbitButton.addEventListener('click',()=>{autoOrbit=!autoOrbit;orbitButton.setAttribute('aria-pressed',autoOrbit?'true':'false');orbitButton.textContent=`自動環繞：${autoOrbit?'開':'暫停'}`});captureButton.addEventListener('click',()=>capture(true));document.querySelector('#frontierModes').addEventListener('click',()=>{location.href='./index.html?landing=1'});document.querySelector('#frontierReal').addEventListener('click',()=>{location.href='./index.html?mode=real'});
+addEventListener('resize',()=>applySize(),{passive:true});document.addEventListener('visibilitychange',()=>{hidden=document.hidden;last=performance.now()});
+applySize();app.classList.add('ready');setTimeout(()=>document.querySelector('#frontierLoading')?.remove(),500);requestAnimationFrame(frame);
+window.WarpFrontier={
+  state(){const info=renderer.info.render;return{destination:'AURELIA',name:'AURELIA ARC｜曙光環域',phase,exploring:phase==='explore',autoOrbit,capturing,pixelRatio:renderer.getPixelRatio(),drawCalls:info.calls,triangles:info.triangles,backingWidth:canvas.width,backingHeight:canvas.height,cssWidth:Math.round(canvas.getBoundingClientRect().width),cssHeight:Math.round(canvas.getBoundingClientRect().height)}},
+  capture(download=false){return capture(download)},
+  skipArrival(){world.position.z=-55;camera.fov=54;camera.updateProjectionMatrix();setPhase('explore')}
+};
+</script>
+</body>
+</html>

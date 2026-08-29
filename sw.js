@@ -6,6 +6,8 @@ const CORE=[
   './index.html',
   './travel-journal.js',
   './responsive-ui.js',
+  './mode-gateway.js',
+  './frontier.html',
   './journey-atmosphere.js',
   './exploration-survey.js',
   './star-atlas.js',
