@@ -34,7 +34,7 @@ async function inspect(chrome,base,width,height){
     const high=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(high.active,true);assert.equal(high.quality,'high');assert.equal(high.objects,4);assert.equal(high.drawCalls,4);assert.equal(high.triangles,8352);
     const highBytes=await screenshot(cdp,`cinematic-tau-${viewport}-high.png`);assert.notEqual(highBytes,standardBytes,'standard and High evidence should not serialize identically');
     const viewportState=await evalJs(cdp,"(()=>{const c=document.querySelector('#space'),r=c.getBoundingClientRect();return{cssWidth:r.width,cssHeight:r.height,backingWidth:c.width,backingHeight:c.height,phase:WarpSim.state().phase}})()");
-    assert.equal(Math.round(viewportState.cssWidth),width);assert.equal(Math.round(viewportState.cssHeight),height);assert.equal(viewportState.phase,'idle');
+    assert.equal(Math.round(viewportState.cssWidth),width);assert.equal(Math.round(viewportState.cssHeight),height);assert.equal(viewportState.phase,'explore');
 
     await evalJs(cdp,"WarpSim.setQuality('low');true");
     await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpCinematicQuality.snapshot();return s.active===false&&s.objects===0&&s.drawCalls===0})()"),'High to Low cinematic GPU disposal');
