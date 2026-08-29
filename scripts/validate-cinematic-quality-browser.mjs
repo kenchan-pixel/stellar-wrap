@@ -41,7 +41,8 @@ async function exercise(cdp,width,height,target,triangles,label){
 
   const away=target==='SOL'?'LUNA':'SOL';
   await evalJs(cdp,`WarpSim.jumpTo('${away}');true`);
-  await waitUntil(()=>evalJs(cdp,`WarpSim.state().current==='${away}'&&WarpCinematicQuality.snapshot().objects===0`),`${target} departure cinematic GPU disposal`);
+  await waitUntil(()=>evalJs(cdp,`(()=>{const s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='${away}'&&s.profiles?.['${target}']?.objects===0})()`),`${target} departure cinematic GPU disposal`);
+  const departed=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(departed.profiles?.[target]?.objects,0,`${target} owned GPU objects must be disposed after departure`);
   await evalJs(cdp,`WarpSim.jumpTo('${target}');WarpSim.setQuality('high');true`);
   await waitUntil(()=>evalJs(cdp,`(()=>{const s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='${target}'&&s.target==='${target}'&&s.active===true&&s.objects===4&&s.drawCalls===4})()`),`${target} revisit High cinematic rebuild`,8000);
   const revisit=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(revisit.triangles,triangles);assert.equal(revisit.budgetTriangles,triangles);assert.ok(revisit.captureCount>=2,`${target} revisit should recapture the rebuilt core scene`);
