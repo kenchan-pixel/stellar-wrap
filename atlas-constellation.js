@@ -58,7 +58,7 @@ function updateNodeSelection(){
     node.setAttribute('aria-pressed',selected?'true':'false');
   }
 }
-function focusRecord(id,scroll=true){
+function focusRecord(id,scroll=true,moveDomFocus=false){
   if(!EXTERNAL_IDS.includes(id))return false;
   focusedId=id;
   updateNodeSelection();
@@ -67,6 +67,11 @@ function focusRecord(id,scroll=true){
   const card=plan?.closest?.('.atlasCard');
   if(!card)return false;
   card.classList.add('constellationFocused');
+  card.setAttribute('tabindex','-1');
+  if(!card.getAttribute('aria-label'))card.setAttribute('aria-label',`${SYSTEM_NAMES[id]}圖鑑紀錄`);
+  if(moveDomFocus){
+    try{card.focus?.({preventScroll:true})}catch{card.focus?.()}
+  }
   if(scroll)card.scrollIntoView?.({block:'center',inline:'nearest',behavior:reducedMotion()?'auto':'smooth'});
   return true;
 }
@@ -75,7 +80,7 @@ function scheduleFocusRestore(){
   focusQueued=true;
   queueMicrotask(()=>{
     focusQueued=false;
-    focusRecord(focusedId,false);
+    focusRecord(focusedId,false,false);
   });
 }
 function watchGrid(){
@@ -115,7 +120,7 @@ function ensureUi(){
       node.dataset.system=id;
       node.setAttribute('aria-pressed','false');
       node.textContent=id;
-      node.onclick=()=>focusRecord(id,true);
+      node.onclick=()=>focusRecord(id,true,true);
       visual.append(node);
     }
     const caption=document.createElement('div');
@@ -150,7 +155,7 @@ function render(){
     node.classList.toggle('current',state?.current===id);
     node.setAttribute('aria-label',`${SYSTEM_NAMES[id]} · ${discovered?'已收錄發現':'發現未收錄'}${state?.current===id?' · 目前位置':''} · 查看圖鑑`);
   }
-  if(focusedId)focusRecord(focusedId,false);
+  if(focusedId)focusRecord(focusedId,false,false);
   return true;
 }
 function watchForAtlas(){
@@ -168,5 +173,5 @@ addEventListener('stellarwarp:atlas-change',render);
 addEventListener('stellarwarp:discovery-change',render);
 addEventListener('stellarwarp:journey-complete',render);
 watchForAtlas();
-window.WarpAtlasConstellation={render,mounted:()=>mounted,focus:id=>focusRecord(id,true)};
+window.WarpAtlasConstellation={render,mounted:()=>mounted,focus:id=>focusRecord(id,true,true)};
 })();
