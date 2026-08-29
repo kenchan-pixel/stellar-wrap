@@ -28,14 +28,29 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"WarpSim.state().current==='TAU'&&WarpSim.state().exploring&&WarpCinematicQuality.snapshot().quality==='standard'"),'safe TAU Standard exploration');
     const standard=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(standard.active,false);assert.equal(standard.quality,'standard');assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);
     const standardBytes=await screenshot(cdp,`cinematic-tau-${viewport}-standard.png`);
+
     await evalJs(cdp,"WarpSim.setQuality('high');true");
     await waitUntil(()=>evalJs(cdp,"WarpCinematicQuality.snapshot().active===true"),'TAU High cinematic layer active',5000);
     const high=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(high.active,true);assert.equal(high.quality,'high');assert.equal(high.objects,4);assert.equal(high.drawCalls,4);assert.equal(high.triangles,8352);
     const highBytes=await screenshot(cdp,`cinematic-tau-${viewport}-high.png`);assert.notEqual(highBytes,standardBytes,'standard and High evidence should not serialize identically');
     const viewportState=await evalJs(cdp,"(()=>{const c=document.querySelector('#space'),r=c.getBoundingClientRect();return{cssWidth:r.width,cssHeight:r.height,backingWidth:c.width,backingHeight:c.height,phase:WarpSim.state().phase}})()");
     assert.equal(Math.round(viewportState.cssWidth),width);assert.equal(Math.round(viewportState.cssHeight),height);assert.equal(viewportState.phase,'idle');
-    await evalJs(cdp,"WarpSim.setQuality('low');true");await waitUntil(()=>evalJs(cdp,"WarpCinematicQuality.snapshot().active===false"),'TAU cinematic layer disables below High');
-    console.log(`TAU Cinematic High real browser ${viewport}: 4 bounded 3D layers, ${high.triangles} tris, High evidence ${highBytes} bytes; Standard ${standardBytes} bytes`);
+
+    await evalJs(cdp,"WarpSim.setQuality('low');true");
+    await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpCinematicQuality.snapshot();return s.active===false&&s.objects===0&&s.drawCalls===0})()"),'High to Low cinematic GPU disposal');
+    const low=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(low.objects,0);assert.equal(low.drawCalls,0);
+
+    await evalJs(cdp,"WarpSim.setQuality('high');true");
+    await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpCinematicQuality.snapshot();return s.active===true&&s.objects===4&&s.drawCalls===4})()"),'High cinematic layer rebuild after Low');
+    const rebuilt=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(rebuilt.triangles,8352);
+
+    await evalJs(cdp,"WarpSim.jumpTo('SOL');true");
+    await waitUntil(()=>evalJs(cdp,"WarpSim.state().current==='SOL'&&WarpCinematicQuality.snapshot().objects===0"),'TAU departure cinematic GPU disposal');
+    await evalJs(cdp,"WarpSim.jumpTo('TAU');WarpSim.setQuality('high');true");
+    await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='TAU'&&s.active===true&&s.objects===4&&s.drawCalls===4})()"),'TAU revisit High cinematic rebuild',7000);
+    const revisit=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(revisit.triangles,8352);assert.ok(revisit.captureCount>=2,'TAU revisit should recapture the rebuilt core root');
+
+    console.log(`TAU Cinematic High real browser ${viewport}: 4 bounded 3D layers, ${high.triangles} tris; High→Low releases GPU objects, High rebuilds, TAU round-trip rebuilds; High evidence ${highBytes} bytes; Standard ${standardBytes} bytes`);
   }catch(e){if(cdp)await screenshot(cdp,`cinematic-tau-failure-${viewport}.png`).catch(()=>{});throw e}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for cinematic quality browser validation');console.log('Cinematic quality browser validation skipped: Chrome/Chromium not available');process.exit(0)}

@@ -25,11 +25,13 @@ check(!/localStorage|sessionStorage|indexedDB/.test(source),'cinematic layer add
 check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'cinematic layer adds no runtime network or analytics path');
 check(/THREE\.Object3D\?\.prototype/.test(source)&&/originalAdd\.apply\(this,children\)/.test(source),'TAU root capture observes bounded scene-construction events instead of renderer frames');
 check(/__stellarCinematicAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add=originalAdd/.test(source),'scene-construction hook is explicitly restored on page teardown');
-check(/disposeMaterial/.test(source)&&/material\.map\?\.dispose/.test(source),'owned procedural GPU texture is explicitly released on scene teardown');
-check(/if\(state\.current!==TARGET&&planetRoot\)releaseTau\(\)/.test(source)&&/function releaseTau\(\)\{disposeOwn\(\);planetRoot=null;surface=null\}/.test(source),'leaving TAU explicitly releases cinematic GPU resources');
+check(/disposeMaterial/.test(source)&&/material\.map\?\.dispose/.test(source),'owned procedural GPU texture is explicitly released');
+check(/if\(!wantsHigh&&objects\.length\)disposeOwn\(\)/.test(source),'dropping below High or leaving safe TAU exploration releases all owned cinematic GPU objects');
+check(/function teardown\(\)\{disposeOwn\(\);planetRoot=null;surface=null\}/.test(source),'page teardown clears owned resources and retained core-root references');
+check(!/state\.current!==TARGET&&planetRoot\)releaseTau/.test(source),'normal departure does not discard the reusable TAU core-root reference before revisit');
 check(/window\.WarpCinematicQuality=/.test(source),'diagnostic API exposes autonomous validation state');
 
 const browser=spawnSync(process.execPath,['scripts/validate-cinematic-quality-browser.mjs'],{encoding:'utf8',timeout:120000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
-check(browser.status===0,'real production WebGL TAU cinematic quality passes at both phone viewports');
+check(browser.status===0,'real production WebGL TAU cinematic quality passes disposal, rebuild and revisit at both phone viewports');
 console.log(`Cinematic quality validation: ${passed}/${passed} checks passed plus two real-browser TAU viewports`);
