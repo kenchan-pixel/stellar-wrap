@@ -1,81 +1,89 @@
-# Mode Gateway + Frontier Fiction First Destination
+# Mode Gateway + Frontier Fiction Destinations
 
 ## Status
 
 - **Candidate vertical slice on `autonomous-evolution`**
-- Product direction is already approved by `docs/ROADMAP.md`.
-- This document records the implementation boundary and acceptance contract; it does not make the candidate a release baseline.
+- Product direction is approved by `docs/ROADMAP.md`; each destination remains candidate until merged/released.
+- This document records implementation and acceptance boundaries only.
 
 ## Goal / intended user outcome
 
-Give Stellar Wrap a real exploration entrance instead of a single-mode boot path, while shipping the entrance together with one immediately viewable original science-fiction destination.
+Give Stellar Wrap a useful mobile exploration entrance while expanding Frontier Fiction through a small number of visually distinct original destinations rather than a large low-detail catalogue.
 
-The first gateway exposes:
+The top-level gateway remains exactly four actions:
 
-- **Continue Journey** — return to the current / restored Real Space state without replanning.
-- **Real Space** — enter the existing eight-system map and approved V4+ travel experience.
-- **Frontier Fiction** — open the first original fiction destination, `AURELIA ARC｜曙光環域`.
-- **Gallery / Captures** — show the existing local journey / visited / discovery summary and the current local-only PNG boundary.
+- **Continue Journey** — return to current/restored Real Space state without replanning.
+- **Real Space** — existing eight-system map and approved V4+ travel.
+- **Frontier Fiction** — original science-fiction exploration line.
+- **Gallery / Captures** — existing local journey/visited/discovery summary; PNG files remain local downloads.
+
+Below those four actions, a compact Frontier destination strip now exposes two original worlds:
+
+1. `AURELIA ARC｜曙光環域` — artificial ring habitat / megastructure.
+2. `NADIR WELL｜玄淵觀測站` — extreme-object frontier observatory around a fictional black-hole-like gravity well.
 
 ## Architecture boundary
 
-Real Space remains authoritative in `index.html`:
+Real Space remains authoritative in `index.html`: existing eight-system `N` data, 6.0 LY Dijkstra graph, true-direction turns, flight phases, Hermite arrival, Travel Journal and Star Atlas.
 
-- existing eight-system `N` data;
-- existing 6.0 LY Dijkstra graph;
-- existing real-direction turn / flight phase / Hermite arrival authority;
-- existing Travel Journal and Star Atlas data.
-
-Frontier Fiction does **not** add AURELIA to the Real Space `N` / `G` graph. It is a separate static `frontier.html` runtime with one Three.js renderer and one camera. This avoids creating a second route authority or silently changing established shortest paths.
-
-`mode-gateway.js` is a presentation layer only. It reads existing Travel Journal / Star Atlas summaries, creates no storage key, sends no analytics, and does not copy discovery data into another store.
+Neither AURELIA nor NADIR is added to Real Space `N` / `G`. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
 
 ## AURELIA ARC｜曙光環域
 
-Original science-fiction destination based on the broad archetype of a megastructure habitat, without copying a named franchise location or asset.
+Original megastructure habitat: inhabited torus, structural spokes, artificial dawn/night illumination, central energy core, distant warm star, debris field, short approach → arrival → exploration sequence, drag-look/auto-orbit and bounded local PNG capture.
+
+## NADIR WELL｜玄淵觀測站
+
+Original extreme-object destination built from a broad science-fiction archetype without reproducing a named franchise or real observatory.
 
 Visual identity:
 
-- large inhabited torus with structural spokes;
-- artificial dawn / night illumination around the ring;
-- central energy core;
-- distant warm star, moon and debris field;
-- short cinematic approach followed by free-look exploration;
-- bounded local high-resolution PNG capture.
+- black central event-horizon silhouette;
+- layered amber/gold accretion structures;
+- three cool gravitational-lensing rings;
+- bounded bipolar jets;
+- offset segmented observation ring and pods;
+- sparse foreground debris and deep star field;
+- dedicated approach → arrival → free-exploration composition;
+- local high-resolution capture.
 
-The scene is procedural and uses no third-party image or audio asset. Three.js stays pinned to `0.185.1`.
+NADIR intentionally contrasts AURELIA: AURELIA is a luminous inhabited megastructure; NADIR is a dark extreme-object observation frontier.
 
 ## Performance contract
 
-- Frontier page uses one renderer / one main scene / one camera.
-- Normal mobile DPR is capped at `1.25`; capture DPR is capped at `1.60`.
-- No shadow maps, backend, analytics, polling network request or account system.
-- Visibility change pauses effective frame updates.
-- Browser acceptance must measure actual renderer draw calls / triangles instead of trusting only declared constants.
-- V4 Real Space simulation timing is untouched.
+For each Frontier runtime:
+
+- one renderer / one main scene / one camera;
+- Three.js pinned to `0.185.1`;
+- `preserveDrawingBuffer:false`;
+- normal mobile DPR ≤ `1.25`; temporary capture DPR ≤ `1.60`;
+- no shadow maps, backend, analytics, account, network polling or new persistent store;
+- page visibility prevents effective frame updates;
+- capture explicitly raises backing resolution, waits rendered frames, renders immediately, exports PNG, then restores normal DPR;
+- production Chromium acceptance measures actual draw calls/triangles at 390×844 and 360×800.
 
 ## Acceptance Criteria
 
-1. Root Real Space runtime presents a mobile-safe mode gateway with four actions and 44 px or larger touch targets.
-2. Continue Journey dismisses the gateway without changing route / current location authority.
-3. Real Space dismisses the gateway and opens the existing star-map panel.
-4. Gallery reads existing local journey / visited / discovery data and clearly states that PNG files remain local downloads.
-5. Frontier Fiction opens a distinct standalone AURELIA runtime rather than inserting a ninth node into the Real Space graph.
-6. AURELIA performs a visible approach → arrival → exploration sequence and ends in manual drag-look / optional auto-orbit exploration.
-7. AURELIA has a real megastructure scene with measured, bounded renderer work on 390×844 and 360×800 production Chromium viewports.
-8. Frontier capture temporarily increases the real backing buffer, exports PNG data, then restores normal DPR.
-9. `npm run check`, immutable V4 regression checks, existing route / flight / Photo Mode / trusted-touch Focus Tray gates all remain green.
-10. Mode and Frontier runtime files are included in the existing offline shell without changing the established cache-generation contract.
+1. Top-level landing continues to expose exactly four useful mode actions with ≥44 px touch targets.
+2. Continue/Real Space preserve the existing Real Space location/route authority.
+3. Gallery remains read-only over existing local journey/discovery sources.
+4. Frontier destination strip exposes exactly AURELIA and NADIR without inserting either into Real Space routing.
+5. NADIR has a visibly distinct approach, arrival and free-exploration scene.
+6. Trusted phone-sized touch can enter NADIR and toggle its exploration control.
+7. Production Chromium at 390×844 and 360×800 proves viewport containment and bounded NADIR renderer work (≤16 draw calls / ≤22,000 triangles).
+8. NADIR high-resolution capture increases the actual backing buffer, produces non-trivial PNG data and restores the previous DPR with `preserveDrawingBuffer:false`.
+9. Existing AURELIA, V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
+10. Both Frontier pages remain in the existing v15 offline shell contract.
 
 ## Out of Scope
 
-- Adding AURELIA to the Real Space Dijkstra network.
-- Multiple Frontier Fiction destinations in this slice.
-- Fiction economy, combat, quests, accounts, cloud save or analytics.
-- Cloud image gallery / upload.
-- Copying famous science-fiction IP locations, branding or recognizable protected assets.
-- Claiming physical-device sustained 60 fps or thermal acceptance without device measurements.
+- Adding Frontier destinations to the Real Space Dijkstra graph.
+- A general Frontier route planner or persistence system.
+- More than these two Frontier worlds in this slice.
+- Combat, economy, quests, accounts, cloud save/upload or analytics.
+- Copying famous science-fiction locations, branding or recognizable protected assets.
+- Forced 4K, post-processing framework or permanent maximum DPR.
 
 ## Supplementary device evidence
 
-Physical iPhone Safari touch feel, long-session thermal load, sustained frame pacing, and PNG save-sheet behavior remain useful supplementary checks. They are not the completion gate for this candidate when the exact production browser path and existing V4 regression suite are green.
+Physical iPhone Safari touch feel, sustained frame pacing/thermal load, cross-GPU transparent blending and PNG save-sheet behavior remain useful supplementary evidence; they do not block unrelated autonomous evolution when exact production-browser and repository regression gates are green.

@@ -7,122 +7,50 @@ const NAMES={SOL:'地球近軌',LUNA:'月環基地',VEGA:'織女星門',CYG:'天
 const DISCOVERY_TOTAL=7;
 let root=null,records=null,visible=false,recordsOpen=false;
 
-function currentState(){
-  try{return window.WarpSim?.state?.()||null}catch{return null}
-}
+function currentState(){try{return window.WarpSim?.state?.()||null}catch{return null}}
 function journalStats(){
   let entries=[],visited=['SOL'],discoveries={};
   try{entries=window.WarpTravelJournal?.entries?.()||[]}catch{}
   try{visited=window.WarpTravelJournal?.visited?.()||visited}catch{}
   try{discoveries=window.WarpStarAtlas?.snapshot?.().discoveries||{}}catch{}
   const discovered=Object.entries(discoveries).filter(([id,value])=>id!=='SOL'&&typeof value==='string'&&value.trim()).length;
-  const latest=entries[0]||null;
-  const latestId=latest?.route?.[latest.route.length-1]||null;
+  const latest=entries[0]||null,latestId=latest?.route?.[latest.route.length-1]||null;
   return{journeys:entries.length,visited:visited.length,discoveries:discovered,latestId,latestName:latestId?NAMES[latestId]||latestId:null};
 }
 function ensureStyle(){
   if(document.querySelector('#modeGatewayStyle'))return;
-  const style=document.createElement('style');
-  style.id='modeGatewayStyle';
-  style.textContent=`
+  const style=document.createElement('style');style.id='modeGatewayStyle';style.textContent=`
 #modeGateway{position:fixed;z-index:30;inset:0;overflow:auto;overscroll-behavior:contain;padding:max(18px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:radial-gradient(circle at 76% 13%,rgba(91,128,255,.22),transparent 29%),radial-gradient(circle at 18% 74%,rgba(89,206,255,.12),transparent 31%),linear-gradient(160deg,#02040a 0%,#071127 54%,#02040a 100%);color:#f5f8ff;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility .22s ease}
-#modeGateway.show{opacity:1;visibility:visible;pointer-events:auto}
-#modeGateway:before,#modeGateway:after{content:"";position:fixed;pointer-events:none;border:1px solid rgba(161,202,255,.12);border-radius:50%;transform:rotate(18deg)}
-#modeGateway:before{width:min(78vw,560px);aspect-ratio:1;right:-28%;top:-18%;box-shadow:0 0 70px rgba(92,137,255,.08),inset 0 0 40px rgba(92,137,255,.05)}
-#modeGateway:after{width:min(54vw,360px);aspect-ratio:1;left:-22%;bottom:-8%;border-color:rgba(105,223,255,.08)}
-.modeGatewayInner{position:relative;z-index:1;width:min(100%,760px);min-height:calc(100dvh - max(38px,env(safe-area-inset-top) + env(safe-area-inset-bottom)));margin:0 auto;display:flex;flex-direction:column;justify-content:center}
-.modeGatewayKicker{font-size:9px;letter-spacing:.22em;font-weight:850;color:rgba(195,220,255,.67)}
-.modeGatewayTitle{margin:8px 0 0;font-size:clamp(30px,10vw,54px);line-height:.98;letter-spacing:-.04em;font-weight:820}.modeGatewayTitle span{display:block;margin-top:7px;font-size:.34em;letter-spacing:.12em;color:#a9d4ff;font-weight:720}
-.modeGatewayLead{max-width:520px;margin:14px 0 18px;font-size:11px;line-height:1.62;color:rgba(229,238,255,.64)}
-.modeGatewayGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.modeGatewayCard{position:relative;min-height:112px;padding:14px 13px;text-align:left;border:1px solid rgba(177,211,255,.16);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025));box-shadow:0 16px 38px rgba(0,0,0,.22);color:inherit;overflow:hidden}
-.modeGatewayCard:after{content:"";position:absolute;width:72px;height:72px;right:-18px;bottom:-28px;border:1px solid rgba(170,214,255,.17);border-radius:50%;box-shadow:0 0 26px rgba(103,165,255,.08)}
-.modeGatewayCard strong{display:block;font-size:14px;line-height:1.2}.modeGatewayCard small{display:block;margin-top:6px;max-width:90%;font-size:9px;line-height:1.48;color:rgba(228,238,255,.57)}
-.modeGatewayCard em{display:inline-block;margin-top:9px;font-style:normal;font-size:7px;letter-spacing:.12em;color:#aad5ff;font-weight:800}
-.modeGatewayCard[data-mode="frontier"]{border-color:rgba(198,171,255,.24);background:radial-gradient(circle at 88% 10%,rgba(175,117,255,.17),transparent 38%),linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))}
-.modeGatewayCard[data-mode="frontier"] em{color:#d6baff}
-.modeGatewayCard:focus-visible{outline:2px solid #c8e0ff;outline-offset:2px}
-.modeGatewayRecords{display:none;margin-top:10px;padding:13px;border:1px solid rgba(180,215,255,.14);border-radius:16px;background:rgba(2,6,14,.58)}
-.modeGatewayRecords.open{display:block}.modeGatewayRecordsHead{display:flex;align-items:center;justify-content:space-between;gap:10px}.modeGatewayRecordsHead strong{font-size:12px}.modeGatewayRecordsClose{min-width:44px;min-height:44px;border-radius:12px;border:1px solid rgba(182,216,255,.18);background:rgba(255,255,255,.05);color:inherit}
-.modeGatewayStats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.modeGatewayStat{padding:9px 7px;border-radius:12px;background:rgba(255,255,255,.04)}.modeGatewayStat b{display:block;font-size:15px}.modeGatewayStat span{font-size:7px;color:rgba(225,236,255,.54)}
-.modeGatewayLatest{margin-top:9px;font-size:9px;line-height:1.55;color:rgba(226,238,255,.68)}.modeGatewayLocal{margin-top:6px;font-size:8px;line-height:1.5;color:rgba(162,205,255,.62)}
-.modeGatewayFoot{margin-top:14px;font-size:8px;line-height:1.45;color:rgba(216,230,250,.38)}
-.modeGatewayPanelSetting button{width:100%;min-height:38px;margin-top:7px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.04);color:var(--text);font-size:9px;font-weight:760}
-@media(max-width:520px){.modeGatewayGrid{grid-template-columns:1fr 1fr}.modeGatewayCard{min-height:124px;padding:13px 11px}.modeGatewayLead{margin-bottom:14px}.modeGatewayTitle{font-size:34px}}
-@media(max-width:360px){.modeGatewayGrid{grid-template-columns:1fr}.modeGatewayCard{min-height:90px}.modeGatewayInner{justify-content:flex-start;padding-top:7vh}}
-@media(min-width:900px){.modeGatewayCard{min-height:136px;padding:18px}.modeGatewayCard strong{font-size:17px}.modeGatewayCard small{font-size:11px}.modeGatewayLead{font-size:13px}.modeGatewayKicker{font-size:11px}.modeGatewayFoot{font-size:10px}}
-@media(prefers-reduced-motion:reduce){#modeGateway{transition:none}}
+#modeGateway.show{opacity:1;visibility:visible;pointer-events:auto}#modeGateway:before,#modeGateway:after{content:"";position:fixed;pointer-events:none;border:1px solid rgba(161,202,255,.12);border-radius:50%;transform:rotate(18deg)}#modeGateway:before{width:min(78vw,560px);aspect-ratio:1;right:-28%;top:-18%}#modeGateway:after{width:min(54vw,360px);aspect-ratio:1;left:-22%;bottom:-8%;border-color:rgba(105,223,255,.08)}
+.modeGatewayInner{position:relative;z-index:1;width:min(100%,760px);min-height:calc(100dvh - max(38px,env(safe-area-inset-top) + env(safe-area-inset-bottom)));margin:0 auto;display:flex;flex-direction:column;justify-content:center}.modeGatewayKicker{font-size:9px;letter-spacing:.22em;font-weight:850;color:rgba(195,220,255,.67)}.modeGatewayTitle{margin:8px 0 0;font-size:clamp(30px,10vw,54px);line-height:.98;letter-spacing:-.04em;font-weight:820}.modeGatewayTitle span{display:block;margin-top:7px;font-size:.34em;letter-spacing:.12em;color:#a9d4ff;font-weight:720}.modeGatewayLead{max-width:520px;margin:14px 0 18px;font-size:11px;line-height:1.62;color:rgba(229,238,255,.64)}
+.modeGatewayGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.modeGatewayCard{position:relative;min-height:112px;padding:14px 13px;text-align:left;border:1px solid rgba(177,211,255,.16);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025));box-shadow:0 16px 38px rgba(0,0,0,.22);color:inherit;overflow:hidden}.modeGatewayCard:after{content:"";position:absolute;width:72px;height:72px;right:-18px;bottom:-28px;border:1px solid rgba(170,214,255,.17);border-radius:50%}.modeGatewayCard strong{display:block;font-size:14px;line-height:1.2}.modeGatewayCard small{display:block;margin-top:6px;max-width:90%;font-size:9px;line-height:1.48;color:rgba(228,238,255,.57)}.modeGatewayCard em{display:inline-block;margin-top:9px;font-style:normal;font-size:7px;letter-spacing:.12em;color:#aad5ff;font-weight:800}.modeGatewayCard[data-mode="frontier"]{border-color:rgba(198,171,255,.24);background:radial-gradient(circle at 88% 10%,rgba(175,117,255,.17),transparent 38%),linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))}.modeGatewayCard[data-mode="frontier"] em{color:#d6baff}.modeGatewayCard:focus-visible,.modeGatewayDest button:focus-visible{outline:2px solid #c8e0ff;outline-offset:2px}
+.modeGatewayDestinations{margin-top:10px;padding:10px;border:1px solid rgba(199,173,255,.15);border-radius:16px;background:rgba(6,4,18,.48)}.modeGatewayDestinations>strong{display:block;font-size:10px;letter-spacing:.08em;color:#dccbff}.modeGatewayDestinations>p{margin:4px 0 8px;font-size:8px;line-height:1.45;color:rgba(225,217,255,.55)}.modeGatewayDest{display:grid;grid-template-columns:1fr 1fr;gap:7px}.modeGatewayDest button{min-height:46px;padding:8px 10px;border:1px solid rgba(207,188,255,.17);border-radius:12px;background:rgba(255,255,255,.045);color:inherit;text-align:left}.modeGatewayDest b{display:block;font-size:10px}.modeGatewayDest span{display:block;margin-top:3px;font-size:7px;line-height:1.35;color:rgba(229,220,255,.56)}#frontierNadirQuick{background:radial-gradient(circle at 90% 15%,rgba(86,205,255,.12),transparent 42%),rgba(255,255,255,.045)}
+.modeGatewayRecords{display:none;margin-top:10px;padding:13px;border:1px solid rgba(180,215,255,.14);border-radius:16px;background:rgba(2,6,14,.58)}.modeGatewayRecords.open{display:block}.modeGatewayRecordsHead{display:flex;align-items:center;justify-content:space-between;gap:10px}.modeGatewayRecordsHead strong{font-size:12px}.modeGatewayRecordsClose{min-width:44px;min-height:44px;border-radius:12px;border:1px solid rgba(182,216,255,.18);background:rgba(255,255,255,.05);color:inherit}.modeGatewayStats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.modeGatewayStat{padding:9px 7px;border-radius:12px;background:rgba(255,255,255,.04)}.modeGatewayStat b{display:block;font-size:15px}.modeGatewayStat span{font-size:7px;color:rgba(225,236,255,.54)}.modeGatewayLatest{margin-top:9px;font-size:9px;line-height:1.55;color:rgba(226,238,255,.68)}.modeGatewayLocal{margin-top:6px;font-size:8px;line-height:1.5;color:rgba(162,205,255,.62)}.modeGatewayFoot{margin-top:12px;font-size:8px;line-height:1.45;color:rgba(216,230,250,.38)}.modeGatewayPanelSetting button{width:100%;min-height:38px;margin-top:7px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.04);color:var(--text);font-size:9px;font-weight:760}
+@media(max-width:520px){.modeGatewayGrid{grid-template-columns:1fr 1fr}.modeGatewayCard{min-height:118px;padding:12px 10px}.modeGatewayLead{margin-bottom:12px}.modeGatewayTitle{font-size:34px}}@media(max-width:360px){.modeGatewayGrid{grid-template-columns:1fr 1fr}.modeGatewayCard{min-height:112px}.modeGatewayInner{justify-content:flex-start;padding-top:3vh}.modeGatewayDestinations{padding:8px}.modeGatewayDest button{min-height:44px;padding:7px 8px}}@media(min-width:900px){.modeGatewayCard{min-height:136px;padding:18px}.modeGatewayCard strong{font-size:17px}.modeGatewayCard small{font-size:11px}.modeGatewayLead{font-size:13px}.modeGatewayKicker{font-size:11px}.modeGatewayFoot{font-size:10px}.modeGatewayDest b{font-size:12px}.modeGatewayDest span{font-size:9px}}@media(prefers-reduced-motion:reduce){#modeGateway{transition:none}}
 `;
   document.head.append(style);
 }
-function refreshRecords(){
-  if(!records)return;
-  const data=journalStats();
-  const journeys=records.querySelector('[data-stat="journeys"]');
-  const visited=records.querySelector('[data-stat="visited"]');
-  const discoveries=records.querySelector('[data-stat="discoveries"]');
-  const latest=records.querySelector('#modeGatewayLatest');
-  if(journeys)journeys.textContent=String(data.journeys);
-  if(visited)visited.textContent=`${data.visited}/8`;
-  if(discoveries)discoveries.textContent=`${data.discoveries}/${DISCOVERY_TOTAL}`;
-  if(latest)latest.textContent=data.latestName?`最近完成：${data.latestName}`:'尚未有完成旅程。由 Real Space 啟航後，旅程紀錄會在此摘要顯示。';
-}
+function refreshRecords(){if(!records)return;const data=journalStats();const journeys=records.querySelector('[data-stat="journeys"]'),visited=records.querySelector('[data-stat="visited"]'),discoveries=records.querySelector('[data-stat="discoveries"]'),latest=records.querySelector('#modeGatewayLatest');if(journeys)journeys.textContent=String(data.journeys);if(visited)visited.textContent=`${data.visited}/8`;if(discoveries)discoveries.textContent=`${data.discoveries}/${DISCOVERY_TOTAL}`;if(latest)latest.textContent=data.latestName?`最近完成：${data.latestName}`:'尚未有完成旅程。由 Real Space 啟航後，旅程紀錄會在此摘要顯示。'}
 function closeRecords(){recordsOpen=false;records?.classList.remove('open');records?.setAttribute('aria-hidden','true')}
 function openRecords(){recordsOpen=true;refreshRecords();records?.classList.add('open');records?.setAttribute('aria-hidden','false');records?.querySelector('.modeGatewayRecordsClose')?.focus?.()}
 function closeGateway(){if(!root)return;visible=false;closeRecords();root.classList.remove('show');root.setAttribute('aria-hidden','true')}
 function openGateway(){if(!ensure())return false;visible=true;root.classList.add('show');root.setAttribute('aria-hidden','false');refreshRecords();return true}
 function enterReal(openMap=false){closeGateway();if(openMap)document.querySelector('#panel')?.classList.add('open')}
 function enterFrontier(){location.href='./frontier.html'}
-function makeCard(id,mode,title,copy,tag){
-  const button=document.createElement('button');button.type='button';button.id=id;button.className='modeGatewayCard';button.dataset.mode=mode;button.innerHTML=`<strong>${title}</strong><small>${copy}</small><em>${tag}</em>`;return button;
-}
-function ensurePanelEntry(){
-  if(document.querySelector('#modeGatewayPanelEntry'))return;
-  const settings=document.querySelector('.settings');if(!settings)return;
-  const card=document.createElement('div');card.id='modeGatewayPanelEntry';card.className='setting wide modeGatewayPanelSetting';card.innerHTML='<label><span>探索模式</span><output>Real / Fiction</output></label><button id="modeGatewayOpen" type="button">返回模式選擇</button>';
-  settings.append(card);card.querySelector('#modeGatewayOpen')?.addEventListener('click',()=>{document.querySelector('#panel')?.classList.remove('open');openGateway()});
-}
+function enterNadir(){location.href='./frontier-nadir.html'}
+function makeCard(id,mode,title,copy,tag){const button=document.createElement('button');button.type='button';button.id=id;button.className='modeGatewayCard';button.dataset.mode=mode;button.innerHTML=`<strong>${title}</strong><small>${copy}</small><em>${tag}</em>`;return button}
+function ensurePanelEntry(){if(document.querySelector('#modeGatewayPanelEntry'))return;const settings=document.querySelector('.settings');if(!settings)return;const card=document.createElement('div');card.id='modeGatewayPanelEntry';card.className='setting wide modeGatewayPanelSetting';card.innerHTML='<label><span>探索模式</span><output>Real / Fiction</output></label><button id="modeGatewayOpen" type="button">返回模式選擇</button>';settings.append(card);card.querySelector('#modeGatewayOpen')?.addEventListener('click',()=>{document.querySelector('#panel')?.classList.remove('open');openGateway()})}
 function ensure(){
   if(root){ensurePanelEntry();return true}
-  const app=document.querySelector('#app');if(!app)return false;
-  ensureStyle();
-  root=document.createElement('section');root.id='modeGateway';root.setAttribute('aria-label','Stellar Wrap 探索模式選擇');root.setAttribute('aria-hidden','true');
-  const inner=document.createElement('div');inner.className='modeGatewayInner';
-  const kicker=document.createElement('div');kicker.className='modeGatewayKicker';kicker.textContent='STELLAR WRAP · EXPLORATION GATEWAY';
-  const title=document.createElement('h1');title.className='modeGatewayTitle';title.innerHTML='STELLAR WRAP<span>選擇你的探索宇宙</span>';
-  const lead=document.createElement('p');lead.className='modeGatewayLead';lead.textContent='延續現有寫實星際航程，或進入原創科幻空域。兩個模式分開管理，不改寫 Real Space 的八站航線與飛行模型。';
-  const grid=document.createElement('div');grid.className='modeGatewayGrid';
-  const cont=makeCard('gatewayContinue','continue','繼續旅程','返回最近停泊點／目前 Real Space 狀態，不重新規劃航線。','CONTINUE');
-  const real=makeCard('gatewayReal','real','Real Space｜真實探索','進入現有八個星區、完整多段曲速與天文探索。','8 SYSTEMS');
-  const fiction=makeCard('gatewayFrontier','frontier','Frontier Fiction｜科幻空域','首站：AURELIA ARC｜曙光環域。原創巨構棲息環與電影式抵達景觀。','NEW · ORIGINAL');
-  const gallery=makeCard('gatewayGallery','gallery','Gallery / Captures｜探索記錄','查看本機旅程、到訪與發現摘要；PNG 留影仍只保存到你的裝置。','LOCAL RECORDS');
-  grid.append(cont,real,fiction,gallery);
+  const app=document.querySelector('#app');if(!app)return false;ensureStyle();root=document.createElement('section');root.id='modeGateway';root.setAttribute('aria-label','Stellar Wrap 探索模式選擇');root.setAttribute('aria-hidden','true');
+  const inner=document.createElement('div');inner.className='modeGatewayInner';const kicker=document.createElement('div');kicker.className='modeGatewayKicker';kicker.textContent='STELLAR WRAP · EXPLORATION GATEWAY';const title=document.createElement('h1');title.className='modeGatewayTitle';title.innerHTML='STELLAR WRAP<span>選擇你的探索宇宙</span>';const lead=document.createElement('p');lead.className='modeGatewayLead';lead.textContent='延續現有寫實星際航程，或進入原創科幻空域。兩個模式分開管理，不改寫 Real Space 的八站航線與飛行模型。';
+  const grid=document.createElement('div');grid.className='modeGatewayGrid';const cont=makeCard('gatewayContinue','continue','繼續旅程','返回最近停泊點／目前 Real Space 狀態，不重新規劃航線。','CONTINUE');const real=makeCard('gatewayReal','real','Real Space｜真實探索','進入現有八個星區、完整多段曲速與天文探索。','8 SYSTEMS');const fiction=makeCard('gatewayFrontier','frontier','Frontier Fiction｜科幻空域','進入原創科幻空域；AURELIA 巨構與 NADIR 極端天體前線現已可探索。','2 ORIGINAL WORLDS');const gallery=makeCard('gatewayGallery','gallery','Gallery / Captures｜探索記錄','查看本機旅程、到訪與發現摘要；PNG 留影仍只保存到你的裝置。','LOCAL RECORDS');grid.append(cont,real,fiction,gallery);
+  const destinations=document.createElement('section');destinations.className='modeGatewayDestinations';destinations.setAttribute('aria-label','Frontier Fiction 目的地');destinations.innerHTML='<strong>FRONTIER DESTINATIONS｜原創科幻目的地</strong><p>Frontier Fiction 逐站擴張；每站保持獨立視覺身份，不加入 Real Space 航線。</p><div class="modeGatewayDest"><button id="frontierAureliaQuick" type="button"><b>AURELIA ARC｜曙光環域</b><span>環形人工棲息地 · 巨構晨昏帶</span></button><button id="frontierNadirQuick" type="button"><b>NADIR WELL｜玄淵觀測站</b><span>黑洞前線 · 引力環與觀測陣列</span></button></div>';
   records=document.createElement('section');records.id='gatewayRecords';records.className='modeGatewayRecords';records.setAttribute('aria-hidden','true');records.innerHTML='<div class="modeGatewayRecordsHead"><strong>探索記錄</strong><button class="modeGatewayRecordsClose" type="button" aria-label="關閉探索記錄">×</button></div><div class="modeGatewayStats"><div class="modeGatewayStat"><b data-stat="journeys">0</b><span>完成旅程</span></div><div class="modeGatewayStat"><b data-stat="visited">1/8</b><span>Real Space 到訪</span></div><div class="modeGatewayStat"><b data-stat="discoveries">0/7</b><span>外站發現</span></div></div><div id="modeGatewayLatest" class="modeGatewayLatest">尚未有完成旅程。</div><div class="modeGatewayLocal">攝影 PNG 不會上傳或另存到雲端；目前 Gallery 只讀取既有本機旅程／發現資料，避免建立第二套資料來源。</div>';
-  const foot=document.createElement('div');foot.className='modeGatewayFoot';foot.textContent='Frontier Fiction 為原創科幻模式；不重製知名作品地名、標誌或場景。';
-  inner.append(kicker,title,lead,grid,records,foot);root.append(inner);app.append(root);
-  cont.addEventListener('click',()=>enterReal(false));
-  real.addEventListener('click',()=>enterReal(true));
-  fiction.addEventListener('click',enterFrontier);
-  gallery.addEventListener('click',openRecords);
-  records.querySelector('.modeGatewayRecordsClose')?.addEventListener('click',closeRecords);
-  ensurePanelEntry();
-  return true;
+  const foot=document.createElement('div');foot.className='modeGatewayFoot';foot.textContent='Frontier Fiction 為原創科幻模式；不重製知名作品地名、標誌或場景。';inner.append(kicker,title,lead,grid,destinations,records,foot);root.append(inner);app.append(root);
+  cont.addEventListener('click',()=>enterReal(false));real.addEventListener('click',()=>enterReal(true));fiction.addEventListener('click',enterFrontier);gallery.addEventListener('click',openRecords);destinations.querySelector('#frontierAureliaQuick')?.addEventListener('click',enterFrontier);destinations.querySelector('#frontierNadirQuick')?.addEventListener('click',enterNadir);records.querySelector('.modeGatewayRecordsClose')?.addEventListener('click',closeRecords);ensurePanelEntry();return true;
 }
-function init(){
-  if(!ensure())return false;
-  const query=new URLSearchParams(location.search),skip=query.get('mode')==='real'&&query.get('landing')!=='1';
-  if(skip)closeGateway();else openGateway();
-  return true;
-}
-
-window.WarpModeGateway={
-  open(){return openGateway()},
-  close(){closeGateway()},
-  openRecords(){if(openGateway())openRecords()},
-  snapshot(){return{visible,recordsOpen,buttons:root?.querySelectorAll?.('.modeGatewayCard')?.length||0,stats:journalStats(),current:currentState()?.current||null}}
-};
-
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
-addEventListener('stellarwarp:journey-complete',refreshRecords);
-addEventListener('stellarwarp:discovery-change',refreshRecords);
+function init(){if(!ensure())return false;const query=new URLSearchParams(location.search),skip=query.get('mode')==='real'&&query.get('landing')!=='1';if(skip)closeGateway();else openGateway();return true}
+window.WarpModeGateway={open(){return openGateway()},close(){closeGateway()},openRecords(){if(openGateway())openRecords()},snapshot(){return{visible,recordsOpen,buttons:root?.querySelectorAll?.('.modeGatewayCard')?.length||0,frontierDestinations:root?.querySelectorAll?.('.modeGatewayDest button')?.length||0,stats:journalStats(),current:currentState()?.current||null}}};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();addEventListener('stellarwarp:journey-complete',refreshRecords);addEventListener('stellarwarp:discovery-change',refreshRecords);
 })();
