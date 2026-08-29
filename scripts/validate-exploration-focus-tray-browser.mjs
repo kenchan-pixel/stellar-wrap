@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import {spawn,spawnSync} from 'node:child_process';
-import {existsSync,mkdtempSync,rmSync} from 'node:fs';
+import {existsSync,mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer as createTcpServer} from 'node:net';
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const EVIDENCE_DIR=join(process.cwd(),'artifacts','focus-tray-browser');
 
 function commandPath(name){
   if(!name)return'';
@@ -137,17 +138,25 @@ async function clickSelector(cdp,selector){
   await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});
   await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1});
 }
+async function waitCardSettled(cdp,label){
+  return waitExpression(cdp,`(()=>{const card=document.querySelector('#exploreCard');if(!card?.classList.contains('hubOpen'))return false;const r=card.getBoundingClientRect(),s=getComputedStyle(card),left=Number.parseFloat(s.left);return s.opacity==='1'&&s.pointerEvents!=='none'&&s.transform==='none'&&Number.isFinite(left)&&Math.abs(r.left-left)<1.5})()`,label,3500);
+}
+async function captureScreenshot(cdp,name){
+  mkdirSync(EVIDENCE_DIR,{recursive:true});
+  const shot=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false},10000);
+  writeFileSync(join(EVIDENCE_DIR,name),Buffer.from(shot.data,'base64'));
+}
 async function snapshot(cdp){
-  return evaluate(cdp,`(()=>{const card=document.querySelector('#exploreCard'),r=card.getBoundingClientRect(),s=getComputedStyle(card);return{viewport:{width:innerWidth,height:innerHeight},pane:card.dataset.hubPane||'',open:card.classList.contains('hubOpen'),active:!!window.WarpExplorationFocusTray?.active?.(),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},computed:{maxHeight:s.maxHeight,left:s.left,right:s.right,bottom:s.bottom,overflowY:s.overflowY}}})()`,'Focus Tray geometry snapshot');
+  return evaluate(cdp,`(()=>{const card=document.querySelector('#exploreCard'),r=card.getBoundingClientRect(),s=getComputedStyle(card);return{viewport:{width:innerWidth,height:innerHeight},pane:card.dataset.hubPane||'',open:card.classList.contains('hubOpen'),active:!!window.WarpExplorationFocusTray?.active?.(),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},computed:{maxHeight:s.maxHeight,left:s.left,right:s.right,bottom:s.bottom,overflowY:s.overflowY,transform:s.transform}}})()`,'Focus Tray geometry snapshot');
 }
 function px(value){const parsed=Number.parseFloat(value);return Number.isFinite(parsed)?parsed:null}
 function assertTray(state,width,height){
   assert.deepEqual(state.viewport,{width,height});assert.equal(state.pane,'explore');assert.equal(state.open,true);assert.equal(state.active,true);
   const narrow=width<=360,maxHeight=Math.min(height*(narrow?.44:.42),narrow?352:360),minVisible=narrow?.56:.58;
   assert(state.rect.height<=maxHeight+1.5,`Focus Tray height ${state.rect.height.toFixed(1)}px exceeds ${maxHeight.toFixed(1)}px`);
-  assert(state.rect.left>=(narrow?17:19),'Focus Tray respects left safe-area inset');
-  assert(width-state.rect.right>=(narrow?17:19),'Focus Tray respects right safe-area inset');
-  assert(height-state.rect.bottom>=17,'Focus Tray respects bottom safe-area inset');
+  assert(state.rect.left>=(narrow?17:19),`Focus Tray left ${state.rect.left.toFixed(1)}px respects safe-area inset`);
+  assert(width-state.rect.right>=(narrow?17:19),`Focus Tray right gap ${(width-state.rect.right).toFixed(1)}px respects safe-area inset`);
+  assert(height-state.rect.bottom>=17,`Focus Tray bottom gap ${(height-state.rect.bottom).toFixed(1)}px respects safe-area inset`);
   assert(1-state.rect.height/height>=minVisible-.002,`Focus Tray preserves at least ${Math.round(minVisible*100)}% scenery height`);
   const computedMax=px(state.computed.maxHeight);assert(computedMax!==null&&computedMax<=maxHeight+1.5,'browser resolves Focus Tray max-height contract');
   return{maxHeight,bottomGap:height-state.rect.bottom};
@@ -208,21 +217,28 @@ async function inspectViewport(chrome,baseUrl,width,height){
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'",'expanded Explore chooser');
     await clickSelector(cdp,'[data-hub-action="explore"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='explore'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Focus Tray open');
+    await waitCardSettled(cdp,'Focus Tray visual transition settled');
     const tray=await snapshot(cdp),metrics=assertTray(tray,width,height);
+    await captureScreenshot(cdp,`focus-tray-${viewport}.png`);
     stage(`Focus Tray geometry accepted (${tray.rect.width.toFixed(1)}×${tray.rect.height.toFixed(1)}px)`);
 
     await clickSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'&&!document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'chooser reopens after tray');
     await clickSelector(cdp,'[data-hub-action="overview"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='overview'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Overview drawer open');
+    await waitCardSettled(cdp,'Overview drawer visual transition settled');
     assertDrawer(await snapshot(cdp),'overview',tray,metrics);
 
     await clickSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'&&!document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'chooser reopens after Overview');
     await clickSelector(cdp,'[data-hub-action="discovery"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='discovery'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Discovery drawer open');
+    await waitCardSettled(cdp,'Discovery drawer visual transition settled');
     assertDrawer(await snapshot(cdp),'discovery',tray,metrics);
     console.log(`Exploration Focus Tray real browser ${viewport}: passed`);
+  }catch(error){
+    if(cdp)await captureScreenshot(cdp,`failure-${viewport}.png`).catch(()=>{});
+    throw error;
   }finally{
     cdp?.close();
     await stopChild(browser);
