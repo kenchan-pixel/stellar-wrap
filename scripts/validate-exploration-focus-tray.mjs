@@ -19,6 +19,8 @@ has(tray,'[data-hub-pane="explore"]','focus tray delegates pane state to the exi
 has(tray,'max-height:min(42vh,360px)','Explore pane leaves the majority of phone height to the 3D scene');
 has(tray,'bottom:calc(var(--safeB) + 8px)','focus tray respects the mobile bottom safe area');
 has(tray,'left:calc(var(--safeL) + 10px);right:calc(var(--safeR) + 10px)','focus tray fits inside both horizontal safe areas');
+has(tray,'#app.exploreHubMobile #openPanel','final mobile exploration removes the redundant navigation pill that would overlap the tray');
+has(tray,'#app.exploreHubMobile #telemetry','final mobile exploration removes arrival telemetry from behind the tray');
 has(tray,'#exploreDesc','duplicated destination description is suppressed only in focused Explore mode');
 has(tray,'@media (max-width:360px)','narrow-phone tray bound exists');
 has(tray,'max-height:min(44vh,352px)','360 px layout keeps a bounded tray height');
