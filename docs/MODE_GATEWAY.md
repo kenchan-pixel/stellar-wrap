@@ -17,16 +17,17 @@ The top-level gateway remains exactly four actions:
 - **Frontier Fiction** — original science-fiction exploration line.
 - **Gallery / Captures** — existing local journey/visited/discovery summary; PNG files remain local downloads.
 
-Below those four actions, a compact Frontier destination strip now exposes two original worlds:
+Below those four actions, a compact Frontier destination strip now exposes three original worlds:
 
 1. `AURELIA ARC｜曙光環域` — artificial ring habitat / megastructure.
 2. `NADIR WELL｜玄淵觀測站` — extreme-object frontier observatory around a fictional black-hole-like gravity well.
+3. `VESPER YARD｜暮環採集場` — industrial gas-giant harvesting zone with atmospheric skimmers, refinery ring and cargo traffic.
 
 ## Architecture boundary
 
 Real Space remains authoritative in `index.html`: existing eight-system `N` data, 6.0 LY Dijkstra graph, true-direction turns, flight phases, Hermite arrival, Travel Journal and Star Atlas.
 
-Frontier Fiction does **not** add AURELIA to the Real Space `N` / `G` graph. NADIR follows the same boundary: neither Frontier destination becomes a Real Space node or changes established shortest paths. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
+Frontier Fiction does **not** add AURELIA, NADIR or VESPER to the Real Space `N` / `G` graph. None of the three becomes a Real Space node or changes established shortest paths. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
 
 ## AURELIA ARC｜曙光環域
 
@@ -49,6 +50,21 @@ Visual identity:
 
 NADIR intentionally contrasts AURELIA: AURELIA is a luminous inhabited megastructure; NADIR is a dark extreme-object observation frontier.
 
+## VESPER YARD｜暮環採集場
+
+Original industrial-atmosphere destination around a fictional teal gas giant. It does not reuse TAU's natural ring identity: the focal landmark is a working refinery ring and atmospheric extraction hardware rather than a natural planetary ring system.
+
+Visual identity:
+
+- large teal gas giant with layered luminous storm bands;
+- orange-white orbital refinery ring and central service hub;
+- eight instanced skimmer modules and four visible extraction tethers;
+- sparse cargo/debris traffic and warm industrial plume lights;
+- dedicated approach → cloud-top arrival → free-exploration composition;
+- drag-look / optional auto-orbit and local high-resolution capture.
+
+VESPER adds the third approved Frontier archetype — industrial asteroid / gas-giant extraction — while keeping the line small and visually distinct.
+
 ## Performance contract
 
 For each Frontier runtime:
@@ -67,19 +83,19 @@ For each Frontier runtime:
 1. Top-level landing continues to expose exactly four useful mode actions with ≥44 px touch targets.
 2. Continue/Real Space preserve the existing Real Space location/route authority.
 3. Gallery remains read-only over existing local journey/discovery sources.
-4. Frontier destination strip exposes exactly AURELIA and NADIR without inserting either into Real Space routing.
-5. NADIR has a visibly distinct approach, arrival and free-exploration scene.
-6. Trusted phone-sized touch can enter NADIR and toggle its exploration control.
-7. Production Chromium at 390×844 and 360×800 proves viewport containment and bounded NADIR renderer work (≤16 draw calls / ≤22,000 triangles).
-8. NADIR high-resolution capture increases the actual backing buffer, produces non-trivial PNG data and restores the previous DPR with `preserveDrawingBuffer:false`.
-9. Existing AURELIA, V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
-10. Both Frontier pages remain in the existing v15 offline shell contract.
+4. Frontier destination strip exposes exactly AURELIA, NADIR and VESPER without inserting any into Real Space routing.
+5. VESPER has a visibly distinct approach, cloud-top arrival and free-exploration scene centred on industrial extraction hardware.
+6. Trusted phone-sized touch can enter VESPER and toggle its exploration control.
+7. Production Chromium at 390×844 and 360×800 proves viewport containment and bounded VESPER renderer work (≤16 draw calls / ≤22,000 triangles).
+8. VESPER high-resolution capture increases the actual backing buffer, produces non-trivial PNG data and restores the previous DPR with `preserveDrawingBuffer:false`.
+9. Existing AURELIA, NADIR, V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
+10. All three Frontier pages remain in the existing v15 offline shell contract.
 
 ## Out of Scope
 
 - Adding Frontier destinations to the Real Space Dijkstra graph.
 - A general Frontier route planner or persistence system.
-- More than these two Frontier worlds in this slice.
+- More than these three Frontier worlds in this slice.
 - Combat, economy, quests, accounts, cloud save/upload or analytics.
 - Copying famous science-fiction locations, branding or recognizable protected assets.
 - Forced 4K, post-processing framework or permanent maximum DPR.

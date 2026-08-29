@@ -9,6 +9,7 @@ const CORE=[
   './mode-gateway.js',
   './frontier.html',
   './frontier-nadir.html',
+  './frontier-vesper.html',
   './journey-atmosphere.js',
   './exploration-survey.js',
   './star-atlas.js',

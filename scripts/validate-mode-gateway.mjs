@@ -8,6 +8,7 @@ import {createServer as createTcpServer} from 'node:net';
 const gateway=readFileSync('mode-gateway.js','utf8');
 const frontier=readFileSync('frontier.html','utf8');
 const nadir=readFileSync('frontier-nadir.html','utf8');
+const vesper=readFileSync('frontier-vesper.html','utf8');
 const index=readFileSync('index.html','utf8');
 const journal=readFileSync('travel-journal.js','utf8');
 const sw=readFileSync('sw.js','utf8');
@@ -16,24 +17,25 @@ const EVIDENCE_DIR=join(process.cwd(),'artifacts','focus-tray-browser');
 
 assert.match(journal,/import\('\.\/mode-gateway\.js'\)/,'Travel Journal bootstrap must load the mode gateway');
 for(const text of['繼續旅程','Real Space｜真實探索','Frontier Fiction｜科幻空域','Gallery / Captures｜探索記錄'])assert.ok(gateway.includes(text),`missing mode entry: ${text}`);
-assert.ok(gateway.includes('AURELIA ARC｜曙光環域')&&gateway.includes('NADIR WELL｜玄淵觀測站'),'gateway must expose both original Frontier destinations');
+assert.ok(gateway.includes('AURELIA ARC｜曙光環域')&&gateway.includes('NADIR WELL｜玄淵觀測站')&&gateway.includes('VESPER YARD｜暮環採集場'),'gateway must expose all three original Frontier destinations');
 assert.doesNotMatch(gateway,/localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'mode gateway must not create storage/network authority');
 assert.doesNotMatch(gateway,/WarpSim\.(?:select|start|isRouteValid)|\bDijkstra\b|\b(?:const|let|var)\s+[GN]\s*=/,'mode gateway must not own Real Space route/topology authority');
-assert.doesNotMatch(index,/\bid\s*:\s*['"](?:AURELIA|NADIR)['"]/,'Frontier destinations must remain outside the Real Space system table');
+assert.doesNotMatch(index,/\bid\s*:\s*['"](?:AURELIA|NADIR|VESPER)['"]/,'Frontier destinations must remain outside the Real Space system table');
 assert.match(frontier,/three@0\.185\.1\/build\/three\.module\.js/,'AURELIA must pin the existing Three.js version');
 assert.equal((frontier.match(/new THREE\.WebGLRenderer/g)||[]).length,1,'AURELIA must use exactly one WebGL renderer');
 assert.match(frontier,/MAX_NORMAL_DPR=1\.25,MAX_CAPTURE_DPR=1\.60/,'AURELIA mobile DPR bounds must remain explicit');
 assert.match(frontier,/window\.WarpFrontier=/,'AURELIA must remain a standalone Frontier runtime');
 assert.match(nadir,/window\.WarpFrontierNadir=/,'NADIR must remain a standalone Frontier runtime');
+assert.match(vesper,/window\.WarpFrontierVesper=/,'VESPER must remain a standalone Frontier runtime');
 assert.match(frontier,/AURELIA ARC｜曙光環域/,'AURELIA destination identity must be present');
 assert.match(frontier,/phase='approach'/,'Frontier approach state must exist');
 assert.match(frontier,/setPhase\('arrival'\)/,'Frontier arrival state must exist');
 assert.match(frontier,/setPhase\('explore'\)/,'Frontier exploration state must exist');
 assert.match(frontier,/toDataURL\('image\/png'\)/,'Frontier capture must export a real PNG from the WebGL canvas');
 assert.doesNotMatch(frontier,/localStorage|sessionStorage|indexedDB|XMLHttpRequest|sendBeacon/,'Frontier runtime must stay local and stateless');
-assert.ok(sw.includes("'./mode-gateway.js'")&&sw.includes("'./frontier.html'")&&sw.includes("'./frontier-nadir.html'"),'offline CORE must include gateway and both Frontier destinations');
+assert.ok(sw.includes("'./mode-gateway.js'")&&sw.includes("'./frontier.html'")&&sw.includes("'./frontier-nadir.html'")&&sw.includes("'./frontier-vesper.html'"),'offline CORE must include gateway and all three Frontier destinations');
 assert.match(sw,/CACHE_NAME=`\$\{CACHE_PREFIX\}v15`/,'existing offline cache-generation contract must remain v15');
-console.log('Mode gateway semantic/static contract: 22/22 passed');
+console.log('Mode gateway semantic/static contract: 23/23 passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const p=commandPath(c);if(p)return p}return''}
@@ -55,7 +57,7 @@ async function inspect(chrome,base,width,height){
     cdp=new Cdp(target.webSocketDebuggerUrl);await cdp.connect();await cdp.send('Page.enable');await cdp.send('Runtime.enable');await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true,screenWidth:width,screenHeight:height});await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
     let loaded=cdp.waitEvent('Page.loadEventFired',15000);await cdp.send('Page.navigate',{url:base});await loaded;
     await waitUntil(()=>evalJs(cdp,"!!window.WarpSim&&!!window.WarpModeGateway&&document.querySelector('#app')?.classList.contains('ready')&&WarpModeGateway.snapshot().visible"),'mode gateway + Real Space runtime',30000);
-    const gatewayState=await evalJs(cdp,"WarpModeGateway.snapshot()");assert.equal(gatewayState.visible,true);assert.equal(gatewayState.buttons,4);assert.equal(gatewayState.current,'SOL');
+    const gatewayState=await evalJs(cdp,"WarpModeGateway.snapshot()");assert.equal(gatewayState.visible,true);assert.equal(gatewayState.buttons,4);assert.equal(gatewayState.frontierDestinations,3);assert.equal(gatewayState.current,'SOL');
     const gatewayBounds=await evalJs(cdp,"(()=>{const r=document.querySelector('#modeGateway').getBoundingClientRect();const cards=[...document.querySelectorAll('.modeGatewayCard')].map(el=>{const b=el.getBoundingClientRect();return{id:el.id,w:b.width,h:b.height,left:b.left,right:b.right,top:b.top,bottom:b.bottom}});return{w:r.width,h:r.height,cards}})()");assert.equal(Math.round(gatewayBounds.w),width);assert.equal(Math.round(gatewayBounds.h),height);for(const card of gatewayBounds.cards){assert.ok(card.h>=44,`${card.id} touch height`);assert.ok(card.left>=0&&card.right<=width+1,`${card.id} horizontal viewport containment`)}
     const landingBytes=await screenshot(cdp,`mode-gateway-${viewport}.png`);assert.ok(landingBytes>8000,'landing screenshot should contain rendered UI');
     await trustedTap(cdp,'#gatewayGallery');await waitUntil(()=>evalJs(cdp,"WarpModeGateway.snapshot().recordsOpen===true&&document.querySelector('#gatewayRecords')?.classList.contains('open')"),'Gallery / Captures panel');const recordCopy=await evalJs(cdp,"document.querySelector('#gatewayRecords')?.textContent||''");assert.match(recordCopy,/PNG/);assert.match(recordCopy,/本機/);
@@ -65,16 +67,12 @@ async function inspect(chrome,base,width,height){
     const initial=await evalJs(cdp,"WarpFrontier.state()");assert.equal(initial.destination,'AURELIA');assert.ok(['approach','arrival','explore'].includes(initial.phase));const approachBytes=await screenshot(cdp,`frontier-aurelia-${viewport}-approach.png`);
     await evalJs(cdp,"WarpFrontier.skipArrival();true");await waitUntil(()=>evalJs(cdp,"WarpFrontier.state().phase==='explore'&&WarpFrontier.state().exploring===true"),'AURELIA explore state');await sleep(180);
     const explored=await evalJs(cdp,"WarpFrontier.state()");assert.equal(explored.cssWidth,width);assert.equal(explored.cssHeight,height);assert.ok(explored.drawCalls>0&&explored.drawCalls<=14,`AURELIA draw calls bounded: ${explored.drawCalls}`);assert.ok(explored.triangles>0&&explored.triangles<=22000,`AURELIA triangles bounded: ${explored.triangles}`);
-    const normalBacking={width:explored.backingWidth,height:explored.backingHeight,pixelRatio:explored.pixelRatio};
-    await trustedTap(cdp,'#frontierOrbit');await waitUntil(()=>evalJs(cdp,"WarpFrontier.state().autoOrbit===false"),'trusted-touch auto-orbit toggle');
-    const capture=await evalJs(cdp,"WarpFrontier.capture(false)",true);assert.ok(capture.width>normalBacking.width&&capture.height>normalBacking.height,'Frontier capture must raise the actual WebGL backing buffer');assert.equal(capture.cssWidth,width);assert.equal(capture.cssHeight,height);assert.ok(capture.bytes>12000,'Frontier capture must produce non-trivial PNG data');
-    const restored=await evalJs(cdp,"WarpFrontier.state()");assert.equal(restored.backingWidth,normalBacking.width);assert.equal(restored.backingHeight,normalBacking.height);assert.equal(restored.pixelRatio,normalBacking.pixelRatio);
-    const exploreBytes=await screenshot(cdp,`frontier-aurelia-${viewport}-explore.png`);assert.notEqual(exploreBytes,approachBytes,'approach and final exploration evidence should differ');
-    console.log(`Mode Gateway + AURELIA browser ${viewport}: 4-mode landing, trusted-touch handoff, ${explored.drawCalls} draws / ${explored.triangles} tris, capture ${capture.width}x${capture.height}, restored DPR ${restored.pixelRatio}`);
+    const normalBacking={width:explored.backingWidth,height:explored.backingHeight,pixelRatio:explored.pixelRatio};await trustedTap(cdp,'#frontierOrbit');await waitUntil(()=>evalJs(cdp,"WarpFrontier.state().autoOrbit===false"),'trusted-touch auto-orbit toggle');
+    const capture=await evalJs(cdp,"WarpFrontier.capture(false)",true);assert.ok(capture.width>normalBacking.width&&capture.height>normalBacking.height,'Frontier capture must raise the actual WebGL backing buffer');assert.equal(capture.cssWidth,width);assert.equal(capture.cssHeight,height);assert.ok(capture.bytes>12000,'Frontier capture must produce non-trivial PNG data');const restored=await evalJs(cdp,"WarpFrontier.state()");assert.equal(restored.backingWidth,normalBacking.width);assert.equal(restored.backingHeight,normalBacking.height);assert.equal(restored.pixelRatio,normalBacking.pixelRatio);const exploreBytes=await screenshot(cdp,`frontier-aurelia-${viewport}-explore.png`);assert.notEqual(exploreBytes,approachBytes,'approach and final exploration evidence should differ');
+    console.log(`Mode Gateway + AURELIA browser ${viewport}: 4-mode landing / 3 Frontier worlds, trusted-touch handoff, ${explored.drawCalls} draws / ${explored.triangles} tris, capture ${capture.width}x${capture.height}, restored DPR ${restored.pixelRatio}`);
   }catch(error){if(cdp)await screenshot(cdp,`mode-gateway-failure-${viewport}.png`).catch(()=>{});throw error}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 
-const chrome=findChrome();
-if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for mode gateway validation');console.log('Mode gateway browser validation skipped: Chrome/Chromium not available');process.exit(0)}
+const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for mode gateway validation');console.log('Mode gateway browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`,server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
 try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('Mode Gateway + AURELIA Frontier Fiction browser validation: passed at 390×844 and 360×800')}finally{await stop(server)}
