@@ -3,6 +3,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 const SAMPLE_MS=250;
 const TARGETS=Object.freeze({
   SOL:{earthCenter:new THREE.Vector3(14,-5,-80),earthRadius:18,moonCenter:new THREE.Vector3(-28,11,-128),moonRadius:4.7,triangles:10944,drawCalls:4},
+  LUNA:{moonCenter:new THREE.Vector3(13,-7,-70),moonRadius:21,earthCenter:new THREE.Vector3(-35,17,-146),earthRadius:12,ringCenter:new THREE.Vector3(13,-7,-70),ringRadius:26,triangles:12992,drawCalls:4},
   TAU:{center:new THREE.Vector3(15,-5,-86),radius:23,triangles:8352,drawCalls:4},
   ORION:{starCenter:new THREE.Vector3(28,8,-137),starRadius:30,rockCenter:new THREE.Vector3(-26,-12,-90),rockRadius:10,triangles:10944,drawCalls:4},
   SIRIUS:{starCenter:new THREE.Vector3(-24,10,-134),starRadius:15,iceCenter:new THREE.Vector3(0,18,-151),iceRadius:6,relayCenter:new THREE.Vector3(0,-4,-82),relayRadius:17.5,triangles:12992,drawCalls:4}
@@ -16,6 +17,14 @@ let solMoonRoot=null;
 let solMoonSurface=null;
 let solObjects=[];
 let solCaptureCount=0;
+let lunaMoonRoot=null;
+let lunaMoonSurface=null;
+let lunaEarthRoot=null;
+let lunaEarthSurface=null;
+let lunaEarthCloudSurface=null;
+let lunaRing=null;
+let lunaObjects=[];
+let lunaCaptureCount=0;
 let tauRoot=null;
 let tauSurface=null;
 let tauObjects=[];
@@ -49,12 +58,14 @@ function cloudSurface(candidate,radius){
 function starMatches(candidate,center,radius){
   return !!(candidate?.isMesh&&approx(candidate.position.x,center.x)&&approx(candidate.position.y,center.y)&&approx(candidate.position.z,center.z)&&approx(candidate.scale.x,radius,.45)&&approx(candidate.scale.y,radius,.45));
 }
+function torusMatches(candidate,center,radius){
+  const g=candidate?.geometry;
+  return !!(candidate?.isMesh&&g?.type==='TorusGeometry'&&approx(candidate.position.x,center.x)&&approx(candidate.position.y,center.y)&&approx(candidate.position.z,center.z)&&approx(g.parameters?.radius,radius,.12));
+}
+function isLunaRing(candidate){const p=TARGETS.LUNA;return torusMatches(candidate,p.ringCenter,p.ringRadius)}
 function isOrionStar(candidate){const p=TARGETS.ORION;return starMatches(candidate,p.starCenter,p.starRadius)}
 function isSiriusStar(candidate){const p=TARGETS.SIRIUS;return starMatches(candidate,p.starCenter,p.starRadius)}
-function isSiriusRelay(candidate){
-  const p=TARGETS.SIRIUS,g=candidate?.geometry;
-  return !!(candidate?.isMesh&&g?.type==='TorusGeometry'&&approx(candidate.position.x,p.relayCenter.x)&&approx(candidate.position.y,p.relayCenter.y)&&approx(candidate.position.z,p.relayCenter.z)&&approx(g.parameters?.radius,p.relayRadius,.12));
-}
+function isSiriusRelay(candidate){const p=TARGETS.SIRIUS;return torusMatches(candidate,p.relayCenter,p.relayRadius)}
 function geometryTriangleCount(object){
   if(!object?.isMesh||!object.geometry)return 0;
   const geometry=object.geometry,indexCount=geometry.index?.count,positionCount=geometry.attributes?.position?.count;
@@ -75,6 +86,22 @@ function captureCandidate(candidate){
   const moon=planetRootSurface(candidate,TARGETS.SOL.moonCenter,TARGETS.SOL.moonRadius);
   if(moon){
     if(solMoonRoot!==candidate){disposeSolOwn();solMoonRoot=candidate;solMoonSurface=moon}
+    captured=true;
+  }
+  const lunaMoon=planetRootSurface(candidate,TARGETS.LUNA.moonCenter,TARGETS.LUNA.moonRadius);
+  if(lunaMoon){
+    if(lunaMoonRoot!==candidate){disposeLunaOwn();lunaMoonRoot=candidate;lunaMoonSurface=lunaMoon;lunaCaptureCount++}
+    captured=true;
+  }
+  const lunaEarth=planetRootSurface(candidate,TARGETS.LUNA.earthCenter,TARGETS.LUNA.earthRadius);
+  if(lunaEarth){
+    const clouds=cloudSurface(candidate,TARGETS.LUNA.earthRadius);
+    if(lunaEarthRoot!==candidate){disposeLunaOwn();lunaEarthRoot=candidate;lunaEarthSurface=lunaEarth;lunaEarthCloudSurface=clouds}
+    else if(clouds)lunaEarthCloudSurface=clouds;
+    captured=true;
+  }
+  if(isLunaRing(candidate)){
+    if(lunaRing!==candidate){disposeLunaOwn();lunaRing=candidate}
     captured=true;
   }
   const tau=planetRootSurface(candidate,TARGETS.TAU.center,TARGETS.TAU.radius);
@@ -188,6 +215,15 @@ function solAuroraGeometry(){
     mix.copy(a).lerp(b,t);colors.set([mix.r,mix.g,mix.b],i*3);
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));g.setAttribute('color',new THREE.BufferAttribute(colors,3));return g;
+}
+
+function lunaRingMaterial(){
+  return new THREE.ShaderMaterial({
+    uniforms:{uA:{value:new THREE.Color('#d8edff')},uB:{value:new THREE.Color('#82b9ff')},uOpacity:{value:.74}},
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`uniform vec3 uA;uniform vec3 uB;uniform float uOpacity;varying vec2 vUv;void main(){float seg=.28+.72*smoothstep(.18,.78,.5+.5*sin(vUv.x*6.2831853*32.0));float rail=.82+.18*sin(vUv.x*6.2831853*9.0+vUv.y*11.0);vec3 c=mix(uA,uB,clamp(.22+.78*seg,0.0,1.0));gl_FragColor=vec4(c,uOpacity*seg*rail);}`,
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false
+  });
 }
 
 function tauBandTexture(){
@@ -367,12 +403,14 @@ function disposeList(list){
   return[];
 }
 function disposeSolOwn(){solObjects=disposeList(solObjects)}
+function disposeLunaOwn(){lunaObjects=disposeList(lunaObjects)}
 function disposeTauOwn(){tauObjects=disposeList(tauObjects)}
 function disposeOrionOwn(){orionObjects=disposeList(orionObjects)}
 function disposeSiriusOwn(){siriusObjects=disposeList(siriusObjects)}
 function teardown(){
-  disposeSolOwn();disposeTauOwn();disposeOrionOwn();disposeSiriusOwn();
+  disposeSolOwn();disposeLunaOwn();disposeTauOwn();disposeOrionOwn();disposeSiriusOwn();
   solEarthRoot=null;solEarthSurface=null;solCloudSurface=null;solMoonRoot=null;solMoonSurface=null;
+  lunaMoonRoot=null;lunaMoonSurface=null;lunaEarthRoot=null;lunaEarthSurface=null;lunaEarthCloudSurface=null;lunaRing=null;
   tauRoot=null;tauSurface=null;
   orionStar=null;orionRockRoot=null;orionRockSurface=null;orionSystemRoot=null;
   siriusStar=null;siriusIceRoot=null;siriusIceSurface=null;siriusRelay=null;
@@ -392,6 +430,22 @@ function buildSol(){
   const aurora=new THREE.Points(solAuroraGeometry(),new THREE.PointsMaterial({map:solAuroraTexture(),size:1.7,vertexColors:true,transparent:true,opacity:.42,alphaTest:.01,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
   aurora.name=`${NAME}-sol-aurora`;solEarthRoot.add(aurora);
   solObjects=[cloudDetail,atmosphere,moonDetail,aurora];
+}
+
+function buildLuna(){
+  if(!lunaMoonSurface||!lunaEarthRoot||!lunaEarthCloudSurface||!lunaRing||lunaObjects.length)return;
+  const moonDetail=new THREE.Mesh(new THREE.SphereGeometry(1,64,40),new THREE.MeshStandardMaterial({map:solMoonTexture(),transparent:true,opacity:.4,depthWrite:false,roughness:1,metalness:0}));
+  moonDetail.name=`${NAME}-luna-moon-detail`;moonDetail.scale.setScalar(1.006);lunaMoonSurface.add(moonDetail);
+
+  const cloudDetail=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshPhongMaterial({map:solCloudTexture(),transparent:true,opacity:.42,alphaTest:.012,depthWrite:false,shininess:16,specular:0xbfeaff}));
+  cloudDetail.name=`${NAME}-luna-earth-cloud-detail`;cloudDetail.scale.setScalar(1.004);lunaEarthCloudSurface.add(cloudDetail);
+
+  const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),solAtmosphereMaterial());
+  atmosphere.name=`${NAME}-luna-earth-atmosphere`;atmosphere.scale.setScalar(TARGETS.LUNA.earthRadius*1.095);lunaEarthRoot.add(atmosphere);
+
+  const ringTrack=new THREE.Mesh(new THREE.TorusGeometry(TARGETS.LUNA.ringRadius,.22,8,128),lunaRingMaterial());
+  ringTrack.name=`${NAME}-luna-ring-track`;lunaRing.add(ringTrack);
+  lunaObjects=[moonDetail,cloudDetail,atmosphere,ringTrack];
 }
 
 function buildTau(){
@@ -452,6 +506,7 @@ function hookQuality(){
 
 function currentProfile(id){
   if(id==='SOL')return{objects:solObjects,captured:!!(solEarthRoot&&solCloudSurface&&solMoonSurface),captureCount:solCaptureCount,...TARGETS.SOL};
+  if(id==='LUNA')return{objects:lunaObjects,captured:!!(lunaMoonSurface&&lunaEarthRoot&&lunaEarthCloudSurface&&lunaRing),captureCount:lunaCaptureCount,...TARGETS.LUNA};
   if(id==='TAU')return{objects:tauObjects,captured:!!tauRoot,captureCount:tauCaptureCount,...TARGETS.TAU};
   if(id==='ORION')return{objects:orionObjects,captured:!!(orionStar&&orionRockSurface&&orionSystemRoot),captureCount:orionCaptureCount,...TARGETS.ORION};
   if(id==='SIRIUS')return{objects:siriusObjects,captured:!!(siriusStar&&siriusIceSurface&&siriusRelay),captureCount:siriusCaptureCount,...TARGETS.SIRIUS};
@@ -466,18 +521,22 @@ function sync(){
   const safe=state.exploring&&!state.flying&&!state.contextLost;
   const high=safe&&state.qualityMode==='high';
   const solHigh=high&&state.current==='SOL';
+  const lunaHigh=high&&state.current==='LUNA';
   const tauHigh=high&&state.current==='TAU';
   const orionHigh=high&&state.current==='ORION';
   const siriusHigh=high&&state.current==='SIRIUS';
   if(!solHigh&&solObjects.length)disposeSolOwn();
+  if(!lunaHigh&&lunaObjects.length)disposeLunaOwn();
   if(!tauHigh&&tauObjects.length)disposeTauOwn();
   if(!orionHigh&&orionObjects.length)disposeOrionOwn();
   if(!siriusHigh&&siriusObjects.length)disposeSiriusOwn();
   if(solHigh&&solEarthRoot&&solCloudSurface&&solMoonSurface&&!solObjects.length)buildSol();
+  if(lunaHigh&&lunaMoonSurface&&lunaEarthRoot&&lunaEarthCloudSurface&&lunaRing&&!lunaObjects.length)buildLuna();
   if(tauHigh&&tauRoot&&!tauObjects.length)buildTau();
   if(orionHigh&&orionStar&&orionRockSurface&&orionSystemRoot&&!orionObjects.length)buildOrion();
   if(siriusHigh&&siriusStar&&siriusIceSurface&&siriusRelay&&!siriusObjects.length)buildSirius();
   for(const o of solObjects)o.visible=solHigh;
+  for(const o of lunaObjects)o.visible=lunaHigh;
   for(const o of tauObjects)o.visible=tauHigh;
   for(const o of orionObjects)o.visible=orionHigh;
   for(const o of siriusObjects)o.visible=siriusHigh;
@@ -489,6 +548,7 @@ function sync(){
     captured:profile.captured,captureCount:profile.captureCount,
     profiles:{
       SOL:{captured:!!(solEarthRoot&&solCloudSurface&&solMoonSurface),objects:solObjects.length,captureCount:solCaptureCount},
+      LUNA:{captured:!!(lunaMoonSurface&&lunaEarthRoot&&lunaEarthCloudSurface&&lunaRing),objects:lunaObjects.length,captureCount:lunaCaptureCount},
       TAU:{captured:!!tauRoot,objects:tauObjects.length,captureCount:tauCaptureCount},
       ORION:{captured:!!(orionStar&&orionRockSurface&&orionSystemRoot),objects:orionObjects.length,captureCount:orionCaptureCount},
       SIRIUS:{captured:!!(siriusStar&&siriusIceSurface&&siriusRelay),objects:siriusObjects.length,captureCount:siriusCaptureCount}
