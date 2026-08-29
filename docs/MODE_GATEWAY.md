@@ -26,7 +26,7 @@ Below those four actions, a compact Frontier destination strip now exposes two o
 
 Real Space remains authoritative in `index.html`: existing eight-system `N` data, 6.0 LY Dijkstra graph, true-direction turns, flight phases, Hermite arrival, Travel Journal and Star Atlas.
 
-Neither AURELIA nor NADIR is added to Real Space `N` / `G`. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
+Frontier Fiction does **not** add AURELIA to the Real Space `N` / `G` graph. NADIR follows the same boundary: neither Frontier destination becomes a Real Space node or changes established shortest paths. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
 
 ## AURELIA ARC｜曙光環域
 
