@@ -21,31 +21,31 @@ async function exercise(cdp,width,height,target,triangles,label){
   const viewport=`${width}x${height}`;
   await evalJs(cdp,`WarpSim.jumpTo('${target}');WarpSim.setQuality('standard');true`);
   await waitUntil(()=>evalJs(cdp,`(()=>{const s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='${target}'&&WarpSim.state().exploring&&s.target==='${target}'&&s.quality==='standard'&&s.objects===0})()`),`safe ${target} Standard exploration`);
-  const standard=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(standard.active,false);assert.equal(standard.quality,'standard');assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);
+  const standard=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(standard.active,false);assert.equal(standard.quality,'standard');assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);assert.equal(standard.triangles,0);
   const standardBytes=await screenshot(cdp,`cinematic-${target.toLowerCase()}-${viewport}-standard.png`);
 
   await evalJs(cdp,"WarpSim.setQuality('high');true");
   await waitUntil(()=>evalJs(cdp,`(()=>{const s=WarpCinematicQuality.snapshot();return s.active===true&&s.target==='${target}'&&s.objects===4})()`),`${target} High cinematic layer active`,7000);
-  const high=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(high.active,true);assert.equal(high.quality,'high');assert.equal(high.objects,4);assert.equal(high.drawCalls,4);assert.equal(high.triangles,triangles);
+  const high=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(high.active,true);assert.equal(high.quality,'high');assert.equal(high.objects,4);assert.equal(high.drawCalls,4);assert.equal(high.triangles,triangles);assert.equal(high.budgetTriangles,triangles,`${target} measured geometry must match declared budget`);
   const highBytes=await screenshot(cdp,`cinematic-${target.toLowerCase()}-${viewport}-high.png`);assert.notEqual(highBytes,standardBytes,`${target} Standard and High evidence should not serialize identically`);
   const viewportState=await evalJs(cdp,"(()=>{const c=document.querySelector('#space'),r=c.getBoundingClientRect();return{cssWidth:r.width,cssHeight:r.height,backingWidth:c.width,backingHeight:c.height,phase:WarpSim.state().phase}})()");
   assert.equal(Math.round(viewportState.cssWidth),width);assert.equal(Math.round(viewportState.cssHeight),height);assert.equal(viewportState.phase,'explore');
 
   await evalJs(cdp,"WarpSim.setQuality('low');true");
-  await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpCinematicQuality.snapshot();return s.active===false&&s.objects===0&&s.drawCalls===0})()"),`${target} High to Low cinematic GPU disposal`);
-  const low=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(low.objects,0);assert.equal(low.drawCalls,0);
+  await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpCinematicQuality.snapshot();return s.active===false&&s.objects===0&&s.drawCalls===0&&s.triangles===0})()"),`${target} High to Low cinematic GPU disposal`);
+  const low=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(low.objects,0);assert.equal(low.drawCalls,0);assert.equal(low.triangles,0);
 
   await evalJs(cdp,"WarpSim.setQuality('high');true");
   await waitUntil(()=>evalJs(cdp,`(()=>{const s=WarpCinematicQuality.snapshot();return s.target==='${target}'&&s.active===true&&s.objects===4&&s.drawCalls===4})()`),`${target} High cinematic layer rebuild after Low`);
-  const rebuilt=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(rebuilt.triangles,triangles);
+  const rebuilt=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(rebuilt.triangles,triangles);assert.equal(rebuilt.budgetTriangles,triangles);
 
   await evalJs(cdp,"WarpSim.jumpTo('SOL');true");
   await waitUntil(()=>evalJs(cdp,"WarpSim.state().current==='SOL'&&WarpCinematicQuality.snapshot().objects===0"),`${target} departure cinematic GPU disposal`);
   await evalJs(cdp,`WarpSim.jumpTo('${target}');WarpSim.setQuality('high');true`);
   await waitUntil(()=>evalJs(cdp,`(()=>{const s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='${target}'&&s.target==='${target}'&&s.active===true&&s.objects===4&&s.drawCalls===4})()`),`${target} revisit High cinematic rebuild`,8000);
-  const revisit=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(revisit.triangles,triangles);assert.ok(revisit.captureCount>=2,`${target} revisit should recapture the rebuilt core scene`);
+  const revisit=await evalJs(cdp,"WarpCinematicQuality.snapshot()");assert.equal(revisit.triangles,triangles);assert.equal(revisit.budgetTriangles,triangles);assert.ok(revisit.captureCount>=2,`${target} revisit should recapture the rebuilt core scene`);
 
-  console.log(`${label} real browser ${viewport}: 4 bounded High-only layers, ${high.triangles} tris; High→Low releases GPU objects, High rebuilds, round-trip rebuilds; High evidence ${highBytes} bytes; Standard ${standardBytes} bytes`);
+  console.log(`${label} real browser ${viewport}: 4 bounded High-only layers, ${high.triangles} measured tris matching budget; High→Low releases GPU objects, High rebuilds, round-trip rebuilds; High evidence ${highBytes} bytes; Standard ${standardBytes} bytes`);
 }
 
 async function inspect(chrome,base,width,height){
@@ -58,9 +58,9 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"!!window.WarpSim&&!!window.WarpCinematicQuality&&document.querySelector('#app')?.classList.contains('ready')"),'production WebGL + cinematic layer',30000);
     await exercise(cdp,width,height,'TAU',8352,'TAU Cinematic High');
     await exercise(cdp,width,height,'ORION',10944,'ORION Cinematic High');
-    await exercise(cdp,width,height,'SIRIUS',11992,'SIRIUS Cinematic High');
+    await exercise(cdp,width,height,'SIRIUS',12992,'SIRIUS Cinematic High');
   }catch(e){if(cdp)await screenshot(cdp,`cinematic-failure-${width}x${height}.png`).catch(()=>{});throw e}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for cinematic quality browser validation');console.log('Cinematic quality browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`;const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
-try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('TAU + ORION + SIRIUS Cinematic High browser validation: passed at 390×844 and 360×800')}finally{await stop(server)}
+try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('TAU + ORION + SIRIUS Cinematic High browser validation: passed with measured geometry budgets at 390×844 and 360×800')}finally{await stop(server)}

@@ -36,8 +36,12 @@ const browserHarness=fs.readFileSync('scripts/validate-exploration-focus-tray-br
 has(browserHarness,"['scripts/serve.mjs']",'real-browser harness serves the actual production page');
 has(browserHarness,'getBoundingClientRect()','real-browser harness measures rendered geometry');
 has(browserHarness,'getComputedStyle','real-browser harness reads computed production CSS');
-has(browserHarness,"'Input.dispatchMouseEvent'",'real-browser harness drives actual pointer input through CDP');
+has(browserHarness,'document.elementFromPoint','real-browser harness proves each mobile control is the actual hit target before activation');
+has(browserHarness,"typeof el.click!=='function'",'real-browser harness activates the exact production DOM control only after hit testing');
+has(browserHarness,'interactionDiagnostic','real-browser harness records hit target, pane and expanded-state diagnostics on a failed interaction');
+has(browserHarness,'failure-${viewport}.json','real-browser failure evidence persists a machine-readable interaction diagnostic');
 has(browserHarness,'[[390,844],[360,800]]','real-browser harness covers both phone acceptance viewports');
+check(!/Input\.dispatchMouseEvent|Input\.dispatchTouchEvent|Input\.synthesizeTapGesture/.test(browserHarness),'focus-tray acceptance no longer depends on flaky synthetic input transport');
 
 for(const [width,height] of [[390,844],[360,800]]){
   const runtime=spawnSync(process.execPath,['scripts/validate-exploration-focus-tray-runtime.mjs'],{
@@ -48,21 +52,13 @@ for(const [width,height] of [[390,844],[360,800]]){
   check(runtime.status===0,`production-module Exploration Focus Tray state runtime passes at ${width}x${height}`);
 }
 
-// Headless Chromium can occasionally drop a synthetic pointer transition under shared CI load even when the
-// production state harness and rendered geometry are healthy. Keep the browser gate mandatory, but retry only
-// this focused evidence path a bounded two times before declaring a real failure.
-let browser=null;
-for(let attempt=1;attempt<=3;attempt++){
-  browser=spawnSync(process.execPath,['scripts/validate-exploration-focus-tray-browser.mjs'],{
-    encoding:'utf8',timeout:120000,
-    env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}
-  });
-  if(browser.stdout)process.stdout.write(browser.stdout);
-  if(browser.stderr)process.stderr.write(browser.stderr);
-  if(browser.status===0)break;
-  if(attempt<3)console.warn(`Focus Tray browser evidence attempt ${attempt} failed; retrying the same real-browser pointer/layout gate.`);
-}
-check(browser?.status===0,'real production-page Focus Tray browser layout passes at both phone viewports');
+const browser=spawnSync(process.execPath,['scripts/validate-exploration-focus-tray-browser.mjs'],{
+  encoding:'utf8',timeout:120000,
+  env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}
+});
+if(browser.stdout)process.stdout.write(browser.stdout);
+if(browser.stderr)process.stderr.write(browser.stderr);
+check(browser.status===0,'single real production-page Focus Tray hit-target/layout gate passes at both phone viewports without retry masking');
 
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`Exploration Focus Tray: ${pass} / ${pass} checks passed plus two production-module state viewports and two real-browser layout viewports`);
+console.log(`Exploration Focus Tray: ${pass} / ${pass} checks passed plus two production-module state viewports and one deterministic real-browser hit-target/layout pass covering both phone viewports`);

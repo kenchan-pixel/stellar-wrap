@@ -78,7 +78,9 @@ High adds four owned objects:
 Budget:
 
 - additional draw calls: **4**
-- additional triangles: **11,992**
+- additional triangles: **12,992**
+
+The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the four High-only SIRIUS meshes (4,992 + 2,976 + 2,976 + 2,048), not a duplicated diagnostic constant. Runtime evidence measures geometry index／position counts and must match the declared budget.
 
 Below High, owned SIRIUS objects return to zero.
 
@@ -93,6 +95,7 @@ Automated source validation must prove:
 - exact pinned Three.js reuse;
 - High-only safe-exploration gating;
 - bounded object / triangle / point budgets;
+- runtime triangle evidence derives from actual `BufferGeometry` rather than echoing the declared budget;
 - no extra render loop, storage or network authority;
 - explicit disposal of owned textures, materials and geometries;
 - offline-shell inclusion.
@@ -100,7 +103,7 @@ Automated source validation must prove:
 Real Chromium at **390×844** and **360×800** must prove for TAU, ORION and SIRIUS:
 
 1. Standard has zero extra cinematic objects.
-2. High has exactly four extra objects and the documented triangle budget.
+2. High has exactly four extra objects and the measured geometry count matches the documented triangle budget.
 3. Standard and High evidence screenshots are not identical.
 4. High → Low disposes all extra objects.
 5. Low → High rebuilds the layer.

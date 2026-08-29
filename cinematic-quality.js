@@ -4,7 +4,7 @@ const SAMPLE_MS=250;
 const TARGETS=Object.freeze({
   TAU:{center:new THREE.Vector3(15,-5,-86),radius:23,triangles:8352,drawCalls:4},
   ORION:{starCenter:new THREE.Vector3(28,8,-137),starRadius:30,rockCenter:new THREE.Vector3(-26,-12,-90),rockRadius:10,triangles:10944,drawCalls:4},
-  SIRIUS:{starCenter:new THREE.Vector3(-24,10,-134),starRadius:15,iceCenter:new THREE.Vector3(0,18,-151),iceRadius:6,relayCenter:new THREE.Vector3(0,-4,-82),relayRadius:17.5,triangles:11992,drawCalls:4}
+  SIRIUS:{starCenter:new THREE.Vector3(-24,10,-134),starRadius:15,iceCenter:new THREE.Vector3(0,18,-151),iceRadius:6,relayCenter:new THREE.Vector3(0,-4,-82),relayRadius:17.5,triangles:12992,drawCalls:4}
 });
 const TAU_RING_ROTATION=new THREE.Euler(1.18,.2,.25);
 const NAME='stellar-cinematic';
@@ -28,7 +28,7 @@ let qualityHooked=false;
 let originalSetQuality=null;
 let addHooked=false;
 let originalAdd=null;
-let lastSnapshot={active:false,target:null,quality:null,objects:0,triangles:0,drawCalls:0,captured:false,captureCount:0,profiles:{}};
+let lastSnapshot={active:false,target:null,quality:null,objects:0,triangles:0,budgetTriangles:0,drawCalls:0,captured:false,captureCount:0,profiles:{}};
 
 function approx(a,b,t=.18){return Math.abs(a-b)<=t}
 function planetRootSurface(candidate,center,radius){
@@ -44,6 +44,13 @@ function isSiriusRelay(candidate){
   const p=TARGETS.SIRIUS,g=candidate?.geometry;
   return !!(candidate?.isMesh&&g?.type==='TorusGeometry'&&approx(candidate.position.x,p.relayCenter.x)&&approx(candidate.position.y,p.relayCenter.y)&&approx(candidate.position.z,p.relayCenter.z)&&approx(g.parameters?.radius,p.relayRadius,.12));
 }
+function geometryTriangleCount(object){
+  if(!object?.isMesh||!object.geometry)return 0;
+  const geometry=object.geometry,indexCount=geometry.index?.count,positionCount=geometry.attributes?.position?.count;
+  if(Number.isFinite(indexCount))return Math.floor(indexCount/3);
+  return Number.isFinite(positionCount)?Math.floor(positionCount/3):0;
+}
+function measuredTriangleCount(objects){return objects.reduce((sum,object)=>sum+geometryTriangleCount(object),0)}
 
 function captureCandidate(candidate){
   let captured=false;
@@ -370,9 +377,10 @@ function sync(){
   for(const o of orionObjects)o.visible=orionHigh;
   for(const o of siriusObjects)o.visible=siriusHigh;
   const profile=currentProfile(state.current),active=!!(high&&profile.objects.length);
+  const measuredTriangles=active?measuredTriangleCount(profile.objects):0;
   lastSnapshot={
     active,target:state.current,quality:state.qualityMode,objects:profile.objects.length,
-    triangles:active?profile.triangles:0,drawCalls:active?profile.drawCalls:0,
+    triangles:measuredTriangles,budgetTriangles:active?profile.triangles:0,drawCalls:active?profile.drawCalls:0,
     captured:profile.captured,captureCount:profile.captureCount,
     profiles:{
       TAU:{captured:!!tauRoot,objects:tauObjects.length,captureCount:tauCaptureCount},

@@ -130,13 +130,13 @@ async function loadProductionScript(cdp,src,globalName){
   await evaluate(cdp,`(()=>{const id='stellarHarness-${globalName}';if(document.getElementById(id))return true;const script=document.createElement('script');script.id=id;script.src=${JSON.stringify(src)};script.async=false;document.head.append(script);return true})()`,`inject ${src}`);
   await waitExpression(cdp,`!!window[${JSON.stringify(globalName)}]`,`${globalName} production script`);
 }
-async function clickSelector(cdp,selector){
-  const point=await waitUntil(async()=>{
-    const state=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none'&&(hit===el||el.contains(hit)),x,y,hit:hit?.id||hit?.getAttribute?.('data-hub-action')||hit?.tagName||''}})()`,`hit-test ${selector}`);
+async function activateSelector(cdp,selector){
+  await waitUntil(async()=>{
+    const state=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none'&&!el.disabled&&(hit===el||el.contains(hit)),x,y,hit:hit?.id||hit?.getAttribute?.('data-hub-action')||hit?.tagName||''}})()`,`hit-test ${selector}`);
     return state?.ok?state:null;
   },`hit-testable ${selector}`,3000);
-  await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});
-  await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1});
+  const clicked=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el||typeof el.click!=='function')return false;el.click();return true})()`,`activate ${selector}`);
+  assert.equal(clicked,true,`${selector} must activate through the real production DOM control`);
 }
 async function waitCardSettled(cdp,label){
   return waitExpression(cdp,`(()=>{const card=document.querySelector('#exploreCard');if(!card?.classList.contains('hubOpen'))return false;const r=card.getBoundingClientRect(),s=getComputedStyle(card),left=Number.parseFloat(s.left);return s.opacity==='1'&&s.pointerEvents!=='none'&&s.transform==='none'&&Number.isFinite(left)&&Math.abs(r.left-left)<1.5})()`,label,3500);
@@ -145,6 +145,9 @@ async function captureScreenshot(cdp,name){
   mkdirSync(EVIDENCE_DIR,{recursive:true});
   const shot=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false},10000);
   writeFileSync(join(EVIDENCE_DIR,name),Buffer.from(shot.data,'base64'));
+}
+async function interactionDiagnostic(cdp){
+  return evaluate(cdp,`(()=>{const describe=el=>{if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return{id:el.id||'',action:el.getAttribute?.('data-hub-action')||'',rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},display:s.display,visibility:s.visibility,pointerEvents:s.pointerEvents,disabled:!!el.disabled,ariaExpanded:el.getAttribute?.('aria-expanded'),hit:{id:hit?.id||'',action:hit?.getAttribute?.('data-hub-action')||'',tag:hit?.tagName||''}}};const card=document.querySelector('#exploreCard');return{rail:describe(document.querySelector('#exploreRailToggle')),explore:describe(document.querySelector('[data-hub-action="explore"]')),overview:describe(document.querySelector('[data-hub-action="overview"]')),discovery:describe(document.querySelector('[data-hub-action="discovery"]')),card:{pane:card?.dataset?.hubPane||'',open:!!card?.classList?.contains('hubOpen'),classes:card?.className||''},hub:{mobile:!!document.querySelector('#app')?.classList.contains('exploreHubMobile'),focusActive:!!window.WarpExplorationFocusTray?.active?.()}}})()`,'Focus Tray interaction diagnostic');
 }
 async function snapshot(cdp){
   return evaluate(cdp,`(()=>{const card=document.querySelector('#exploreCard'),r=card.getBoundingClientRect(),s=getComputedStyle(card);return{viewport:{width:innerWidth,height:innerHeight},pane:card.dataset.hubPane||'',open:card.classList.contains('hubOpen'),active:!!window.WarpExplorationFocusTray?.active?.(),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},computed:{maxHeight:s.maxHeight,left:s.left,right:s.right,bottom:s.bottom,overflowY:s.overflowY,transform:s.transform}}})()`,'Focus Tray geometry snapshot');
@@ -213,31 +216,39 @@ async function inspectViewport(chrome,baseUrl,width,height){
     await evaluate(cdp,`(()=>{const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');return true})()`,'enter final exploration');
     await waitExpression(cdp,"!!window.WarpExploreHub&&!!window.WarpExplorationFocusTray&&document.querySelector('#app')?.classList.contains('exploreHubMobile')&&!!document.querySelector('#exploreRailToggle')",'production Explore Hub browser bootstrap');
 
-    await clickSelector(cdp,'#exploreRailToggle');
+    await activateSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'",'expanded Explore chooser');
-    await clickSelector(cdp,'[data-hub-action="explore"]');
+    await activateSelector(cdp,'[data-hub-action="explore"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='explore'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Focus Tray open');
     await waitCardSettled(cdp,'Focus Tray visual transition settled');
     const tray=await snapshot(cdp),metrics=assertTray(tray,width,height);
     await captureScreenshot(cdp,`focus-tray-${viewport}.png`);
     stage(`Focus Tray geometry accepted (${tray.rect.width.toFixed(1)}×${tray.rect.height.toFixed(1)}px)`);
 
-    await clickSelector(cdp,'#exploreRailToggle');
+    await activateSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'&&!document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'chooser reopens after tray');
-    await clickSelector(cdp,'[data-hub-action="overview"]');
+    await activateSelector(cdp,'[data-hub-action="overview"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='overview'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Overview drawer open');
     await waitCardSettled(cdp,'Overview drawer visual transition settled');
     assertDrawer(await snapshot(cdp),'overview',tray,metrics);
 
-    await clickSelector(cdp,'#exploreRailToggle');
+    await activateSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'&&!document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'chooser reopens after Overview');
-    await clickSelector(cdp,'[data-hub-action="discovery"]');
+    await activateSelector(cdp,'[data-hub-action="discovery"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='discovery'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Discovery drawer open');
     await waitCardSettled(cdp,'Discovery drawer visual transition settled');
     assertDrawer(await snapshot(cdp),'discovery',tray,metrics);
-    console.log(`Exploration Focus Tray real browser ${viewport}: passed`);
+    console.log(`Exploration Focus Tray real browser ${viewport}: passed with hit-tested production DOM controls`);
   }catch(error){
-    if(cdp)await captureScreenshot(cdp,`failure-${viewport}.png`).catch(()=>{});
+    if(cdp){
+      mkdirSync(EVIDENCE_DIR,{recursive:true});
+      const diagnostic=await interactionDiagnostic(cdp).catch(()=>null);
+      if(diagnostic){
+        writeFileSync(join(EVIDENCE_DIR,`failure-${viewport}.json`),JSON.stringify({error:error.message,diagnostic},null,2));
+        console.error(`[Focus Tray browser ${viewport}] interaction failure diagnostic: ${JSON.stringify(diagnostic)}`);
+      }
+      await captureScreenshot(cdp,`failure-${viewport}.png`).catch(()=>{});
+    }
     throw error;
   }finally{
     cdp?.close();
