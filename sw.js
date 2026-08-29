@@ -10,6 +10,7 @@ const CORE=[
   './frontier.html',
   './frontier-nadir.html',
   './frontier-vesper.html',
+  './frontier-eidolon.html',
   './journey-atmosphere.js',
   './exploration-survey.js',
   './star-atlas.js',

@@ -17,17 +17,18 @@ The top-level gateway remains exactly four actions:
 - **Frontier Fiction** — original science-fiction exploration line.
 - **Gallery / Captures** — existing local journey/visited/discovery summary; PNG files remain local downloads.
 
-Below those four actions, a compact Frontier destination strip now exposes three original worlds:
+The compact always-visible strip keeps three established worlds, while a fourth **featured expedition** is presented as a separate full-width destination so 360 px phones do not compress four dense cards into one row:
 
 1. `AURELIA ARC｜曙光環域` — artificial ring habitat / megastructure.
 2. `NADIR WELL｜玄淵觀測站` — extreme-object frontier observatory around a fictional black-hole-like gravity well.
 3. `VESPER YARD｜暮環採集場` — industrial gas-giant harvesting zone with atmospheric skimmers, refinery ring and cargo traffic.
+4. `EIDOLON GATE｜遺光門廊` — featured ancient deep-space gate / ruin expedition with fractured rings, surviving glyph light and relic debris.
 
 ## Architecture boundary
 
 Real Space remains authoritative in `index.html`: existing eight-system `N` data, 6.0 LY Dijkstra graph, true-direction turns, flight phases, Hermite arrival, Travel Journal and Star Atlas.
 
-Frontier Fiction does **not** add AURELIA, NADIR or VESPER to the Real Space `N` / `G` graph. None of the three becomes a Real Space node or changes established shortest paths. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
+Frontier Fiction does **not** add AURELIA, NADIR, VESPER or EIDOLON to the Real Space `N` / `G` graph. None becomes a Real Space node or changes established shortest paths. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
 
 ## AURELIA ARC｜曙光環域
 
@@ -35,35 +36,26 @@ Original megastructure habitat: inhabited torus, structural spokes, artificial d
 
 ## NADIR WELL｜玄淵觀測站
 
-Original extreme-object destination built from a broad science-fiction archetype without reproducing a named franchise or real observatory.
-
-Visual identity:
-
-- black central event-horizon silhouette;
-- layered amber/gold accretion structures;
-- three cool gravitational-lensing rings;
-- bounded bipolar jets;
-- offset segmented observation ring and pods;
-- sparse foreground debris and deep star field;
-- dedicated approach → arrival → free-exploration composition;
-- local high-resolution capture.
-
-NADIR intentionally contrasts AURELIA: AURELIA is a luminous inhabited megastructure; NADIR is a dark extreme-object observation frontier.
+Original extreme-object destination with black central silhouette, layered accretion structures, cool lensing rings, bounded jets, segmented observation hardware and local high-resolution capture.
 
 ## VESPER YARD｜暮環採集場
 
-Original industrial-atmosphere destination around a fictional teal gas giant. It does not reuse TAU's natural ring identity: the focal landmark is a working refinery ring and atmospheric extraction hardware rather than a natural planetary ring system.
+Original industrial-atmosphere destination around a fictional teal gas giant: luminous storm bands, refinery ring, skimmers, extraction tethers, cargo traffic and dedicated cloud-top arrival composition.
+
+## EIDOLON GATE｜遺光門廊
+
+Original ancient deep-space gate / ruin destination. It completes the fourth preferred Frontier archetype without copying a named franchise or recognizable protected location.
 
 Visual identity:
 
-- large teal gas giant with layered luminous storm bands;
-- orange-white orbital refinery ring and central service hub;
-- eight instanced skimmer modules and four visible extraction tethers;
-- sparse cargo/debris traffic and warm industrial plume lights;
-- dedicated approach → cloud-top arrival → free-exploration composition;
+- two offset weathered gate rings plus a thin surviving amber glyph circuit;
+- intentionally damaged / collapsed pylon sectors rather than a pristine portal;
+- dark central veil and subtle violet lensing glow to imply unknown function without reproducing a known IP gate;
+- 54 bounded glyph lights, sparse relic shards and one distant surviving beacon;
+- dedicated ruin approach → near-field arrival → free-exploration composition;
 - drag-look / optional auto-orbit and local high-resolution capture.
 
-VESPER adds the third approved Frontier archetype — industrial asteroid / gas-giant extraction — while keeping the line small and visually distinct.
+EIDOLON is presented as a featured expedition below the three compact destination cards. This keeps the mode entrance readable at 360 px while still making the new world directly discoverable from the landing experience.
 
 ## Performance contract
 
@@ -83,19 +75,19 @@ For each Frontier runtime:
 1. Top-level landing continues to expose exactly four useful mode actions with ≥44 px touch targets.
 2. Continue/Real Space preserve the existing Real Space location/route authority.
 3. Gallery remains read-only over existing local journey/discovery sources.
-4. Frontier destination strip exposes exactly AURELIA, NADIR and VESPER without inserting any into Real Space routing.
-5. VESPER has a visibly distinct approach, cloud-top arrival and free-exploration scene centred on industrial extraction hardware.
-6. Trusted phone-sized touch can enter VESPER and toggle its exploration control.
-7. Production Chromium at 390×844 and 360×800 proves viewport containment and bounded VESPER renderer work (≤16 draw calls / ≤22,000 triangles).
-8. VESPER high-resolution capture increases the actual backing buffer, produces non-trivial PNG data and restores the previous DPR with `preserveDrawingBuffer:false`.
-9. Existing AURELIA, NADIR, V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
-10. All three Frontier pages remain in the existing v15 offline shell contract.
+4. The three-card compact strip remains AURELIA, NADIR and VESPER; EIDOLON is a separate featured expedition with a ≥44 px touch target.
+5. EIDOLON remains outside Real Space routing and exposes its own approach, near-field arrival and free-exploration state.
+6. Trusted phone-sized touch can enter EIDOLON and toggle its exploration control.
+7. Production Chromium at 390×844 and 360×800 proves viewport containment and bounded EIDOLON renderer work (≤16 draw calls / ≤22,000 triangles).
+8. EIDOLON high-resolution capture increases the actual backing buffer, produces non-trivial PNG data and restores the previous DPR with `preserveDrawingBuffer:false`.
+9. Existing AURELIA, NADIR, VESPER, V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
+10. All four Frontier pages remain in the existing v15 offline shell contract.
 
 ## Out of Scope
 
 - Adding Frontier destinations to the Real Space Dijkstra graph.
 - A general Frontier route planner or persistence system.
-- More than these three Frontier worlds in this slice.
+- More than these four Frontier worlds in this slice.
 - Combat, economy, quests, accounts, cloud save/upload or analytics.
 - Copying famous science-fiction locations, branding or recognizable protected assets.
 - Forced 4K, post-processing framework or permanent maximum DPR.
