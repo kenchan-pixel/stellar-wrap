@@ -7,29 +7,33 @@ import {createServer as createTcpServer} from 'node:net';
 
 const gateway=readFileSync('mode-gateway.js','utf8');
 const frontier=readFileSync('frontier.html','utf8');
+const nadir=readFileSync('frontier-nadir.html','utf8');
+const index=readFileSync('index.html','utf8');
 const journal=readFileSync('travel-journal.js','utf8');
 const sw=readFileSync('sw.js','utf8');
-const doc=readFileSync('docs/MODE_GATEWAY.md','utf8');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const EVIDENCE_DIR=join(process.cwd(),'artifacts','focus-tray-browser');
 
 assert.match(journal,/import\('\.\/mode-gateway\.js'\)/,'Travel Journal bootstrap must load the mode gateway');
 for(const text of['繼續旅程','Real Space｜真實探索','Frontier Fiction｜科幻空域','Gallery / Captures｜探索記錄'])assert.ok(gateway.includes(text),`missing mode entry: ${text}`);
-assert.ok(gateway.includes('AURELIA ARC｜曙光環域'),'gateway must expose the first real Frontier Fiction destination');
+assert.ok(gateway.includes('AURELIA ARC｜曙光環域')&&gateway.includes('NADIR WELL｜玄淵觀測站'),'gateway must expose both original Frontier destinations');
 assert.doesNotMatch(gateway,/localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'mode gateway must not create storage/network authority');
-assert.match(frontier,/three@0\.185\.1\/build\/three\.module\.js/,'Frontier page must pin the existing Three.js version');
-assert.equal((frontier.match(/new THREE\.WebGLRenderer/g)||[]).length,1,'Frontier page must use exactly one WebGL renderer');
-assert.match(frontier,/MAX_NORMAL_DPR=1\.25,MAX_CAPTURE_DPR=1\.60/,'Frontier mobile DPR bounds must remain explicit');
-assert.match(frontier,/AURELIA ARC｜曙光環域/,'Frontier destination identity must be present');
+assert.doesNotMatch(gateway,/WarpSim\.(?:select|start|isRouteValid)|\bDijkstra\b|\b(?:const|let|var)\s+[GN]\s*=/,'mode gateway must not own Real Space route/topology authority');
+assert.doesNotMatch(index,/\bid\s*:\s*['"](?:AURELIA|NADIR)['"]/,'Frontier destinations must remain outside the Real Space system table');
+assert.match(frontier,/three@0\.185\.1\/build\/three\.module\.js/,'AURELIA must pin the existing Three.js version');
+assert.equal((frontier.match(/new THREE\.WebGLRenderer/g)||[]).length,1,'AURELIA must use exactly one WebGL renderer');
+assert.match(frontier,/MAX_NORMAL_DPR=1\.25,MAX_CAPTURE_DPR=1\.60/,'AURELIA mobile DPR bounds must remain explicit');
+assert.match(frontier,/window\.WarpFrontier=/,'AURELIA must remain a standalone Frontier runtime');
+assert.match(nadir,/window\.WarpFrontierNadir=/,'NADIR must remain a standalone Frontier runtime');
+assert.match(frontier,/AURELIA ARC｜曙光環域/,'AURELIA destination identity must be present');
 assert.match(frontier,/phase='approach'/,'Frontier approach state must exist');
 assert.match(frontier,/setPhase\('arrival'\)/,'Frontier arrival state must exist');
 assert.match(frontier,/setPhase\('explore'\)/,'Frontier exploration state must exist');
 assert.match(frontier,/toDataURL\('image\/png'\)/,'Frontier capture must export a real PNG from the WebGL canvas');
 assert.doesNotMatch(frontier,/localStorage|sessionStorage|indexedDB|XMLHttpRequest|sendBeacon/,'Frontier runtime must stay local and stateless');
-assert.ok(sw.includes("'./mode-gateway.js'")&&sw.includes("'./frontier.html'"),'offline CORE must include gateway and first Frontier destination');
+assert.ok(sw.includes("'./mode-gateway.js'")&&sw.includes("'./frontier.html'")&&sw.includes("'./frontier-nadir.html'"),'offline CORE must include gateway and both Frontier destinations');
 assert.match(sw,/CACHE_NAME=`\$\{CACHE_PREFIX\}v15`/,'existing offline cache-generation contract must remain v15');
-assert.match(doc,/does \*\*not\*\* add AURELIA to the Real Space `N` \/ `G` graph/,'mode separation must be documented');
-console.log('Mode gateway static contract: 18/18 passed');
+console.log('Mode gateway semantic/static contract: 22/22 passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const p=commandPath(c);if(p)return p}return''}
