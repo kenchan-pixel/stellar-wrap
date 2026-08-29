@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawn,spawnSync} from 'node:child_process';
-import {existsSync,mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {existsSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer as createTcpServer} from 'node:net';
@@ -164,13 +164,19 @@ function assertDrawer(state,name,tray,metrics){
 async function inspectViewport(chrome,baseUrl,width,height){
   const viewport=`${width}x${height}`;
   const stage=message=>console.log(`[Focus Tray browser ${viewport}] ${message}`);
-  const profile=mkdtempSync(join(tmpdir(),`stellar-wrap-layout-${width}-`));let browser=null,cdp=null;
+  const profile=mkdtempSync(join(tmpdir(),`stellar-wrap-layout-${width}-`));let browser=null,cdp=null,chromeError='';
   try{
     stage('launch headless Chrome');
-    browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--mute-audio','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:'ignore'});
-    const portFile=join(profile,'DevToolsActivePort');await waitUntil(()=>existsSync(portFile),`Chrome DevTools port ${viewport}`,8000);
-    const debugPort=Number(readFileSync(portFile,'utf8').split(/\r?\n/)[0]);
-    const target=await waitUntil(async()=>{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`),targets=await response.json();return targets.find(item=>item.type==='page'&&item.webSocketDebuggerUrl)||null},'Chrome page target',8000);
+    const debugPort=await freePort();
+    browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--mute-audio',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
+    browser.stderr?.on('data',chunk=>{chromeError=(chromeError+String(chunk)).slice(-4000)});
+    const target=await waitUntil(async()=>{
+      if(browser.exitCode!==null)throw new Error(`Chrome exited ${browser.exitCode}: ${chromeError.trim()||'no stderr'}`);
+      try{
+        const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`),targets=await response.json();
+        return targets.find(item=>item.type==='page'&&item.webSocketDebuggerUrl)||null;
+      }catch{return null}
+    },`Chrome page target ${viewport}`,12000);
     cdp=new CdpClient(target.webSocketDebuggerUrl);await cdp.connect();
     await cdp.send('Page.enable');await cdp.send('Runtime.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true,screenWidth:width,screenHeight:height});
