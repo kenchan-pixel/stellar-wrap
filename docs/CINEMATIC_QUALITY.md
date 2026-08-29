@@ -14,10 +14,11 @@ The current destination slices are deliberately curated rather than global:
 
 1. **SOL｜地球近軌** — Earth atmosphere / cloud / Moon / aurora depth.
 2. **LUNA｜月環基地** — primary lunar surface / distant Earth / orbital-ring depth.
-3. **TAU｜金牛塵海** — ringed gas giant depth.
-4. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
-5. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
-6. **PROX｜比鄰星港** — lava fissure / hot atmosphere / red-dwarf / starport depth.
+3. **VEGA｜織女星門** — blue-white primary / ice world / warp-gate depth.
+4. **TAU｜金牛塵海** — ringed gas giant depth.
+5. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
+6. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
+7. **PROX｜比鄰星港** — lava fissure / hot atmosphere / red-dwarf / starport depth.
 
 ## Runtime contract
 
@@ -67,6 +68,22 @@ Budget:
 - additional triangles: **12,992**
 
 The 12,992 figure is measured from the four actual indexed `BufferGeometry` meshes: 4,992 + 2,976 + 2,976 + 2,048 triangles. Below High, owned LUNA objects return to zero.
+
+## VEGA budget
+
+High adds four owned objects to the existing blue-white star / ice world / double warp-gate scene:
+
+- higher-frequency blue-white granulation attached to the existing primary star;
+- additive stellar halo around that primary without creating another star authority;
+- crystalline frost / fracture detail attached to the existing ice-world surface;
+- segmented luminous energy track attached to the existing outer 24-unit warp-gate torus, inheriting its core counter-rotation rather than adding another animation authority.
+
+Budget:
+
+- additional draw calls: **4**
+- additional triangles: **12,992**
+
+The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the four High-only VEGA meshes (4,992 + 2,976 + 2,976 + 2,048). Runtime evidence measures geometry index／position counts and must match the declared budget. Below High, owned VEGA objects return to zero.
 
 ## TAU budget
 
@@ -138,7 +155,7 @@ The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the f
 
 ## Capture handoff
 
-Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at SOL, LUNA, TAU, ORION, SIRIUS or PROX receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
+Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at SOL, LUNA, VEGA, TAU, ORION, SIRIUS or PROX receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
 
 ## Acceptance
 
@@ -152,7 +169,7 @@ Automated source validation must prove:
 - explicit disposal of owned textures, materials and geometries;
 - offline-shell inclusion.
 
-Real Chromium at **390×844** and **360×800** must prove for SOL, LUNA, TAU, ORION, SIRIUS and PROX:
+Real Chromium at **390×844** and **360×800** must prove for SOL, LUNA, VEGA, TAU, ORION, SIRIUS and PROX:
 
 1. Standard has zero extra cinematic objects.
 2. High has exactly four extra objects and the measured geometry count matches the documented triangle budget.

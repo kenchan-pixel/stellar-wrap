@@ -4,6 +4,7 @@ const SAMPLE_MS=250;
 const TARGETS=Object.freeze({
   SOL:{earthCenter:new THREE.Vector3(14,-5,-80),earthRadius:18,moonCenter:new THREE.Vector3(-28,11,-128),moonRadius:4.7,triangles:10944,drawCalls:4},
   LUNA:{moonCenter:new THREE.Vector3(13,-7,-70),moonRadius:21,earthCenter:new THREE.Vector3(-35,17,-146),earthRadius:12,ringCenter:new THREE.Vector3(13,-7,-70),ringRadius:26,triangles:12992,drawCalls:4},
+  VEGA:{starCenter:new THREE.Vector3(-32,15,-139),starRadius:17,iceCenter:new THREE.Vector3(34,-12,-126),iceRadius:7,gateCenter:new THREE.Vector3(17,-1,-82),gateRadius:24,triangles:12992,drawCalls:4},
   TAU:{center:new THREE.Vector3(15,-5,-86),radius:23,triangles:8352,drawCalls:4},
   ORION:{starCenter:new THREE.Vector3(28,8,-137),starRadius:30,rockCenter:new THREE.Vector3(-26,-12,-90),rockRadius:10,triangles:10944,drawCalls:4},
   SIRIUS:{starCenter:new THREE.Vector3(-24,10,-134),starRadius:15,iceCenter:new THREE.Vector3(0,18,-151),iceRadius:6,relayCenter:new THREE.Vector3(0,-4,-82),relayRadius:17.5,triangles:12992,drawCalls:4},
@@ -26,6 +27,12 @@ let lunaEarthCloudSurface=null;
 let lunaRing=null;
 let lunaObjects=[];
 let lunaCaptureCount=0;
+let vegaStar=null;
+let vegaIceRoot=null;
+let vegaIceSurface=null;
+let vegaGate=null;
+let vegaObjects=[];
+let vegaCaptureCount=0;
 let tauRoot=null;
 let tauSurface=null;
 let tauObjects=[];
@@ -70,6 +77,8 @@ function torusMatches(candidate,center,radius){
   return !!(candidate?.isMesh&&g?.type==='TorusGeometry'&&approx(candidate.position.x,center.x)&&approx(candidate.position.y,center.y)&&approx(candidate.position.z,center.z)&&approx(g.parameters?.radius,radius,.12));
 }
 function isLunaRing(candidate){const p=TARGETS.LUNA;return torusMatches(candidate,p.ringCenter,p.ringRadius)}
+function isVegaStar(candidate){const p=TARGETS.VEGA;return starMatches(candidate,p.starCenter,p.starRadius)}
+function isVegaGate(candidate){const p=TARGETS.VEGA;return torusMatches(candidate,p.gateCenter,p.gateRadius)}
 function isOrionStar(candidate){const p=TARGETS.ORION;return starMatches(candidate,p.starCenter,p.starRadius)}
 function isSiriusStar(candidate){const p=TARGETS.SIRIUS;return starMatches(candidate,p.starCenter,p.starRadius)}
 function isSiriusRelay(candidate){const p=TARGETS.SIRIUS;return torusMatches(candidate,p.relayCenter,p.relayRadius)}
@@ -111,6 +120,19 @@ function captureCandidate(candidate){
   }
   if(isLunaRing(candidate)){
     if(lunaRing!==candidate){disposeLunaOwn();lunaRing=candidate}
+    captured=true;
+  }
+  const vegaIce=planetRootSurface(candidate,TARGETS.VEGA.iceCenter,TARGETS.VEGA.iceRadius);
+  if(vegaIce){
+    if(vegaIceRoot!==candidate){disposeVegaOwn();vegaIceRoot=candidate;vegaIceSurface=vegaIce}
+    captured=true;
+  }
+  if(isVegaStar(candidate)){
+    if(vegaStar!==candidate){disposeVegaOwn();vegaStar=candidate;vegaCaptureCount++}
+    captured=true;
+  }
+  if(isVegaGate(candidate)){
+    if(vegaGate!==candidate){disposeVegaOwn();vegaGate=candidate}
     captured=true;
   }
   const tau=planetRootSurface(candidate,TARGETS.TAU.center,TARGETS.TAU.radius);
@@ -244,6 +266,61 @@ function lunaRingMaterial(){
     uniforms:{uA:{value:new THREE.Color('#d8edff')},uB:{value:new THREE.Color('#82b9ff')},uOpacity:{value:.74}},
     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
     fragmentShader:`uniform vec3 uA;uniform vec3 uB;uniform float uOpacity;varying vec2 vUv;void main(){float seg=.28+.72*smoothstep(.18,.78,.5+.5*sin(vUv.x*6.2831853*32.0));float rail=.82+.18*sin(vUv.x*6.2831853*9.0+vUv.y*11.0);vec3 c=mix(uA,uB,clamp(.22+.78*seg,0.0,1.0));gl_FragColor=vec4(c,uOpacity*seg*rail);}`,
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false
+  });
+}
+
+function vegaStarTexture(){
+  const c=document.createElement('canvas');c.width=512;c.height=256;
+  const x=c.getContext('2d'),im=x.createImageData(c.width,c.height);
+  for(let y=0;y<c.height;y++)for(let xx=0;xx<c.width;xx++){
+    const u=xx/c.width,v=y/c.height,lon=u*Math.PI*2,lat=(v-.5)*Math.PI;
+    const cells=.5+.5*Math.sin(lon*23+Math.sin(lat*15)*2.2)+.24*Math.sin(lon*53-lat*37)+.12*Math.sin(lon*97+lat*61);
+    const belts=.5+.5*Math.cos(lat*6.4+Math.sin(lon*4.2));
+    const mix=Math.max(0,Math.min(1,.32+cells*.2+belts*.12));
+    const i=(y*c.width+xx)*4;
+    im.data[i]=166+Math.round(72*mix);
+    im.data[i+1]=214+Math.round(38*mix);
+    im.data[i+2]=238+Math.round(17*mix);
+    im.data[i+3]=Math.round(78+116*mix);
+  }
+  x.putImageData(im,0,0);
+  return canvasTexture(c);
+}
+
+function vegaIceTexture(){
+  const c=document.createElement('canvas');c.width=512;c.height=256;
+  const x=c.getContext('2d'),im=x.createImageData(c.width,c.height);
+  for(let y=0;y<c.height;y++)for(let xx=0;xx<c.width;xx++){
+    const u=xx/c.width,v=y/c.height;
+    const ridge=.5+.5*Math.sin((u*1.31+v*.47)*127+Math.sin(v*31)*2.2);
+    const facet=.5+.5*Math.sin((u-v*.63)*211)+.22*Math.sin(u*307+v*149);
+    const fracture=Math.abs(Math.sin(u*181-v*133+1.4*Math.sin((u+v)*27)));
+    const mix=Math.max(0,Math.min(1,.18+.34*ridge+.24*facet-.17*(1-fracture)));
+    const i=(y*c.width+xx)*4;
+    im.data[i]=112+Math.round(76*mix);
+    im.data[i+1]=174+Math.round(62*mix);
+    im.data[i+2]=206+Math.round(46*mix);
+    im.data[i+3]=Math.round(34+84*mix);
+  }
+  x.putImageData(im,0,0);
+  return canvasTexture(c);
+}
+
+function vegaHaloMaterial(){
+  return new THREE.ShaderMaterial({
+    uniforms:{uCore:{value:new THREE.Color('#a9d7ff')},uEdge:{value:new THREE.Color('#f4fbff')},uOpacity:{value:.48}},
+    vertexShader:`varying vec3 vN;varying vec3 vV;varying float vY;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);vY=normal.y;gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`uniform vec3 uCore;uniform vec3 uEdge;uniform float uOpacity;varying vec3 vN;varying vec3 vV;varying float vY;void main(){float rim=pow(1.0-clamp(dot(vN,vV),0.0,1.0),1.78);float pulse=.84+.16*sin(vY*33.0);vec3 c=mix(uCore,uEdge,clamp(rim*.96,0.0,1.0));gl_FragColor=vec4(c,smoothstep(.04,1.0,rim)*uOpacity*pulse);}`,
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.FrontSide
+  });
+}
+
+function vegaGateMaterial(){
+  return new THREE.ShaderMaterial({
+    uniforms:{uA:{value:new THREE.Color('#75c9ff')},uB:{value:new THREE.Color('#eefbff')},uOpacity:{value:.78}},
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`uniform vec3 uA;uniform vec3 uB;uniform float uOpacity;varying vec2 vUv;void main(){float seg=.28+.72*smoothstep(.2,.75,.5+.5*sin(vUv.x*6.2831853*40.0));float rail=.76+.24*sin(vUv.x*6.2831853*11.0+vUv.y*12.0);vec3 c=mix(uA,uB,clamp(.22+.78*seg,0.0,1.0));gl_FragColor=vec4(c,uOpacity*seg*rail);}`,
     transparent:true,blending:THREE.AdditiveBlending,depthWrite:false
   });
 }
@@ -487,14 +564,16 @@ function disposeList(list){
 }
 function disposeSolOwn(){solObjects=disposeList(solObjects)}
 function disposeLunaOwn(){lunaObjects=disposeList(lunaObjects)}
+function disposeVegaOwn(){vegaObjects=disposeList(vegaObjects)}
 function disposeTauOwn(){tauObjects=disposeList(tauObjects)}
 function disposeOrionOwn(){orionObjects=disposeList(orionObjects)}
 function disposeSiriusOwn(){siriusObjects=disposeList(siriusObjects)}
 function disposeProxOwn(){proxObjects=disposeList(proxObjects)}
 function teardown(){
-  disposeSolOwn();disposeLunaOwn();disposeTauOwn();disposeOrionOwn();disposeSiriusOwn();disposeProxOwn();
+  disposeSolOwn();disposeLunaOwn();disposeVegaOwn();disposeTauOwn();disposeOrionOwn();disposeSiriusOwn();disposeProxOwn();
   solEarthRoot=null;solEarthSurface=null;solCloudSurface=null;solMoonRoot=null;solMoonSurface=null;
   lunaMoonRoot=null;lunaMoonSurface=null;lunaEarthRoot=null;lunaEarthSurface=null;lunaEarthCloudSurface=null;lunaRing=null;
+  vegaStar=null;vegaIceRoot=null;vegaIceSurface=null;vegaGate=null;
   tauRoot=null;tauSurface=null;
   orionStar=null;orionRockRoot=null;orionRockSurface=null;orionSystemRoot=null;
   siriusStar=null;siriusIceRoot=null;siriusIceSurface=null;siriusRelay=null;
@@ -531,6 +610,22 @@ function buildLuna(){
   const ringTrack=new THREE.Mesh(new THREE.TorusGeometry(TARGETS.LUNA.ringRadius,.22,8,128),lunaRingMaterial());
   ringTrack.name=`${NAME}-luna-ring-track`;lunaRing.add(ringTrack);
   lunaObjects=[moonDetail,cloudDetail,atmosphere,ringTrack];
+}
+
+function buildVega(){
+  if(!vegaStar||!vegaIceSurface||!vegaGate||vegaObjects.length)return;
+  const granulation=new THREE.Mesh(new THREE.SphereGeometry(1,64,40),new THREE.MeshBasicMaterial({map:vegaStarTexture(),transparent:true,opacity:.56,blending:THREE.AdditiveBlending,depthWrite:false}));
+  granulation.name=`${NAME}-vega-granulation`;granulation.scale.setScalar(1.014);vegaStar.add(granulation);
+
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),vegaHaloMaterial());
+  halo.name=`${NAME}-vega-halo`;halo.scale.setScalar(1.115);vegaStar.add(halo);
+
+  const iceDetail=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshStandardMaterial({map:vegaIceTexture(),transparent:true,opacity:.4,depthWrite:false,roughness:.86,metalness:.04}));
+  iceDetail.name=`${NAME}-vega-ice-detail`;iceDetail.scale.setScalar(1.012);vegaIceSurface.add(iceDetail);
+
+  const gateTrack=new THREE.Mesh(new THREE.TorusGeometry(TARGETS.VEGA.gateRadius,.3,8,128),vegaGateMaterial());
+  gateTrack.name=`${NAME}-vega-gate-track`;vegaGate.add(gateTrack);
+  vegaObjects=[granulation,halo,iceDetail,gateTrack];
 }
 
 function buildTau(){
@@ -608,6 +703,7 @@ function hookQuality(){
 function currentProfile(id){
   if(id==='SOL')return{objects:solObjects,captured:!!(solEarthRoot&&solCloudSurface&&solMoonSurface),captureCount:solCaptureCount,...TARGETS.SOL};
   if(id==='LUNA')return{objects:lunaObjects,captured:!!(lunaMoonSurface&&lunaEarthRoot&&lunaEarthCloudSurface&&lunaRing),captureCount:lunaCaptureCount,...TARGETS.LUNA};
+  if(id==='VEGA')return{objects:vegaObjects,captured:!!(vegaStar&&vegaIceSurface&&vegaGate),captureCount:vegaCaptureCount,...TARGETS.VEGA};
   if(id==='TAU')return{objects:tauObjects,captured:!!tauRoot,captureCount:tauCaptureCount,...TARGETS.TAU};
   if(id==='ORION')return{objects:orionObjects,captured:!!(orionStar&&orionRockSurface&&orionSystemRoot),captureCount:orionCaptureCount,...TARGETS.ORION};
   if(id==='SIRIUS')return{objects:siriusObjects,captured:!!(siriusStar&&siriusIceSurface&&siriusRelay),captureCount:siriusCaptureCount,...TARGETS.SIRIUS};
@@ -624,24 +720,28 @@ function sync(){
   const high=safe&&state.qualityMode==='high';
   const solHigh=high&&state.current==='SOL';
   const lunaHigh=high&&state.current==='LUNA';
+  const vegaHigh=high&&state.current==='VEGA';
   const tauHigh=high&&state.current==='TAU';
   const orionHigh=high&&state.current==='ORION';
   const siriusHigh=high&&state.current==='SIRIUS';
   const proxHigh=high&&state.current==='PROX';
   if(!solHigh&&solObjects.length)disposeSolOwn();
   if(!lunaHigh&&lunaObjects.length)disposeLunaOwn();
+  if(!vegaHigh&&vegaObjects.length)disposeVegaOwn();
   if(!tauHigh&&tauObjects.length)disposeTauOwn();
   if(!orionHigh&&orionObjects.length)disposeOrionOwn();
   if(!siriusHigh&&siriusObjects.length)disposeSiriusOwn();
   if(!proxHigh&&proxObjects.length)disposeProxOwn();
   if(solHigh&&solEarthRoot&&solCloudSurface&&solMoonSurface&&!solObjects.length)buildSol();
   if(lunaHigh&&lunaMoonSurface&&lunaEarthRoot&&lunaEarthCloudSurface&&lunaRing&&!lunaObjects.length)buildLuna();
+  if(vegaHigh&&vegaStar&&vegaIceSurface&&vegaGate&&!vegaObjects.length)buildVega();
   if(tauHigh&&tauRoot&&!tauObjects.length)buildTau();
   if(orionHigh&&orionStar&&orionRockSurface&&orionSystemRoot&&!orionObjects.length)buildOrion();
   if(siriusHigh&&siriusStar&&siriusIceSurface&&siriusRelay&&!siriusObjects.length)buildSirius();
   if(proxHigh&&proxStar&&proxLavaRoot&&proxLavaSurface&&proxStarport&&!proxObjects.length)buildProx();
   for(const o of solObjects)o.visible=solHigh;
   for(const o of lunaObjects)o.visible=lunaHigh;
+  for(const o of vegaObjects)o.visible=vegaHigh;
   for(const o of tauObjects)o.visible=tauHigh;
   for(const o of orionObjects)o.visible=orionHigh;
   for(const o of siriusObjects)o.visible=siriusHigh;
@@ -655,6 +755,7 @@ function sync(){
     profiles:{
       SOL:{captured:!!(solEarthRoot&&solCloudSurface&&solMoonSurface),objects:solObjects.length,captureCount:solCaptureCount},
       LUNA:{captured:!!(lunaMoonSurface&&lunaEarthRoot&&lunaEarthCloudSurface&&lunaRing),objects:lunaObjects.length,captureCount:lunaCaptureCount},
+      VEGA:{captured:!!(vegaStar&&vegaIceSurface&&vegaGate),objects:vegaObjects.length,captureCount:vegaCaptureCount},
       TAU:{captured:!!tauRoot,objects:tauObjects.length,captureCount:tauCaptureCount},
       ORION:{captured:!!(orionStar&&orionRockSurface&&orionSystemRoot),objects:orionObjects.length,captureCount:orionCaptureCount},
       SIRIUS:{captured:!!(siriusStar&&siriusIceSurface&&siriusRelay),objects:siriusObjects.length,captureCount:siriusCaptureCount},
