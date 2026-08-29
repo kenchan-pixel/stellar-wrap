@@ -63,8 +63,9 @@ async function inspect(chrome,base,width,height){
     await exercise(cdp,width,height,'TAU',8352,'TAU Cinematic High');
     await exercise(cdp,width,height,'ORION',10944,'ORION Cinematic High');
     await exercise(cdp,width,height,'SIRIUS',12992,'SIRIUS Cinematic High');
+    await exercise(cdp,width,height,'PROX',12992,'PROX Cinematic High');
   }catch(e){if(cdp)await screenshot(cdp,`cinematic-failure-${width}x${height}.png`).catch(()=>{});throw e}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for cinematic quality browser validation');console.log('Cinematic quality browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`;const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
-try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('SOL + LUNA + TAU + ORION + SIRIUS Cinematic High browser validation: passed with measured geometry budgets at 390×844 and 360×800')}finally{await stop(server)}
+try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('SOL + LUNA + TAU + ORION + SIRIUS + PROX Cinematic High browser validation: passed with measured geometry budgets at 390×844 and 360×800')}finally{await stop(server)}

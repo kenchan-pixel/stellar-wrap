@@ -17,6 +17,7 @@ The current destination slices are deliberately curated rather than global:
 3. **TAU｜金牛塵海** — ringed gas giant depth.
 4. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
 5. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
+6. **PROX｜比鄰星港** — lava fissure / hot atmosphere / red-dwarf / starport depth.
 
 ## Runtime contract
 
@@ -119,9 +120,25 @@ The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the f
 
 Below High, owned SIRIUS objects return to zero.
 
+## PROX budget
+
+High adds four owned objects to the existing red-dwarf / lava-planet / starport composition:
+
+- higher-frequency incandescent fissure detail attached to the existing lava-planet surface;
+- additive orange-red atmospheric / heat limb around the lava planet;
+- a bounded red-dwarf halo that strengthens the distant light source without adding another star;
+- segmented luminous starport track attached to the existing orbital torus, inheriting the core starport rotation instead of adding another animation authority.
+
+Budget:
+
+- additional draw calls: **4**
+- additional triangles: **12,992**
+
+The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the four High-only PROX meshes (4,992 + 2,976 + 2,976 + 2,048). Below High, owned PROX objects return to zero.
+
 ## Capture handoff
 
-Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at SOL, LUNA, TAU, ORION or SIRIUS receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
+Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at SOL, LUNA, TAU, ORION, SIRIUS or PROX receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
 
 ## Acceptance
 
@@ -135,7 +152,7 @@ Automated source validation must prove:
 - explicit disposal of owned textures, materials and geometries;
 - offline-shell inclusion.
 
-Real Chromium at **390×844** and **360×800** must prove for SOL, LUNA, TAU, ORION and SIRIUS:
+Real Chromium at **390×844** and **360×800** must prove for SOL, LUNA, TAU, ORION, SIRIUS and PROX:
 
 1. Standard has zero extra cinematic objects.
 2. High has exactly four extra objects and the measured geometry count matches the documented triangle budget.

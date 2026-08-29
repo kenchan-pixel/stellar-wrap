@@ -17,6 +17,7 @@ check(/LUNA:\{moonCenter:new THREE\.Vector3\(13,-7,-70\),moonRadius:21,earthCent
 check(/TAU:\{center:new THREE\.Vector3\(15,-5,-86\),radius:23,triangles:8352,drawCalls:4\}/.test(source),'TAU quality profile remains explicitly bounded');
 check(/ORION:\{starCenter:new THREE\.Vector3\(28,8,-137\),starRadius:30,rockCenter:new THREE\.Vector3\(-26,-12,-90\),rockRadius:10,triangles:10944,drawCalls:4\}/.test(source),'ORION quality profile remains explicitly bounded');
 check(/SIRIUS:\{starCenter:new THREE\.Vector3\(-24,10,-134\),starRadius:15,iceCenter:new THREE\.Vector3\(0,18,-151\),iceRadius:6,relayCenter:new THREE\.Vector3\(0,-4,-82\),relayRadius:17\.5,triangles:12992,drawCalls:4\}/.test(source),'SIRIUS quality profile remains explicitly bounded at the actual geometry budget');
+check(/PROX:\{starCenter:new THREE\.Vector3\(-34,14,-140\),starRadius:18,lavaCenter:new THREE\.Vector3\(15,-6,-82\),lavaRadius:14,starportCenter:new THREE\.Vector3\(15,-6,-82\),starportRadius:20,triangles:12992,drawCalls:4\}/.test(source),'PROX quality profile is explicitly bounded at the measured geometry budget');
 check(/function geometryTriangleCount\(object\)/.test(source)&&/geometry\.index\?\.count/.test(source)&&/geometry\.attributes\?\.position\?\.count/.test(source),'runtime diagnostics derive triangles from actual BufferGeometry data');
 check(/budgetTriangles:active\?profile\.triangles:0/.test(source)&&/triangles:measuredTriangles/.test(source),'runtime snapshot separates measured triangles from the declared budget');
 check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source),'enhancements are gated to safe final exploration');
@@ -37,9 +38,14 @@ check(/function buildSirius\(\)/.test(source)&&/siriusStarTexture/.test(source)&
 check(/siriusIceTexture/.test(source)&&/sirius-frost/.test(source),'SIRIUS High retains real 3D ice-body frost detail');
 check(/new THREE\.TorusGeometry\(TARGETS\.SIRIUS\.relayRadius,\.34,8,128\)/.test(source)&&/sirius-relay/.test(source),'SIRIUS High retains a bounded segmented relay energy track');
 check(/function isSiriusRelay\(candidate\)/.test(source)&&/torusMatches\(candidate,p\.relayCenter,p\.relayRadius\)/.test(source)&&/siriusRelay\.add\(relay\)/.test(source),'SIRIUS relay enhancement remains attached to the existing spinning relay-ring authority');
+check(/function buildProx\(\)/.test(source)&&/proxLavaTexture/.test(source)&&/prox-lava-detail/.test(source),'PROX High adds incandescent fissure detail to the existing lava planet');
+check(/proxAtmosphereMaterial/.test(source)&&/prox-atmosphere/.test(source),'PROX High adds a bounded hot atmospheric limb');
+check(/proxStarHaloMaterial/.test(source)&&/prox-star-halo/.test(source),'PROX High adds bounded red-dwarf halo depth');
+check(/function isProxStarport\(candidate\)/.test(source)&&/new THREE\.TorusGeometry\(TARGETS\.PROX\.starportRadius,\.34,8,128\)/.test(source)&&/proxStarport\.add\(starportTrack\)/.test(source),'PROX High adds a segmented track attached to the existing spinning starport authority');
 check(/triangles:12992/.test(source)&&/drawCalls:4/.test(source),'declared high-tier budgets remain bounded to four draw calls per supported destination');
-check(/if\(!solHigh&&solObjects\.length\)disposeSolOwn\(\)/.test(source)&&/if\(!lunaHigh&&lunaObjects\.length\)disposeLunaOwn\(\)/.test(source)&&/if\(!tauHigh&&tauObjects\.length\)disposeTauOwn\(\)/.test(source)&&/if\(!orionHigh&&orionObjects\.length\)disposeOrionOwn\(\)/.test(source)&&/if\(!siriusHigh&&siriusObjects\.length\)disposeSiriusOwn\(\)/.test(source),'dropping below High or leaving a target releases all owned cinematic GPU objects');
+check(/if\(!solHigh&&solObjects\.length\)disposeSolOwn\(\)/.test(source)&&/if\(!lunaHigh&&lunaObjects\.length\)disposeLunaOwn\(\)/.test(source)&&/if\(!tauHigh&&tauObjects\.length\)disposeTauOwn\(\)/.test(source)&&/if\(!orionHigh&&orionObjects\.length\)disposeOrionOwn\(\)/.test(source)&&/if\(!siriusHigh&&siriusObjects\.length\)disposeSiriusOwn\(\)/.test(source)&&/if\(!proxHigh&&proxObjects\.length\)disposeProxOwn\(\)/.test(source),'dropping below High or leaving a target releases all owned cinematic GPU objects');
 check(/if\(lunaHigh&&lunaMoonSurface&&lunaEarthRoot&&lunaEarthCloudSurface&&lunaRing&&!lunaObjects\.length\)buildLuna\(\)/.test(source),'LUNA High layer rebuilds only after all existing core scene anchors are recaptured');
+check(/if\(proxHigh&&proxStar&&proxLavaRoot&&proxLavaSurface&&proxStarport&&!proxObjects\.length\)buildProx\(\)/.test(source),'PROX High layer rebuilds only after all existing core scene anchors are recaptured');
 check(/if\(solHigh&&solEarthRoot&&solCloudSurface&&solMoonSurface&&!solObjects\.length\)buildSol\(\)/.test(source)&&/if\(tauHigh&&tauRoot&&!tauObjects\.length\)buildTau\(\)/.test(source)&&/if\(orionHigh&&orionStar&&orionRockSurface&&orionSystemRoot&&!orionObjects\.length\)buildOrion\(\)/.test(source)&&/if\(siriusHigh&&siriusStar&&siriusIceSurface&&siriusRelay&&!siriusObjects\.length\)buildSirius\(\)/.test(source),'existing SOL, TAU, ORION and SIRIUS High layers still rebuild on demand');
 check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'state synchronization is bounded to 4 Hz outside the renderer loop');
 check(!/requestAnimationFrame\s*\(/.test(source),'cinematic module adds no independent render loop');
@@ -48,10 +54,10 @@ check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'cinemati
 check(/THREE\.Object3D\?\.prototype/.test(source)&&/originalAdd\.apply\(this,children\)/.test(source),'scene-root capture observes construction events instead of renderer frames');
 check(/__stellarCinematicAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add=originalAdd/.test(source),'scene-construction hook is explicitly restored on page teardown');
 check(/disposeMaterial/.test(source)&&/material\.map\?\.dispose/.test(source),'owned procedural GPU textures are explicitly released');
-check(/function teardown\(\)/.test(source)&&/disposeSolOwn\(\);disposeLunaOwn\(\);disposeTauOwn\(\);disposeOrionOwn\(\);disposeSiriusOwn\(\)/.test(source),'page teardown releases all five destination quality slices');
+check(/function teardown\(\)/.test(source)&&/disposeSolOwn\(\);disposeLunaOwn\(\);disposeTauOwn\(\);disposeOrionOwn\(\);disposeSiriusOwn\(\);disposeProxOwn\(\)/.test(source),'page teardown releases all six destination quality slices');
 check(/window\.WarpCinematicQuality=/.test(source),'diagnostic API exposes autonomous validation state');
 
 const browser=spawnSync(process.execPath,['scripts/validate-cinematic-quality-browser.mjs'],{encoding:'utf8',timeout:180000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
-check(browser.status===0,'real production WebGL SOL + LUNA + TAU + ORION + SIRIUS cinematic quality passes measured-budget, disposal, rebuild, revisit and viewport gates');
-console.log(`Cinematic quality validation: ${passed}/${passed} checks passed plus two real-browser phone viewports covering SOL, LUNA, TAU, ORION and SIRIUS`);
+check(browser.status===0,'real production WebGL SOL + LUNA + TAU + ORION + SIRIUS + PROX cinematic quality passes measured-budget, disposal, rebuild, revisit and viewport gates');
+console.log(`Cinematic quality validation: ${passed}/${passed} checks passed plus two real-browser phone viewports covering SOL, LUNA, TAU, ORION, SIRIUS and PROX`);
