@@ -26,7 +26,8 @@ async function screenshot(cdp,name){mkdirSync(EVIDENCE_DIR,{recursive:true});con
 async function click(cdp,selector){const p=await waitUntil(()=>evalJs(cdp,`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;const r=e.getBoundingClientRect(),h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return r.width>0&&r.height>0&&(h===e||e.contains(h))?{x:r.left+r.width/2,y:r.top+r.height/2}:null})()`),`click ${selector}`,3500);await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:p.x,y:p.y,button:'left',clickCount:1});await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:p.x,y:p.y,button:'left',clickCount:1})}
 async function pressEnter(cdp,selector){
   await waitUntil(()=>evalJs(cdp,`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)return false;e.focus();return document.activeElement===e})()`),`keyboard focus ${selector}`,3500);
-  await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
+  const key={key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13,text:'\r',unmodifiedText:'\r'};
+  await cdp.send('Input.dispatchKeyEvent',{type:'rawKeyDown',...key});
   await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13});
 }
 function overlap(a,b){const w=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left)),h=Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));return w*h}
