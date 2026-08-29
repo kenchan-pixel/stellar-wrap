@@ -172,6 +172,14 @@ function orionCoronaMaterial(){
   });
 }
 
+function orionGlowTexture(){
+  const c=document.createElement('canvas');c.width=64;c.height=64;
+  const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,31);
+  g.addColorStop(0,'rgba(255,255,255,.96)');g.addColorStop(.2,'rgba(255,226,210,.72)');g.addColorStop(.58,'rgba(255,166,140,.2)');g.addColorStop(1,'rgba(255,120,100,0)');
+  x.fillStyle=g;x.fillRect(0,0,64,64);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+
 function orionFilamentGeometry(){
   const count=84,p=new Float32Array(count*3),colors=new Float32Array(count*3);let seed=31027;
   const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
@@ -223,7 +231,7 @@ function buildOrion(){
   const terrain=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshStandardMaterial({map:orionRockTexture(),transparent:true,opacity:.36,depthWrite:false,roughness:1,metalness:0}));
   terrain.name=`${NAME}-orion-terrain`;terrain.scale.setScalar(1.008);orionRockSurface.add(terrain);
 
-  const filaments=new THREE.Points(orionFilamentGeometry(),new THREE.PointsMaterial({size:4.6,vertexColors:true,transparent:true,opacity:.2,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
+  const filaments=new THREE.Points(orionFilamentGeometry(),new THREE.PointsMaterial({map:orionGlowTexture(),size:5.2,vertexColors:true,transparent:true,opacity:.24,alphaTest:.01,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
   filaments.name=`${NAME}-orion-filaments`;orionSystemRoot.add(filaments);
   orionObjects=[granulation,corona,terrain,filaments];
 }

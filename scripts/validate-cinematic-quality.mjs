@@ -19,7 +19,7 @@ check(/state\.qualityMode==='high'/.test(source),'additional 3D objects are High
 check(/function buildTau\(\)/.test(source)&&/new THREE\.RingGeometry\(30\.15,54\.85,192,1\)/.test(source),'TAU retains bounded real 3D surface and ring geometry');
 check(/function buildOrion\(\)/.test(source)&&/orionStarTexture/.test(source)&&/orionCoronaMaterial/.test(source),'ORION High adds red-supergiant surface and corona detail');
 check(/orionRockTexture/.test(source)&&/orion-terrain/.test(source),'ORION High adds real 3D foreground outpost surface detail');
-check(/const count=84/.test(source)&&/orionFilamentGeometry/.test(source),'ORION nebula filament particle count is explicitly bounded');
+check(/const count=84/.test(source)&&/orionFilamentGeometry/.test(source)&&/orionGlowTexture/.test(source),'ORION nebula filament layer uses 84 bounded soft point sprites');
 check(/triangles:10944/.test(source)&&/drawCalls:4/.test(source),'ORION diagnostic contract caps the slice at four draw calls and 10,944 triangles');
 check(/if\(!tauHigh&&tauObjects\.length\)disposeTauOwn\(\)/.test(source)&&/if\(!orionHigh&&orionObjects\.length\)disposeOrionOwn\(\)/.test(source),'dropping below High or leaving a target releases all owned cinematic GPU objects');
 check(/if\(tauHigh&&tauRoot&&!tauObjects\.length\)buildTau\(\)/.test(source)&&/if\(orionHigh&&orionStar&&orionRockSurface&&orionSystemRoot&&!orionObjects\.length\)buildOrion\(\)/.test(source),'TAU and ORION High layers rebuild on demand');
