@@ -4,10 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -20,7 +23,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 22
+          cache: npm
 
       - name: Validate source, stable baseline and route graph
         run: npm run check
+
+      - name: Upload Focus Tray browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-tray-browser-evidence
+          path: artifacts/focus-tray-browser/
+          if-no-files-found: ignore
+          retention-days: 7
