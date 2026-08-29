@@ -7,13 +7,14 @@
 ## Scope
 
 - 只提升 TAU 的 High tier；自動／流暢／標準不建立這組額外 3D objects。
-- 在既有 TAU 3D scene root 上加入 4 個 bounded render objects：
+- 在既有 TAU planet root 上加入 4 個 bounded render objects：
   1. 跟隨原行星表面旋轉的高細節氣帶／風暴薄層。
   2. Fresnel 式粉紫／冰藍大氣邊緣。
   3. 具細環帶、間隙及色差的 shader ring overlay。
   4. 96 粒固定上限的環塵 points layer。
 - 只在 `TAU + final exploration + High quality + WebGL healthy` 建立及顯示。
 - Photo Capture Boost 暫時切到 High 時同樣啟用，因此高畫質 PNG 會包含新增的真 3D 細節。
+- 模組只觀察 `Object3D.add()` 的低頻場景建構事件以取得現有 TAU root；不攔截 renderer frame、不建立第二 scene／renderer／camera，並於 page teardown 還原 hook。
 - 離開 TAU／scene rebuild 後釋放自有 geometry、materials 及程序化 texture；避免多次重遊累積 GPU 資源。
 - 沿用固定 Three.js `0.185.1`；沒有新增第三方依賴、圖片資產、後端、網絡服務或資料儲存。
 
@@ -22,7 +23,7 @@
 1. 390×844 及 360×800 真 production WebGL 均可由 Standard 切換到 High，High 狀態顯示完整 TAU scene。
 2. Standard 時額外 cinematic objects = 0；High 額外負載固定為 4 draw objects、8,352 triangles 及 96 ring-dust points。
 3. 新模組不建立第二 renderer、第二 camera、獨立 `requestAnimationFrame` 或 flight state。
-4. Renderer prototype 只用一次取得現有 live scene，捕捉後立即恢復原 `render()`；不留下每幀 wrapper。
+4. 場景 root 取得只發生於既有 Three.js `Object3D.add()` 建構事件，不加入每幀 renderer wrapper；page teardown 後還原原方法。
 5. 不改 `index.html` 的 route graph、flight phases、Hermite arrival、DPR 上限或 simulation timing。
 6. `npm run check`、V4 immutable baseline、Photo Capture Boost、offline shell 及既有探索回歸全部保持通過。
 
