@@ -46,4 +46,5 @@ function active(){
 }
 
 window.WarpExplorationFocusTray={active};
+import('./atlas-constellation.js').catch(()=>{});
 })();
