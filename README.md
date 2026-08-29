@@ -6,9 +6,9 @@
 
 ## 專案狀態
 
-- **目前 release baseline：V4.1.0**（2026-08-27；見 `releases/v4.1.0.md`）
+- **目前 release baseline：V5.0.0**（2026-08-29；見 `releases/v5.0.0.md`）
 - **不可覆寫回歸快照：V4.0 Stable**（`releases/v4.0-stable.html`）
-- **Active app：** `index.html` 現為 V4.1.0 基線；後續功能仍透過 branch／PR 演進
+- **Active app：** `index.html` 現為 V5.0.0 基線；後續功能仍透過 branch／PR 演進
 - **產品方向：** 由曲速特效展示，持續發展成完整星際探索體驗
 - **主要平台：** 手機瀏覽器，兼容桌面瀏覽器
 - **架構：** 無建置流程的靜態 Three.js WebGL 應用
@@ -29,14 +29,18 @@
 - Web Audio 動態引擎、曲速、轉向與環境聲
 - 自動／流暢／標準／高畫質模式及效能診斷 HUD
 - WebGL context lost 時凍結航程並於恢復後由原位置續航
-- 本機旅行日誌保存完成航程、路線、活躍時間、距離及累積 LY
-- LUNA 三點觀測探索及本機發現紀錄
-- 最終目的地攝影模式及本機 PNG capture
+- 本機旅行日誌保存完成航程、路線、活躍時間、距離、累積 LY 及探索結果
+- 七個外部星區形成完整探索／發現收藏，Star Atlas 顯示到訪與發現進度
+- LUNA、VEGA、CYG、ORION、TAU、SIRIUS、PROX 均有目的地專屬探索內容與本機發現紀錄
+- Arrival Debrief、Discovery Handoff、Field Notes 與 Landmark Guide 串連抵達、探索、發現及下一段航程
+- 手機 Explore Hub／Focus Tray 預設保持景觀優先，探索工具只在需要時展開
+- Journey Atmosphere、Transit Corridor Vistas、Approach Vista、Warp Threshold 及航道奇景提升多段旅程辨識度
+- Reload World Continuity 會透過既有核心 authority 恢復最新有效停泊點，並拒絕不合法 route history
+- 最終目的地 Photo Mode 可輸出本機 PNG；高畫質留影會短暫使用 High renderer backing buffer，完成後恢復原畫質
 - 成功在線啟動一次後支援離線重新啟動；3D 啟動失敗時提供靜態導航 fallback
-- 完整抵達後顯示 Arrival Debrief，包括目的地、航段、路線、距離及活躍航行時間
 - 以 60 Hz 裝置上的 16.67 ms 幀預算為優先目標
 
-> V4.1.0 已經 owner 實機驗收並由 PR #4 合併成 release baseline。這只確認目前已發佈行為，不等同預先批准更廣泛的 V5 roadmap。
+> V5.0.0 由 autonomous evolution PR #6 合併至 `main` 後正式成為 release baseline。下一批准演進方向為 Cinematic High-tier Quality → Landing Page + Mode Architecture → 原創 Frontier Fiction；這些後續項目仍須逐個垂直切片實作及驗證。
 
 ### 離線恢復
 
@@ -73,7 +77,7 @@ python3 -m http.server 8080
 3. 檢查航段、距離、方位角、高度角及預計時間。
 4. 按「啟動航行」。
 5. 系統會自動完成整段旅程；中途站可立即續航。
-6. 抵達最終目的地後，可拖動畫面觀察或暫停自動環繞。
+6. 抵達最終目的地後，可拖動畫面觀察、使用 Explore Hub 開啟目的地任務／圖鑑，或進入 Photo Mode 留影。
 
 非航行狀態下：
 
@@ -85,13 +89,18 @@ python3 -m http.server 8080
 
 ```text
 .
-├── index.html                         # V4.1.0 active app；後續 branch 可演進
-├── travel-journal.js                  # V4.1.0：本機旅行日誌與完成航程記錄
-├── exploration-survey.js              # V4.1.0：LUNA guided survey
-├── photo-mode.js                      # V4.1.0：目的地乾淨觀景與本機 PNG capture
-├── offline-bootstrap.js               # V4.1.0：離線準備狀態、Service Worker 註冊、啟動後備
-├── sw.js                              # V4.1.0：active shell + pinned Three.js offline cache
-├── releases/v4.1.0.md                # V4.1.0 release／實機驗收紀錄
+├── index.html                         # V5.0.0 active app；核心航行／3D scene authority
+├── travel-journal.js                  # 本機旅行日誌、完成航程與 reload continuity authority
+├── star-atlas.js                      # 七站探索／發現聚合與圖鑑 presentation
+├── exploration-survey.js              # LUNA guided survey
+├── photo-mode.js                      # 目的地乾淨觀景、高畫質留影與本機 PNG capture
+├── arrival-debrief.js                 # 抵達摘要與探索／下一站 handoff
+├── journey-atmosphere.js              # 旅程氣氛、approach／corridor visual presentation
+├── explore-hub.js                     # Scenery-first mobile Explore Hub / Focus Tray
+├── offline-bootstrap.js               # 離線準備狀態、Service Worker 註冊、啟動後備
+├── sw.js                              # active shell + pinned Three.js offline cache
+├── releases/v5.0.0.md                # V5.0.0 release baseline record
+├── releases/v4.1.0.md                # V4.1.0 historical release record
 ├── releases/v4.0-stable.html         # 不可覆寫的 V4.0 穩定版快照
 ├── archive/                           # V1–V3.2 演進版本
 ├── docs/
@@ -110,9 +119,7 @@ python3 -m http.server 8080
 ├── scripts/
 │   ├── serve.mjs                      # 零依賴本機伺服器
 │   ├── validate.mjs                   # 結構、語法、基線及秘密掃描
-│   ├── validate-survey.mjs            # LUNA guided survey 聚焦驗證
-│   ├── validate-photo-mode.mjs        # Destination photo mode 聚焦驗證
-│   └── validate-offline.mjs           # Offline resilience 聚焦驗證
+│   └── validate-*.mjs                 # exploration / journey / UI / offline 聚焦驗證
 ├── AGENTS.md                          # AI agent 工作規則
 └── .github/workflows/validate.yml     # GitHub Actions 驗證
 ```
@@ -135,11 +142,11 @@ python3 -m http.server 8080
 ## 開發守則
 
 - 所有新要求均視為在已批准功能上**疊加修正**，不可因重構刪走原有體驗。
-- `releases/v4.0-stable.html` 是不可修改的回歸基線；V4.1.0 release baseline 由 `releases/v4.1.0.md` 記錄其 immutable Git commit。
+- `releases/v4.0-stable.html` 是不可修改的回歸基線；目前 release baseline 由 `releases/v5.0.0.md` 記錄其 immutable Git commit。
 - 先證明核心航程完整，再增加新星區、任務或遊戲系統。
 - 手機直向畫面及實機流暢度優先於桌面特效數量。
 - 不加入分析追蹤、秘密、API key 或不必要後端。
-- 任何影響航行方向、時間或抵達動作的修改，必須完成多段航線實機驗收。
+- 任何影響航行方向、時間或抵達動作的修改，必須完成多段航線回歸驗證；真人實機證據屬重要補充，但不應無理由阻塞與其無關的自主演進。
 
 ## 依賴及授權
 

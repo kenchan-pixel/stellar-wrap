@@ -4,6 +4,16 @@ All notable changes to this project are recorded here. Dates use Hong Kong time.
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-08-29
+
+### Release status
+
+- Owner merged autonomous evolution PR #6 to `main` and instructed that the merged state be recorded as the formal version baseline.
+- v5.0.0 runtime baseline commit: `e8eeb3727c09626c348cf5a1b3559c8ba8c76960`.
+- Pre-merge feature HEAD: `2cd119eb7a23ea68e3fc63a2fae194e6c2f62440`; exact-head GitHub Actions run `33249598396` succeeded and Vercel succeeded.
+- The merged `main` baseline also reports Vercel deployment success.
+- The immutable V4.0 regression snapshot remains unchanged.
+
 ### Added
 
 - Added a V5-candidate **Discovery Field Notes + Photo Handoff** slice: each collected external discovery now carries a compact destination-specific classification and observation note in Star Atlas and the completion handoff, so discoveries read as field records rather than name-only badges.
