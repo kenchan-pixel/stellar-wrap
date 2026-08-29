@@ -67,7 +67,7 @@ function focusRecord(id,scroll=true){
   const card=plan?.closest?.('.atlasCard');
   if(!card)return false;
   card.classList.add('constellationFocused');
-  if(scroll)card.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:reducedMotion()?'auto':'smooth'});
+  if(scroll)card.scrollIntoView?.({block:'center',inline:'nearest',behavior:reducedMotion()?'auto':'smooth'});
   return true;
 }
 function scheduleFocusRestore(){
