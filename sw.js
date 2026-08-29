@@ -1,13 +1,28 @@
 const CACHE_PREFIX='stellar-wrap-shell-';
-const CACHE_NAME=`${CACHE_PREFIX}v2`;
+const CACHE_NAME=`${CACHE_PREFIX}v15`;
 const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const CORE=[
   './',
   './index.html',
   './travel-journal.js',
+  './responsive-ui.js',
+  './journey-atmosphere.js',
   './exploration-survey.js',
+  './star-atlas.js',
+  './vega-survey.js',
+  './cyg-beacon-scan.js',
+  './orion-spectrograph.js',
+  './tau-ring-profiler.js',
+  './sirius-relay-calibration.js',
+  './prox-starport-alignment.js',
   './photo-mode.js',
   './arrival-debrief.js',
+  './discovery-debrief.js',
+  './navigation-discovery-status.js',
+  './explore-hub.js',
+  './exploration-focus-tray.js',
+  './atlas-constellation.js',
+  './landmark-guide.js',
   './offline-bootstrap.js'
 ];
 

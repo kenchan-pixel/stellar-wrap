@@ -13,7 +13,7 @@ npm run check
 - WebGL context lost／restored handlers、暫停模擬 clock 及診斷控制存在
 - 旅行日誌外掛可通過 `node --check`，使用版本化本機儲存 key、2 Hz 有界輪詢，且只接受真正完成最終目的地的航程
 - LUNA guided survey 可通過獨立 validator：JavaScript 語法、三個固定觀測點、LUNA-only 最終探索 gate、2 Hz polling、本機 persistence、三點全完成先解鎖發現，以及零額外網絡／後端請求
-- Destination photo mode 可通過獨立 validator：bootstrap 載入、JavaScript 語法、最終探索 gate、2 Hz polling、乾淨 HUD、capture toolbar 排除、fresh-frame PNG、local download、安全退出，以及零網絡／零儲存
+- Destination photo mode 可通過獨立 validator：bootstrap 載入、JavaScript 語法、最終探索 gate、2 Hz polling、乾淨 HUD、capture toolbar 排除、兩個已渲染幀後 PNG、留影期間短暫 High renderer tier、原畫質可靠恢復、local download、安全退出，以及零網絡／零儲存；另以真 production WebGL Chromium 在 390×844 與 360×800 驗證 backing buffer 升級、PNG 尺寸及恢復
 - V4.1 offline resilience 可通過獨立 validator：bootstrap／Service Worker 語法、固定 Three.js cache、核心 shell cache、network-first navigation、cache-first fixed dependency、cache-ready 回報、9 秒 startup fallback，以及零 render-loop polling
 - HTML 內 module JavaScript 可通過 `node --check`
 - Three.js 版本固定為 `0.185.1`
@@ -24,7 +24,7 @@ npm run check
 - repo 內沒有常見 API key／私鑰格式
 - archive 及 release 清單與已知 hash 相符
 
-自動檢查只證明結構、語法及基線沒有被意外破壞，不能取代 WebGL 視覺、Service Worker 真實快取及手機實機驗收。
+自動檢查可證明結構、語法、部分真 Browser/WebGL 行為及基線沒有被意外破壞，但不能取代 Safari 實機熱力、長時間 frame pacing、觸控手感等裝置驗收。
 
 ## 2. 核心手動驗收
 
@@ -110,18 +110,20 @@ npm run check
 
 ### F2. Destination Photo Mode｜V5 候選實驗
 
-建議先在 `SOL → LUNA`、再於任一非 LUNA 最終站驗證：
+詳細自動驗收合約見 `docs/CAPTURE_QUALITY.md`。建議先在 `SOL → LUNA`、再於任一非 LUNA 最終站驗證：
 
 - [ ] 「攝影模式」只在最終到站探索顯示；中途飛掠、航行中及 WebGL context lost 時不顯示
 - [ ] 進入後 HUD、flight bar、telemetry、星圖控制、探索卡與 diagnostics 都隱藏，中央 3D 景觀保持完整
 - [ ] 攝影模式內仍可拖動畫面構圖；沒有改變原有 flight state、camera timing 或 auto-orbit 設定
-- [ ] 底部攝影工具列在手機安全區內，返回／儲存影像按鈕有約 44 px 點擊高度
-- [ ] 按「儲存影像」後，輸出的 PNG 不包含攝影工具列或其他 HUD
-- [ ] PNG 解像度符合目前 WebGL canvas／DPR，而不是額外強制高畫質造成卡頓
+- [ ] 底部攝影工具列在手機安全區內，返回／高畫質留影按鈕有約 44 px 點擊高度
+- [ ] 按「高畫質留影」後，攝影工具列／HUD 不會出現在輸出的 PNG
+- [ ] 非 High 模式留影時，WebGL backing buffer 必須短暫提升至既有 High tier，而 CSS viewport 尺寸不變；PNG width／height 必須等於提升後 backing buffer，不能只是事後放大低解像畫面
+- [ ] PNG 完成、失敗或安全狀態中止後，必須恢復留影前的畫質模式；留影期間不可重複觸發另一個 capture
+- [ ] 真 production Chromium 的 390×844 與 360×800 gate 必須實際通過「低畫質 → High backing buffer → PNG → 原畫質恢復」流程
 - [ ] iPhone Safari 可正常得到 PNG；如 Safari 下載行為轉成開圖／長按保存，提示仍足以完成保存
 - [ ] capture 失敗時顯示可理解後備提示，不會令 app 留在 `photoCapturing` 狀態
-- [ ] 開啟攝影模式後觸發 WebGL context lost，模式會自動退出；恢復後可重新進入
-- [ ] `WarpPhotoMode.enter()`／`exit()`／`capture()` 可供驗收，不會新增 localStorage、analytics 或網絡請求
+- [ ] 開啟攝影模式後觸發 WebGL context lost，模式會自動安全退出；恢復後可重新進入
+- [ ] `WarpPhotoMode.enter()`／`exit()`／`capture()`／`capturing()` 可供驗收，不會新增 localStorage、analytics、網絡請求或第二個 renderer
 
 ### F3. Offline Resilience｜V4.1 候選實驗
 
@@ -151,6 +153,7 @@ npm run check
 - [ ] 畫質改變不會改慢或加快航程
 - [ ] 流暢模式可完成最長航程
 - [ ] 高畫質模式沒有造成 WebGL context lost
+- [ ] 目的地留影的 High tier 提升只在 capture 短時間內發生，完成後回復原畫質
 - [ ] 10 分鐘連續操作沒有持續惡化
 
 ### I. 中止與恢復
@@ -183,8 +186,8 @@ npm run check
 - 是否影響 V4.0 已批准功能
 - 修改的航行階段／星區／資料格式
 - 自動測試輸出
-- 已完成的手動測試航線及裝置
+- 已完成的自動 Browser／runtime 視覺證據
 - 未能自動證明的風險
-- 需擁有人手確認的畫面或產品決定
+- 仍值得補充的人手實機證據
 
-沒有實機證據時，不可聲稱「已穩定 60 fps」或「iPhone 已可離線使用」；只可說明程式結構、快取策略及自動調節已通過相應驗證。
+沒有實機證據時，不可聲稱「已穩定 60 fps」或「iPhone 已可離線使用」；但已由真 production Chromium／WebGL 自動 gate 證明的畫面、互動或 backing-buffer 行為，可清楚列為自動驗證證據，不應因缺少真人測試而阻塞自主循環。

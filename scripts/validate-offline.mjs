@@ -29,8 +29,9 @@ ok(bootstrap.includes('cacheReady&&navigator.onLine')&&bootstrap.includes('cache
 ok(!bootstrap.includes('localStorage'),'offline bootstrap adds no persistent user-data store');
 
 ok(sw.includes("const CACHE_PREFIX='stellar-wrap-shell-'"),'service worker cache is versioned');
+ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v15`"),'offline shell generation advances for exploration constellation');
 ok(sw.includes("three@0.185.1/build/three.module.js"),'offline cache pins the approved Three.js version');
-for(const path of ['./index.html','./travel-journal.js','./exploration-survey.js','./photo-mode.js','./arrival-debrief.js','./offline-bootstrap.js'])ok(sw.includes(`'${path}'`),`offline core includes ${path}`);
+for(const path of ['./index.html','./travel-journal.js','./responsive-ui.js','./journey-atmosphere.js','./exploration-survey.js','./star-atlas.js','./vega-survey.js','./cyg-beacon-scan.js','./orion-spectrograph.js','./tau-ring-profiler.js','./sirius-relay-calibration.js','./prox-starport-alignment.js','./photo-mode.js','./arrival-debrief.js','./discovery-debrief.js','./navigation-discovery-status.js','./explore-hub.js','./exploration-focus-tray.js','./atlas-constellation.js','./landmark-guide.js','./offline-bootstrap.js'])ok(sw.includes(`'${path}'`),`offline core includes ${path}`);
 ok(sw.includes("event.request.mode==='navigate'" )&&sw.includes('networkFirst(event.request)'),'navigation uses network-first with cached fallback');
 ok(sw.includes('if(isThree)')&&sw.includes('cacheFirst(event.request)'),'fixed Three.js dependency uses cache-first offline fallback');
 ok(sw.includes("event.data?.type!=='OFFLINE_STATUS'"),'service worker exposes explicit cache-readiness status');
