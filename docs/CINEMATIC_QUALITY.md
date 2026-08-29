@@ -1,49 +1,95 @@
-# Cinematic High-tier Quality｜V5.5 第一個垂直切片
+# Cinematic High-tier Quality｜高畫質 3D 景觀層
+
+## Status
+
+- Product direction: approved.
+- Current implementation surface: `autonomous-evolution` Draft PR.
+- This document describes bounded High-tier destination layers only. It does not change route, camera, flight timing, DPR ceilings, persistence, backend or release baseline.
 
 ## Goal
 
-先以 `TAU｜金牛塵海` 驗證真正 3D High-tier 畫質提升：高畫質探索及 Photo Capture Boost 應比標準畫質有明顯更細緻的氣態巨行星表面、大氣邊緣、環帶分層及環塵深度，同時不改變航線、航行時間、相機 authority 或抵達軌跡。
+Raise the real 3D visual ceiling so destinations are worth watching, revisiting and recording, while keeping Standard／Low／Auto free from the extra sustained GPU cost.
 
-## Scope
+The first two destination slices are deliberately curated rather than global:
 
-- 只提升 TAU 的 High tier；自動／流暢／標準不建立這組額外 3D objects。
-- 在既有 TAU planet root 上加入 4 個 bounded render objects：
-  1. 跟隨原行星表面旋轉的高細節氣帶／風暴薄層。
-  2. Fresnel 式粉紫／冰藍大氣邊緣。
-  3. 具細環帶、間隙及色差的 shader ring overlay。
-  4. 96 粒固定上限的環塵 points layer。
-- 只在 `TAU + final exploration + High quality + WebGL healthy` 建立及顯示。
-- Photo Capture Boost 暫時切到 High 時同樣啟用，因此高畫質 PNG 會包含新增的真 3D 細節。
-- 模組只觀察 `Object3D.add()` 的低頻場景建構事件以取得現有 TAU root；不攔截 renderer frame、不建立第二 scene／renderer／camera，並於 page teardown 還原 hook。
-- 離開 TAU／scene rebuild 後釋放自有 geometry、materials 及程序化 texture；避免多次重遊累積 GPU 資源。
-- 沿用固定 Three.js `0.185.1`；沒有新增第三方依賴、圖片資產、後端、網絡服務或資料儲存。
+1. **TAU｜金牛塵海** — ringed gas giant depth.
+2. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
 
-## Acceptance Criteria
+## Runtime contract
 
-1. 390×844 及 360×800 真 production WebGL 均可由 Standard 切換到 High，High 狀態顯示完整 TAU scene。
-2. Standard 時額外 cinematic objects = 0；High 額外負載固定為 4 draw objects、8,352 triangles 及 96 ring-dust points。
-3. 新模組不建立第二 renderer、第二 camera、獨立 `requestAnimationFrame` 或 flight state。
-4. 場景 root 取得只發生於既有 Three.js `Object3D.add()` 建構事件，不加入每幀 renderer wrapper；page teardown 後還原原方法。
-5. 不改 `index.html` 的 route graph、flight phases、Hermite arrival、DPR 上限或 simulation timing。
-6. `npm run check`、V4 immutable baseline、Photo Capture Boost、offline shell 及既有探索回歸全部保持通過。
+The cinematic module reuses the existing Three.js `0.185.1`, renderer, camera, scene and `WarpSim.setQuality()` authority.
 
-## Performance Budget
+Extra objects are created only when all are true:
 
-- 額外 draw objects：4（僅 High TAU final exploration）
-- 額外三角形：8,352
-- 額外 Points：96
-- 狀態同步：4 Hz，render loop 之外
-- 無 shadow map、post-processing chain、額外 canvas renderer 或無上限粒子
-- 日常 Auto／Standard 航行不建立這組額外幾何及程序化 texture
+- current destination is a supported cinematic target;
+- final destination exploration is active;
+- flight is not active;
+- WebGL context is healthy;
+- selected quality is `high`.
 
-## Out of Scope
+When any condition stops being true, the module removes and disposes its owned geometry, materials and procedural textures. Returning to High or revisiting a supported destination rebuilds them from the current core scene.
 
-- 提高全域 High DPR 1.60／1.90 上限
-- 一次重畫全部八站
-- 新科幻目的地、Landing Page 或 Gallery
-- 改 flight timing／路線／相機
-- 宣稱未量度的實體手機長時間 60 fps／熱力結果
+There is no second renderer, requestAnimationFrame loop, storage key, network request, analytics path or external visual asset.
 
-## Completion Signal
+## TAU budget
 
-TAU 在同一手機 viewport 下由 Standard 切換 High 後，真 Browser 證據顯示新增 3D 氣帶、大氣、細環及環塵層已啟用；切回低畫質後立即停用，而完整 V4+ 航行及現有探索／攝影能力維持綠燈。
+High adds four owned objects:
+
+- gas-band / storm surface layer;
+- Fresnel atmosphere rim;
+- higher-frequency ring structure;
+- 96 bounded ring-dust points.
+
+Budget:
+
+- additional draw calls: **4**
+- additional triangles: **8,352**
+- additional points: **96**
+
+Below High, owned TAU objects return to zero.
+
+## ORION budget
+
+High adds four owned objects:
+
+- procedural granulation layer on the red supergiant;
+- additive chromosphere / corona rim;
+- higher-frequency rocky-outpost surface detail;
+- 84 bounded warm nebula filament points for foreground / background depth.
+
+Budget:
+
+- additional draw calls: **4**
+- additional triangles: **10,944**
+- additional filament points: **84**
+
+Below High, owned ORION objects return to zero.
+
+## Capture handoff
+
+Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at TAU or ORION receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
+
+## Acceptance
+
+Automated source validation must prove:
+
+- exact pinned Three.js reuse;
+- High-only safe-exploration gating;
+- bounded object / triangle / point budgets;
+- no extra render loop, storage or network authority;
+- explicit disposal of owned textures, materials and geometries;
+- offline-shell inclusion.
+
+Real Chromium at **390×844** and **360×800** must prove for both TAU and ORION:
+
+1. Standard has zero extra cinematic objects.
+2. High has exactly four extra objects and the documented triangle budget.
+3. Standard and High evidence screenshots are not identical.
+4. High → Low disposes all extra objects.
+5. Low → High rebuilds the layer.
+6. Destination → SOL → destination rebuilds successfully without accumulation.
+7. CSS viewport remains unchanged and phase remains final exploration.
+
+## Performance boundary
+
+These slices intentionally improve actual scene content instead of raising global DPR. Long-duration physical-device thermal behaviour and sustained frame pacing remain useful supplementary evidence, but lack of manual testing does not block unrelated autonomous evolution when bounded real-browser evidence is green.
