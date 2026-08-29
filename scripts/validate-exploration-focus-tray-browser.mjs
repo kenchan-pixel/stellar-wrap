@@ -130,8 +130,10 @@ async function loadProductionScript(cdp,src,globalName){
   await waitExpression(cdp,`!!window[${JSON.stringify(globalName)}]`,`${globalName} production script`);
 }
 async function clickSelector(cdp,selector){
-  const point=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el);return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none',x:r.left+r.width/2,y:r.top+r.height/2}})()`,`measure ${selector}`);
-  assert(point?.ok,`${selector} must be visible and pointer-interactive`);
+  const point=await waitUntil(async()=>{
+    const state=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none'&&(hit===el||el.contains(hit)),x,y,hit:hit?.id||hit?.getAttribute?.('data-hub-action')||hit?.tagName||''}})()`,`hit-test ${selector}`);
+    return state?.ok?state:null;
+  },`hit-testable ${selector}`,3000);
   await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});
   await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1});
 }
