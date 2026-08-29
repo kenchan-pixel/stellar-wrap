@@ -75,6 +75,13 @@ function focusRecord(id,scroll=true,moveDomFocus=false){
   if(scroll)card.scrollIntoView?.({block:'center',inline:'nearest',behavior:reducedMotion()?'auto':'smooth'});
   return true;
 }
+function activateNode(event,id){
+  if(event.type==='keydown'){
+    if(event.key!=='Enter'&&event.key!==' ')return;
+    event.preventDefault();
+  }
+  focusRecord(id,true,true);
+}
 function scheduleFocusRestore(){
   if(!focusedId||focusQueued)return;
   focusQueued=true;
@@ -120,7 +127,8 @@ function ensureUi(){
       node.dataset.system=id;
       node.setAttribute('aria-pressed','false');
       node.textContent=id;
-      node.onclick=()=>focusRecord(id,true,true);
+      node.onclick=event=>activateNode(event,id);
+      node.onkeydown=event=>activateNode(event,id);
       visual.append(node);
     }
     const caption=document.createElement('div');
