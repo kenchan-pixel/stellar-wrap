@@ -7,6 +7,10 @@ if(!document.querySelector(`#${STYLE_ID}`)){
   style.id=STYLE_ID;
   style.textContent=`
 @media (max-width:899px){
+  #app.exploreHubMobile #openPanel,
+  #app.exploreHubMobile #telemetry{
+    display:none
+  }
   #app.exploreHubMobile #exploreCard:not(.transit)[data-hub-pane="explore"]{
     left:calc(var(--safeL) + 10px);right:calc(var(--safeR) + 10px);
     bottom:calc(var(--safeB) + 8px);width:auto;max-height:min(42vh,360px);
