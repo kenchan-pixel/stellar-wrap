@@ -30,11 +30,13 @@ function ensureStyle(){
 .atlasConstellation::after{content:"";position:absolute;inset:42px 69px;border:1px dashed rgba(118,234,211,.08);border-radius:50%;pointer-events:none}
 .atlasConstellationLinks{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.62}
 .atlasConstellationLinks polygon{fill:none;stroke:rgba(138,188,237,.16);stroke-width:1;stroke-dasharray:3 5;vector-effect:non-scaling-stroke}
-.atlasConstellationCenter{position:absolute;left:50%;top:50%;width:68px;height:68px;transform:translate(-50%,-50%);border-radius:50%;display:grid;place-items:center;text-align:center;background:conic-gradient(#76ead3 var(--atlas-progress,0deg),rgba(132,173,221,.09) 0);box-shadow:0 0 28px rgba(86,169,222,.08);pointer-events:none}
-.atlasConstellationCenter::before{content:"";position:absolute;inset:5px;border-radius:50%;background:rgba(6,12,24,.94);border:1px solid rgba(174,216,255,.17)}
-.atlasConstellationCount{position:relative;z-index:1;font-size:15px;font-weight:820;line-height:1;color:#effaff}.atlasConstellationCount small{display:block;margin-top:5px;font-size:7px;font-weight:760;letter-spacing:.08em;color:#9ec9ef}
+.atlasConstellationCenter{position:absolute;left:50%;top:50%;width:70px;height:70px;transform:translate(-50%,-50%);border-radius:50%;display:grid;place-items:center;text-align:center;background:conic-gradient(#76ead3 var(--atlas-progress,0deg),rgba(132,173,221,.09) 0);box-shadow:0 0 28px rgba(86,169,222,.08);pointer-events:none}
+.atlasConstellationCenter::before{content:"";position:absolute;inset:5px;border-radius:50%;background:conic-gradient(#8fbfff var(--atlas-visit-progress,0deg),rgba(91,127,168,.13) 0);border:1px solid rgba(174,216,255,.17)}
+.atlasConstellationCenter::after{content:"";position:absolute;inset:10px;border-radius:50%;background:rgba(6,12,24,.96);border:1px solid rgba(174,216,255,.12)}
+.atlasConstellationCount{position:relative;z-index:1;font-size:15px;font-weight:820;line-height:1;color:#effaff}.atlasConstellationCount small{display:block;margin-top:4px;font-size:7px;font-weight:760;letter-spacing:.08em;color:#9ec9ef}.atlasConstellationVisitValue{display:block;margin-top:3px;font-size:6.5px;font-weight:760;line-height:1;color:#a9cfff}
 .atlasConstellationNode{position:absolute;width:46px;min-height:44px;transform:translate(-50%,-50%);display:grid;place-items:center;padding:4px 3px;border:1px solid rgba(179,211,244,.14);border-radius:10px;background:rgba(7,13,26,.82);color:rgba(210,226,245,.52);font-size:7px;font-weight:820;line-height:1.05;text-align:center;box-shadow:0 8px 18px rgba(0,0,0,.18);appearance:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
 .atlasConstellationNode::after{content:"";width:4px;height:4px;margin-top:3px;border-radius:50%;background:rgba(195,216,239,.2)}
+.atlasConstellationNode.visited:not(.discovered){border-color:rgba(143,191,255,.4);background:rgba(48,83,128,.28);color:#e0edff}.atlasConstellationNode.visited:not(.discovered)::after{background:#8fbfff;box-shadow:0 0 7px rgba(143,191,255,.55)}
 .atlasConstellationNode.discovered{border-color:rgba(104,235,207,.45);background:rgba(31,94,88,.32);color:#dffdf7;box-shadow:0 0 18px rgba(72,208,181,.12)}
 .atlasConstellationNode.discovered::after{background:#76ead3;box-shadow:0 0 8px rgba(118,234,211,.7)}
 .atlasConstellationNode.current{outline:1px solid rgba(172,213,255,.62);outline-offset:2px}
@@ -106,7 +108,7 @@ function ensureUi(){
     visual.id='atlasConstellation';
     visual.className='atlasConstellation';
     visual.setAttribute('role','group');
-    visual.setAttribute('aria-label','探索星環 · 0 / 7 外站發現');
+    visual.setAttribute('aria-label','探索星環 · 0 / 7 外站到訪 · 0 / 7 外站發現');
     const lines=document.createElementNS('http://www.w3.org/2000/svg','svg');
     lines.setAttribute('class','atlasConstellationLinks');
     lines.setAttribute('viewBox','0 0 100 100');
@@ -119,7 +121,8 @@ function ensureUi(){
     const count=document.createElement('div');count.id='atlasConstellationCount';count.className='atlasConstellationCount';
     const value=document.createElement('span');value.id='atlasConstellationValue';value.textContent='0 / 7';
     const label=document.createElement('small');label.textContent='發現';
-    count.append(value,label);center.append(count);visual.append(lines,center);
+    const visit=document.createElement('span');visit.id='atlasConstellationVisitValue';visit.className='atlasConstellationVisitValue';visit.textContent='0 / 7 到訪';
+    count.append(value,label,visit);center.append(count);visual.append(lines,center);
     for(const id of EXTERNAL_IDS){
       const node=document.createElement('button');
       node.type='button';
@@ -146,22 +149,30 @@ function render(){
   const snapshot=readSnapshot();
   if(!snapshot)return false;
   const discoveries=snapshot.discoveries||{};
+  const visited=new Set(Array.isArray(snapshot.visited)?snapshot.visited:[]);
   const state=readState();
   const count=EXTERNAL_IDS.filter(id=>discoveries[id]).length;
+  const visitedCount=EXTERNAL_IDS.filter(id=>visited.has(id)).length;
   const visual=document.querySelector('#atlasConstellation');
   const counter=document.querySelector('#atlasConstellationValue');
-  if(!visual||!counter)return false;
+  const visitCounter=document.querySelector('#atlasConstellationVisitValue');
+  if(!visual||!counter||!visitCounter)return false;
   visual.style.setProperty('--atlas-progress',`${(count/EXTERNAL_IDS.length*360).toFixed(1)}deg`);
+  visual.style.setProperty('--atlas-visit-progress',`${(visitedCount/EXTERNAL_IDS.length*360).toFixed(1)}deg`);
   visual.classList.toggle('complete',count===EXTERNAL_IDS.length);
-  visual.setAttribute('aria-label',`探索星環 · ${count} / ${EXTERNAL_IDS.length} 外站發現`);
+  visual.setAttribute('aria-label',`探索星環 · ${visitedCount} / ${EXTERNAL_IDS.length} 外站到訪 · ${count} / ${EXTERNAL_IDS.length} 外站發現`);
   counter.textContent=`${count} / ${EXTERNAL_IDS.length}`;
+  visitCounter.textContent=`${visitedCount} / ${EXTERNAL_IDS.length} 到訪`;
   for(const id of EXTERNAL_IDS){
     const node=visual.querySelector(`[data-system="${id}"]`);
     if(!node)continue;
     const discovered=!!discoveries[id];
+    const wasVisited=visited.has(id);
+    node.classList.toggle('visited',wasVisited);
     node.classList.toggle('discovered',discovered);
     node.classList.toggle('current',state?.current===id);
-    node.setAttribute('aria-label',`${SYSTEM_NAMES[id]} · ${discovered?'已收錄發現':'發現未收錄'}${state?.current===id?' · 目前位置':''} · 查看圖鑑`);
+    const progressLabel=discovered?'已收錄發現':wasVisited?'已到訪 · 發現未收錄':'未到訪 · 發現未收錄';
+    node.setAttribute('aria-label',`${SYSTEM_NAMES[id]} · ${progressLabel}${state?.current===id?' · 目前位置':''} · 查看圖鑑`);
   }
   if(focusedId)focusRecord(focusedId,false,false);
   return true;

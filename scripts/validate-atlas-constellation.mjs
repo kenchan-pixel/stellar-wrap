@@ -14,8 +14,10 @@ ok(syntax.status===0,'atlas constellation JavaScript syntax');
 const ids=[...source.matchAll(/const EXTERNAL_IDS=\[([^\]]+)\]/g)][0]?.[1]?.match(/'([A-Z]+)'/g)?.map(v=>v.slice(1,-1))||[];
 ok(JSON.stringify(ids)===JSON.stringify(['LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX']),'exact seven external discovery systems');
 ok(source.includes('window.WarpStarAtlas?.snapshot?.()'),'uses Star Atlas as discovery authority');
+ok(source.includes('snapshot.visited'),'uses existing Star Atlas visit authority for journey progress');
 ok(source.includes('window.WarpSim?.state?.()'),'reads core state only for current-system highlight');
 ok(source.includes('探索星環 · 非航線比例'),'labels visual as non-route presentation');
+ok(source.includes('--atlas-visit-progress')&&source.includes('.atlasConstellationNode.visited:not(.discovered)'),'separates visited-pending and discovery-complete presentation');
 ok(source.includes("observer.disconnect()"),'one-shot mutation observer disconnects after mount');
 ok(!/setInterval|setTimeout|requestAnimationFrame|localStorage|sessionStorage|fetch\s*\(/.test(source),'adds no polling, render-loop, storage or network work');
 ok(tray.includes("import('./atlas-constellation.js').catch(()=>{});"),'loaded through existing exploration presentation bootstrap');
@@ -66,6 +68,7 @@ class Doc{
 const document=new Doc();
 const atlas=new El('section');atlas.id='starAtlas';const body=new El('div');body.className='atlasBody';atlas.append(body);document.body.append(atlas);
 let discoveries={};
+let visited=['SOL','CYG'];
 const listeners=new Map();
 const context={
   document,console,
@@ -73,7 +76,7 @@ const context={
   CustomEvent:class{constructor(type,init={}){this.type=type;this.detail=init.detail}},
   addEventListener(type,fn){if(!listeners.has(type))listeners.set(type,[]);listeners.get(type).push(fn)},
   dispatchEvent(event){for(const fn of listeners.get(event.type)||[])fn(event)},
-  WarpStarAtlas:{snapshot(){return{discoveries}}},
+  WarpStarAtlas:{snapshot(){return{discoveries,visited}}},
   WarpSim:{state(){return{current:'CYG'}}}
 };
 context.window=context;
@@ -84,15 +87,26 @@ ok(visual===body.firstChild,'constellation appears before card grid/content');
 ok(visual.querySelectorAll('.atlasConstellationNode').length===7,'runtime renders seven bounded nodes');
 ok(visual.querySelector('[data-system="CYG"]').classList.contains('current'),'runtime highlights current destination');
 ok(visual.querySelectorAll('.atlasConstellationNode.discovered').length===0,'fresh state shows zero completed nodes');
+ok(visual.querySelectorAll('.atlasConstellationNode.visited').length===1,'fresh state reflects the current visited external node');
+ok(visual.getAttribute('aria-label').includes('1 / 7 外站到訪')&&visual.getAttribute('aria-label').includes('0 / 7 外站發現'),'fresh accessible summary reports both visit and discovery progress');
+ok(visual.style.getPropertyValue('--atlas-visit-progress')==='51.4deg','fresh visit progress ring reflects 1 / 7');
 
+visited=['SOL','LUNA','VEGA','CYG','TAU','PROX'];
 discoveries={LUNA:'x',CYG:'x',PROX:'x'};context.WarpAtlasConstellation.render();
 ok(visual.querySelectorAll('.atlasConstellationNode.discovered').length===3,'same-tab render updates discovery nodes');
-ok(visual.getAttribute('aria-label').includes('3 / 7'),'accessible summary updates to 3 / 7');
-ok(visual.style.getPropertyValue('--atlas-progress')==='154.3deg','center progress ring reflects 3 / 7');
+ok(visual.querySelectorAll('.atlasConstellationNode.visited').length===5,'same-tab render updates visited external nodes');
+ok(visual.querySelector('[data-system="VEGA"]').classList.contains('visited')&&!visual.querySelector('[data-system="VEGA"]').classList.contains('discovered'),'visited-pending node remains distinct from discovery-complete');
+ok(!visual.querySelector('[data-system="ORION"]').classList.contains('visited'),'unvisited node remains distinct from visited-pending');
+ok(visual.getAttribute('aria-label').includes('5 / 7 外站到訪')&&visual.getAttribute('aria-label').includes('3 / 7 外站發現'),'accessible summary reports both journey and discovery progress');
+ok(visual.style.getPropertyValue('--atlas-progress')==='154.3deg','discovery ring reflects 3 / 7');
+ok(visual.style.getPropertyValue('--atlas-visit-progress')==='257.1deg','visit ring reflects 5 / 7');
+ok(document.querySelector('#atlasConstellationVisitValue').textContent==='5 / 7 到訪','center reports visit progress separately');
+ok(visual.querySelector('[data-system="VEGA"]').getAttribute('aria-label').includes('已到訪 · 發現未收錄'),'visited-pending node exposes meaningful accessible state');
 ok(!visual.querySelector('[data-system="VEGA"]').getAttribute('aria-label').includes('雙環共振窗口'),'pending node does not leak undiscovered record name');
 
-discoveries=Object.fromEntries(ids.map(id=>[id,'done']));context.WarpAtlasConstellation.render();
+visited=['SOL',...ids];discoveries=Object.fromEntries(ids.map(id=>[id,'done']));context.WarpAtlasConstellation.render();
 ok(visual.classList.contains('complete'),'all seven discoveries activate completion visual state');
+ok(visual.style.getPropertyValue('--atlas-visit-progress')==='360.0deg'&&visual.style.getPropertyValue('--atlas-progress')==='360.0deg','both progress rings complete at seven external systems');
 ok(document.querySelector('#atlasConstellationStyle').textContent.includes('@media(max-width:360px)'),'mobile narrow-screen treatment exists');
 
 const browser=spawnSync(process.execPath,['scripts/validate-atlas-constellation-browser.mjs'],{encoding:'utf8',timeout:120000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
