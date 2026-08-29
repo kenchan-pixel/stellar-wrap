@@ -10,10 +10,11 @@
 
 Raise the real 3D visual ceiling so destinations are worth watching, revisiting and recording, while keeping Standard／Low／Auto free from the extra sustained GPU cost.
 
-The first two destination slices are deliberately curated rather than global:
+The current destination slices are deliberately curated rather than global:
 
 1. **TAU｜金牛塵海** — ringed gas giant depth.
 2. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
+3. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
 
 ## Runtime contract
 
@@ -65,9 +66,25 @@ Budget:
 
 Below High, owned ORION objects return to zero.
 
+## SIRIUS budget
+
+High adds four owned objects:
+
+- procedural blue-white granulation on the primary star;
+- additive stellar halo around that primary;
+- higher-frequency frost / fracture detail on the existing ice body;
+- segmented luminous energy track attached to the existing outer relay torus, inheriting its existing rotation authority rather than adding another animation loop.
+
+Budget:
+
+- additional draw calls: **4**
+- additional triangles: **11,992**
+
+Below High, owned SIRIUS objects return to zero.
+
 ## Capture handoff
 
-Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at TAU or ORION receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
+Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at TAU, ORION or SIRIUS receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
 
 ## Acceptance
 
@@ -80,7 +97,7 @@ Automated source validation must prove:
 - explicit disposal of owned textures, materials and geometries;
 - offline-shell inclusion.
 
-Real Chromium at **390×844** and **360×800** must prove for both TAU and ORION:
+Real Chromium at **390×844** and **360×800** must prove for TAU, ORION and SIRIUS:
 
 1. Standard has zero extra cinematic objects.
 2. High has exactly four extra objects and the documented triangle budget.
