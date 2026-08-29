@@ -42,7 +42,7 @@ const APPROACH_MS=TEST_MODE?1200:7600;
 let phase='approach',phaseStarted=performance.now(),autoOrbit=true,capturing=false,hidden=document.hidden,last=performance.now(),toastTimer=0;
 let targetYaw=0,targetPitch=0,lookYaw=0,lookPitch=0,dragging=false,lastX=0,lastY=0;
 
-const renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance',stencil:false,depth:true,preserveDrawingBuffer:true});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance',stencil:false,depth:true,preserveDrawingBuffer:false});
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.setClearColor(0x03030a,1);
 const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x050511,.0041);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,1400);camera.position.set(0,0,0);
