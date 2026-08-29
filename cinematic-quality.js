@@ -98,13 +98,7 @@ function disposeOwn(){
   for(const o of objects){try{o.parent?.remove?.(o);o.geometry?.dispose?.();if(Array.isArray(o.material))o.material.forEach(disposeMaterial);else disposeMaterial(o.material)}catch{}}
   objects=[];
 }
-
-function releaseDetached(){
-  if(!planetRoot)return;
-  const attached=!!planetRoot.parent;
-  if(attached)return;
-  disposeOwn();planetRoot=null;surface=null;
-}
+function releaseTau(){disposeOwn();planetRoot=null;surface=null}
 
 function build(){
   if(!planetRoot||!surface||objects.length)return;
@@ -131,10 +125,11 @@ function hookQuality(){
 }
 
 function sync(){
-  hookQuality();releaseDetached();
+  hookQuality();
   const api=window.WarpSim;
   if(!api||typeof api.state!=='function')return;
   let state;try{state=api.state()}catch{return}
+  if(state.current!==TARGET&&planetRoot)releaseTau();
   const safe=state.current===TARGET&&state.exploring&&!state.flying&&!state.contextLost;
   const wantsHigh=safe&&state.qualityMode==='high';
   if(wantsHigh&&planetRoot&&!objects.length)build();
@@ -149,7 +144,7 @@ addEventListener('pagehide',()=>{
   clearInterval(timer);
   if(qualityHooked&&originalSetQuality&&window.WarpSim)window.WarpSim.setQuality=originalSetQuality;
   if(addHooked&&originalAdd&&THREE.Object3D.prototype.add?.__stellarCinematicAddHook)THREE.Object3D.prototype.add=originalAdd;
-  disposeOwn();planetRoot=null;surface=null;
+  releaseTau();
 },{once:true});
 window.WarpCinematicQuality={snapshot(){return{...lastSnapshot}},sync};
 sync();

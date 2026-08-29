@@ -26,7 +26,7 @@ check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'cinemati
 check(/THREE\.Object3D\?\.prototype/.test(source)&&/originalAdd\.apply\(this,children\)/.test(source),'TAU root capture observes bounded scene-construction events instead of renderer frames');
 check(/__stellarCinematicAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add=originalAdd/.test(source),'scene-construction hook is explicitly restored on page teardown');
 check(/disposeMaterial/.test(source)&&/material\.map\?\.dispose/.test(source),'owned procedural GPU texture is explicitly released on scene teardown');
-check(/releaseDetached/.test(source)&&/disposeOwn\(\);planetRoot=null;surface=null/.test(source),'leaving a rebuilt destination releases cinematic GPU resources');
+check(/if\(state\.current!==TARGET&&planetRoot\)releaseTau\(\)/.test(source)&&/function releaseTau\(\)\{disposeOwn\(\);planetRoot=null;surface=null\}/.test(source),'leaving TAU explicitly releases cinematic GPU resources');
 check(/window\.WarpCinematicQuality=/.test(source),'diagnostic API exposes autonomous validation state');
 
 const browser=spawnSync(process.execPath,['scripts/validate-cinematic-quality-browser.mjs'],{encoding:'utf8',timeout:120000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
