@@ -10,19 +10,20 @@
 
 Raise the real 3D visual ceiling so destinations are worth watching, revisiting and recording, while keeping Standard／Low／Auto free from the extra sustained GPU cost.
 
-The current destination slices are deliberately curated rather than global:
+The current destination slices now cover all eight existing systems:
 
 1. **SOL｜地球近軌** — Earth atmosphere / cloud / Moon / aurora depth.
 2. **LUNA｜月環基地** — primary lunar surface / distant Earth / orbital-ring depth.
 3. **VEGA｜織女星門** — blue-white primary / ice world / warp-gate depth.
-4. **TAU｜金牛塵海** — ringed gas giant depth.
+4. **CYG｜天鵝航標** — blue-violet binary / beacon-array depth.
 5. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
-6. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
-7. **PROX｜比鄰星港** — lava fissure / hot atmosphere / red-dwarf / starport depth.
+6. **TAU｜金牛塵海** — ringed gas giant depth.
+7. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
+8. **PROX｜比鄰星港** — lava fissure / hot atmosphere / red-dwarf / starport depth.
 
 ## Runtime contract
 
-The cinematic module reuses the existing Three.js `0.185.1`, renderer, camera, scene and `WarpSim.setQuality()` authority.
+The cinematic layers reuse the existing Three.js `0.185.1`, renderer, camera, scene and `WarpSim.setQuality()` authority.
 
 Extra objects are created only when all are true:
 
@@ -32,9 +33,9 @@ Extra objects are created only when all are true:
 - WebGL context is healthy;
 - selected quality is `high`.
 
-When any condition stops being true, the module removes and disposes its owned geometry, materials and procedural textures. Returning to High or revisiting a supported destination rebuilds them from the current core scene.
+When any condition stops being true, the modules remove and dispose their owned geometry, materials and procedural textures. Returning to High or revisiting a supported destination rebuilds them from the current core scene.
 
-There is no second renderer, requestAnimationFrame loop, storage key, network request, analytics path or external visual asset.
+There is no second renderer, requestAnimationFrame loop, storage key, network request, analytics path or external visual asset. CYG is implemented as a focused destination extension loaded after the shared cinematic layer; it follows the same authority and lifecycle contract and samples state at the same bounded 4 Hz outside the renderer loop.
 
 ## SOL budget
 
@@ -84,6 +85,22 @@ Budget:
 - additional triangles: **12,992**
 
 The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the four High-only VEGA meshes (4,992 + 2,976 + 2,976 + 2,048). Runtime evidence measures geometry index／position counts and must match the declared budget. Below High, owned VEGA objects return to zero.
+
+## CYG budget
+
+High adds four owned objects to the existing moving blue-violet binary / beacon-array scene:
+
+- higher-frequency blue-white granulation attached to the existing primary star, so it follows the core binary motion;
+- violet granulation attached to the existing companion star, also inheriting the same core orbital motion;
+- a bounded additive blue-violet halo attached to the existing primary;
+- a segmented luminous energy track attached to the existing outer 19-unit beacon torus, inheriting its core counter-rotation rather than adding another animation authority.
+
+Budget:
+
+- additional draw calls: **4**
+- additional triangles: **12,992**
+
+The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the four High-only CYG meshes (4,992 + 2,976 + 2,976 + 2,048). Runtime evidence measures actual geometry data rather than echoing the budget. Below High, owned CYG objects return to zero.
 
 ## TAU budget
 
@@ -155,7 +172,7 @@ The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the f
 
 ## Capture handoff
 
-Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at SOL, LUNA, VEGA, TAU, ORION, SIRIUS or PROX receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
+Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic modules listen to that same quality authority, so a high-quality capture at any of the eight existing destinations receives its destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
 
 ## Acceptance
 
@@ -169,7 +186,7 @@ Automated source validation must prove:
 - explicit disposal of owned textures, materials and geometries;
 - offline-shell inclusion.
 
-Real Chromium at **390×844** and **360×800** must prove for SOL, LUNA, VEGA, TAU, ORION, SIRIUS and PROX:
+Real Chromium at **390×844** and **360×800** must prove for all eight destinations:
 
 1. Standard has zero extra cinematic objects.
 2. High has exactly four extra objects and the measured geometry count matches the documented triangle budget.
