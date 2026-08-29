@@ -2,12 +2,20 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 
 const SAMPLE_MS=250;
 const TARGETS=Object.freeze({
+  SOL:{earthCenter:new THREE.Vector3(14,-5,-80),earthRadius:18,moonCenter:new THREE.Vector3(-28,11,-128),moonRadius:4.7,triangles:10944,drawCalls:4},
   TAU:{center:new THREE.Vector3(15,-5,-86),radius:23,triangles:8352,drawCalls:4},
   ORION:{starCenter:new THREE.Vector3(28,8,-137),starRadius:30,rockCenter:new THREE.Vector3(-26,-12,-90),rockRadius:10,triangles:10944,drawCalls:4},
   SIRIUS:{starCenter:new THREE.Vector3(-24,10,-134),starRadius:15,iceCenter:new THREE.Vector3(0,18,-151),iceRadius:6,relayCenter:new THREE.Vector3(0,-4,-82),relayRadius:17.5,triangles:12992,drawCalls:4}
 });
 const TAU_RING_ROTATION=new THREE.Euler(1.18,.2,.25);
 const NAME='stellar-cinematic';
+let solEarthRoot=null;
+let solEarthSurface=null;
+let solCloudSurface=null;
+let solMoonRoot=null;
+let solMoonSurface=null;
+let solObjects=[];
+let solCaptureCount=0;
 let tauRoot=null;
 let tauSurface=null;
 let tauObjects=[];
@@ -35,6 +43,9 @@ function planetRootSurface(candidate,center,radius){
   if(!candidate?.isGroup||!approx(candidate.position.x,center.x)||!approx(candidate.position.y,center.y)||!approx(candidate.position.z,center.z))return null;
   return candidate.children?.find?.(child=>child?.isMesh&&approx(child.scale.x,radius,.38)&&approx(child.scale.y,radius,.38))||null;
 }
+function cloudSurface(candidate,radius){
+  return candidate?.children?.find?.(child=>child?.isMesh&&approx(child.scale.x,radius*1.014,.22)&&child.material?.type==='MeshPhongMaterial')||null;
+}
 function starMatches(candidate,center,radius){
   return !!(candidate?.isMesh&&approx(candidate.position.x,center.x)&&approx(candidate.position.y,center.y)&&approx(candidate.position.z,center.z)&&approx(candidate.scale.x,radius,.45)&&approx(candidate.scale.y,radius,.45));
 }
@@ -54,6 +65,18 @@ function measuredTriangleCount(objects){return objects.reduce((sum,object)=>sum+
 
 function captureCandidate(candidate){
   let captured=false;
+  const earth=planetRootSurface(candidate,TARGETS.SOL.earthCenter,TARGETS.SOL.earthRadius);
+  if(earth){
+    const clouds=cloudSurface(candidate,TARGETS.SOL.earthRadius);
+    if(solEarthRoot!==candidate){disposeSolOwn();solEarthRoot=candidate;solEarthSurface=earth;solCloudSurface=clouds;solCaptureCount++}
+    else if(clouds)solCloudSurface=clouds;
+    captured=true;
+  }
+  const moon=planetRootSurface(candidate,TARGETS.SOL.moonCenter,TARGETS.SOL.moonRadius);
+  if(moon){
+    if(solMoonRoot!==candidate){disposeSolOwn();solMoonRoot=candidate;solMoonSurface=moon}
+    captured=true;
+  }
   const tau=planetRootSurface(candidate,TARGETS.TAU.center,TARGETS.TAU.radius);
   if(tau){
     if(tauRoot!==candidate){disposeTauOwn();tauRoot=candidate;tauSurface=tau;tauCaptureCount++}
@@ -106,6 +129,65 @@ function canvasTexture(canvas){
   t.colorSpace=THREE.SRGBColorSpace;
   t.anisotropy=4;
   return t;
+}
+
+function solCloudTexture(){
+  const c=document.createElement('canvas');c.width=512;c.height=256;
+  const x=c.getContext('2d'),im=x.createImageData(c.width,c.height);
+  for(let y=0;y<c.height;y++)for(let xx=0;xx<c.width;xx++){
+    const u=xx/c.width,v=y/c.height;
+    const broad=.5+.5*Math.sin(u*31+Math.sin(v*17)*2.8)+.26*Math.sin(u*73-v*29);
+    const wisps=.5+.5*Math.sin((u+v)*137+Math.sin(u*19)*2.1);
+    const polar=Math.pow(Math.abs(v-.5)*2,1.8);
+    const alpha=Math.max(0,Math.min(1,(broad*.45+wisps*.34-.48)*(1-polar*.38)));
+    const i=(y*c.width+xx)*4,shade=226+Math.round(29*Math.max(0,broad*.55+wisps*.25));
+    im.data[i]=shade;im.data[i+1]=Math.min(255,shade+7);im.data[i+2]=255;im.data[i+3]=Math.round(alpha*118);
+  }
+  x.putImageData(im,0,0);
+  return canvasTexture(c);
+}
+
+function solMoonTexture(){
+  const c=document.createElement('canvas');c.width=512;c.height=256;
+  const x=c.getContext('2d'),im=x.createImageData(c.width,c.height);
+  for(let y=0;y<c.height;y++)for(let xx=0;xx<c.width;xx++){
+    const u=xx/c.width,v=y/c.height;
+    const ridge=.5+.5*Math.sin(u*119+Math.sin(v*47)*2.4);
+    const grain=.5+.5*Math.sin((u-v)*223)+.22*Math.sin(u*337+v*131);
+    const crater=Math.exp(-((u-.24)**2/.0013+(v-.57)**2/.0022))+Math.exp(-((u-.68)**2/.0021+(v-.34)**2/.0015));
+    const mix=Math.max(0,Math.min(1,.22+.34*ridge+.2*grain-.28*crater));
+    const i=(y*c.width+xx)*4,value=118+Math.round(112*mix);
+    im.data[i]=value;im.data[i+1]=value;im.data[i+2]=Math.min(255,value+5);im.data[i+3]=Math.round(28+76*mix);
+  }
+  x.putImageData(im,0,0);
+  return canvasTexture(c);
+}
+
+function solAtmosphereMaterial(){
+  return new THREE.ShaderMaterial({
+    uniforms:{uInner:{value:new THREE.Color('#4d9fff')},uOuter:{value:new THREE.Color('#bfeaff')},uOpacity:{value:.48}},
+    vertexShader:`varying vec3 vN;varying vec3 vV;varying float vY;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);vY=normal.y;gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`uniform vec3 uInner;uniform vec3 uOuter;uniform float uOpacity;varying vec3 vN;varying vec3 vV;varying float vY;void main(){float rim=pow(1.0-clamp(dot(vN,vV),0.0,1.0),2.15);float band=.9+.1*sin(vY*24.0);vec3 c=mix(uInner,uOuter,clamp(rim*.92+.08,0.0,1.0));gl_FragColor=vec4(c,smoothstep(.06,1.0,rim)*uOpacity*band);}`,
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.FrontSide
+  });
+}
+
+function solAuroraTexture(){
+  const c=document.createElement('canvas');c.width=64;c.height=64;
+  const x=c.getContext('2d'),g=x.createRadialGradient(32,32,0,32,32,31);
+  g.addColorStop(0,'rgba(235,255,250,.98)');g.addColorStop(.18,'rgba(125,255,220,.76)');g.addColorStop(.55,'rgba(72,206,255,.22)');g.addColorStop(1,'rgba(42,160,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,64,64);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+
+function solAuroraGeometry(){
+  const count=72,p=new Float32Array(count*3),colors=new Float32Array(count*3);const a=new THREE.Color('#62ffd4'),b=new THREE.Color('#62bfff'),mix=new THREE.Color();
+  for(let i=0;i<count;i++){
+    const north=i<count/2,j=i%(count/2),t=j/(count/2-1),lon=-1.2+t*2.4+(north?0:.32),lat=(north?1:-1)*(1.05+.1*Math.sin(t*Math.PI*3)),r=TARGETS.SOL.earthRadius*1.075;
+    p[i*3]=Math.cos(lat)*Math.cos(lon)*r;p[i*3+1]=Math.sin(lat)*r;p[i*3+2]=Math.cos(lat)*Math.sin(lon)*r;
+    mix.copy(a).lerp(b,t);colors.set([mix.r,mix.g,mix.b],i*3);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));g.setAttribute('color',new THREE.BufferAttribute(colors,3));return g;
 }
 
 function tauBandTexture(){
@@ -284,14 +366,32 @@ function disposeList(list){
   for(const o of list){try{o.parent?.remove?.(o);o.geometry?.dispose?.();if(Array.isArray(o.material))o.material.forEach(disposeMaterial);else disposeMaterial(o.material)}catch{}}
   return[];
 }
+function disposeSolOwn(){solObjects=disposeList(solObjects)}
 function disposeTauOwn(){tauObjects=disposeList(tauObjects)}
 function disposeOrionOwn(){orionObjects=disposeList(orionObjects)}
 function disposeSiriusOwn(){siriusObjects=disposeList(siriusObjects)}
 function teardown(){
-  disposeTauOwn();disposeOrionOwn();disposeSiriusOwn();
+  disposeSolOwn();disposeTauOwn();disposeOrionOwn();disposeSiriusOwn();
+  solEarthRoot=null;solEarthSurface=null;solCloudSurface=null;solMoonRoot=null;solMoonSurface=null;
   tauRoot=null;tauSurface=null;
   orionStar=null;orionRockRoot=null;orionRockSurface=null;orionSystemRoot=null;
   siriusStar=null;siriusIceRoot=null;siriusIceSurface=null;siriusRelay=null;
+}
+
+function buildSol(){
+  if(!solEarthRoot||!solCloudSurface||!solMoonSurface||solObjects.length)return;
+  const cloudDetail=new THREE.Mesh(new THREE.SphereGeometry(1,64,40),new THREE.MeshPhongMaterial({map:solCloudTexture(),transparent:true,opacity:.46,alphaTest:.012,depthWrite:false,shininess:18,specular:0xbfeaff}));
+  cloudDetail.name=`${NAME}-sol-cloud-detail`;cloudDetail.scale.setScalar(1.004);solCloudSurface.add(cloudDetail);
+
+  const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),solAtmosphereMaterial());
+  atmosphere.name=`${NAME}-sol-atmosphere`;atmosphere.scale.setScalar(TARGETS.SOL.earthRadius*1.092);solEarthRoot.add(atmosphere);
+
+  const moonDetail=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshStandardMaterial({map:solMoonTexture(),transparent:true,opacity:.32,depthWrite:false,roughness:1,metalness:0}));
+  moonDetail.name=`${NAME}-sol-moon-detail`;moonDetail.scale.setScalar(1.009);solMoonSurface.add(moonDetail);
+
+  const aurora=new THREE.Points(solAuroraGeometry(),new THREE.PointsMaterial({map:solAuroraTexture(),size:1.7,vertexColors:true,transparent:true,opacity:.42,alphaTest:.01,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
+  aurora.name=`${NAME}-sol-aurora`;solEarthRoot.add(aurora);
+  solObjects=[cloudDetail,atmosphere,moonDetail,aurora];
 }
 
 function buildTau(){
@@ -351,6 +451,7 @@ function hookQuality(){
 }
 
 function currentProfile(id){
+  if(id==='SOL')return{objects:solObjects,captured:!!(solEarthRoot&&solCloudSurface&&solMoonSurface),captureCount:solCaptureCount,...TARGETS.SOL};
   if(id==='TAU')return{objects:tauObjects,captured:!!tauRoot,captureCount:tauCaptureCount,...TARGETS.TAU};
   if(id==='ORION')return{objects:orionObjects,captured:!!(orionStar&&orionRockSurface&&orionSystemRoot),captureCount:orionCaptureCount,...TARGETS.ORION};
   if(id==='SIRIUS')return{objects:siriusObjects,captured:!!(siriusStar&&siriusIceSurface&&siriusRelay),captureCount:siriusCaptureCount,...TARGETS.SIRIUS};
@@ -364,15 +465,19 @@ function sync(){
   let state;try{state=api.state()}catch{return}
   const safe=state.exploring&&!state.flying&&!state.contextLost;
   const high=safe&&state.qualityMode==='high';
+  const solHigh=high&&state.current==='SOL';
   const tauHigh=high&&state.current==='TAU';
   const orionHigh=high&&state.current==='ORION';
   const siriusHigh=high&&state.current==='SIRIUS';
+  if(!solHigh&&solObjects.length)disposeSolOwn();
   if(!tauHigh&&tauObjects.length)disposeTauOwn();
   if(!orionHigh&&orionObjects.length)disposeOrionOwn();
   if(!siriusHigh&&siriusObjects.length)disposeSiriusOwn();
+  if(solHigh&&solEarthRoot&&solCloudSurface&&solMoonSurface&&!solObjects.length)buildSol();
   if(tauHigh&&tauRoot&&!tauObjects.length)buildTau();
   if(orionHigh&&orionStar&&orionRockSurface&&orionSystemRoot&&!orionObjects.length)buildOrion();
   if(siriusHigh&&siriusStar&&siriusIceSurface&&siriusRelay&&!siriusObjects.length)buildSirius();
+  for(const o of solObjects)o.visible=solHigh;
   for(const o of tauObjects)o.visible=tauHigh;
   for(const o of orionObjects)o.visible=orionHigh;
   for(const o of siriusObjects)o.visible=siriusHigh;
@@ -383,6 +488,7 @@ function sync(){
     triangles:measuredTriangles,budgetTriangles:active?profile.triangles:0,drawCalls:active?profile.drawCalls:0,
     captured:profile.captured,captureCount:profile.captureCount,
     profiles:{
+      SOL:{captured:!!(solEarthRoot&&solCloudSurface&&solMoonSurface),objects:solObjects.length,captureCount:solCaptureCount},
       TAU:{captured:!!tauRoot,objects:tauObjects.length,captureCount:tauCaptureCount},
       ORION:{captured:!!(orionStar&&orionRockSurface&&orionSystemRoot),objects:orionObjects.length,captureCount:orionCaptureCount},
       SIRIUS:{captured:!!(siriusStar&&siriusIceSurface&&siriusRelay),objects:siriusObjects.length,captureCount:siriusCaptureCount}

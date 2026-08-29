@@ -12,9 +12,10 @@ Raise the real 3D visual ceiling so destinations are worth watching, revisiting 
 
 The current destination slices are deliberately curated rather than global:
 
-1. **TAU｜金牛塵海** — ringed gas giant depth.
-2. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
-3. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
+1. **SOL｜地球近軌** — Earth atmosphere / cloud / Moon / aurora depth.
+2. **TAU｜金牛塵海** — ringed gas giant depth.
+3. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
+4. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
 
 ## Runtime contract
 
@@ -31,6 +32,23 @@ Extra objects are created only when all are true:
 When any condition stops being true, the module removes and disposes its owned geometry, materials and procedural textures. Returning to High or revisiting a supported destination rebuilds them from the current core scene.
 
 There is no second renderer, requestAnimationFrame loop, storage key, network request, analytics path or external visual asset.
+
+## SOL budget
+
+High adds four owned objects to the existing Earth / Moon scene:
+
+- higher-frequency translucent cloud microstructure attached to the existing rotating cloud layer;
+- additive blue atmospheric limb around Earth;
+- higher-frequency lunar surface detail attached to the existing Moon surface;
+- 72 bounded soft aurora points arranged in two high-latitude ribbons.
+
+Budget:
+
+- additional draw calls: **4**
+- additional triangles: **10,944**
+- additional aurora points: **72**
+
+The cloud detail inherits the existing cloud mesh rotation because it is attached to that mesh. Aurora, atmosphere and lunar detail add no independent animation loop. Below High, owned SOL objects return to zero.
 
 ## TAU budget
 
@@ -86,7 +104,7 @@ Below High, owned SIRIUS objects return to zero.
 
 ## Capture handoff
 
-Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at TAU, ORION or SIRIUS receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
+Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic module listens to that same quality authority, so a high-quality capture at SOL, TAU, ORION or SIRIUS receives the destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
 
 ## Acceptance
 
@@ -100,14 +118,14 @@ Automated source validation must prove:
 - explicit disposal of owned textures, materials and geometries;
 - offline-shell inclusion.
 
-Real Chromium at **390×844** and **360×800** must prove for TAU, ORION and SIRIUS:
+Real Chromium at **390×844** and **360×800** must prove for SOL, TAU, ORION and SIRIUS:
 
 1. Standard has zero extra cinematic objects.
 2. High has exactly four extra objects and the measured geometry count matches the documented triangle budget.
 3. Standard and High evidence screenshots are not identical.
 4. High → Low disposes all extra objects.
 5. Low → High rebuilds the layer.
-6. Destination → SOL → destination rebuilds successfully without accumulation.
+6. Destination → another system → destination rebuilds successfully without accumulation.
 7. CSS viewport remains unchanged and phase remains final exploration.
 
 ## Performance boundary
