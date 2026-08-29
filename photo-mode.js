@@ -21,7 +21,7 @@ function ensureUi(){
   if(!document.querySelector('#photoModeStyle')){
     const style=document.createElement('style');
     style.id='photoModeStyle';
-    style.textContent='.photoModeTrigger{display:none}.photoModeTrigger.show{display:block}.photoModeToolbar{position:absolute;z-index:18;left:var(--safeL);right:var(--safeR);bottom:var(--safeB);display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(181,216,255,.2);border-radius:14px;background:rgba(3,7,15,.72);backdrop-filter:blur(16px);box-shadow:0 12px 38px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s,transform .18s}.photoMode .photoModeToolbar{opacity:1;transform:none;pointer-events:auto}.photoModeToolbar button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.055);color:var(--text);font-size:10px;font-weight:780;padding:0 12px}.photoModeToolbar .photoCapture{flex:1;border-color:rgba(178,216,255,.38);background:linear-gradient(180deg,rgba(150,195,255,.22),rgba(91,145,220,.1))}.photoModeLabel{min-width:0;flex:1.2}.photoModeLabel strong{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.photoModeLabel span{display:block;margin-top:2px;font-size:7px;color:var(--muted)}.photoModeToast{position:absolute;z-index:19;left:50%;bottom:calc(var(--safeB) + 68px);transform:translateX(-50%) translateY(7px);max-width:82vw;padding:7px 10px;border-radius:999px;border:1px solid rgba(182,216,255,.18);background:rgba(3,7,15,.82);font-size:8px;color:#eaf3ff;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;white-space:nowrap}.photoModeToast.show{opacity:1;transform:translateX(-50%) translateY(0)}.photoMode .hud,.photoMode #flightBar,.photoMode #telemetry,.photoMode #openPanel,.photoMode #panel,.photoMode #exploreCard,.photoMode #perfHud{opacity:0!important;pointer-events:none!important}.photoMode.photoCapturing .photoModeToolbar,.photoMode.photoCapturing .photoModeToast{opacity:0!important;pointer-events:none!important}@media (max-width:390px){.photoModeToolbar{gap:5px;padding:6px}.photoModeToolbar button{padding:0 10px}.photoModeLabel span{display:none}}';
+    style.textContent='.photoModeTrigger{display:none}.photoModeTrigger.show{display:block}.photoModeToolbar{position:absolute;z-index:18;left:var(--safeL);right:var(--safeR);bottom:var(--safeB);display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(181,216,255,.2);border-radius:14px;background:rgba(3,7,15,.72);backdrop-filter:blur(16px);box-shadow:0 12px 38px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s,transform .18s}.photoMode .photoModeToolbar{opacity:1;transform:none;pointer-events:auto}.photoModeToolbar button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.055);color:var(--text);font-size:10px;font-weight:780;padding:0 12px}.photoModeToolbar button:disabled{opacity:.46}.photoModeToolbar .photoCapture{flex:1;border-color:rgba(178,216,255,.38);background:linear-gradient(180deg,rgba(150,195,255,.22),rgba(91,145,220,.1))}.photoModeLabel{min-width:0;flex:1.2}.photoModeLabel strong{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.photoModeLabel span{display:block;margin-top:2px;font-size:7px;color:var(--muted)}.photoModeToast{position:absolute;z-index:19;left:50%;bottom:calc(var(--safeB) + 68px);transform:translateX(-50%) translateY(7px);max-width:82vw;padding:7px 10px;border-radius:999px;border:1px solid rgba(182,216,255,.18);background:rgba(3,7,15,.82);font-size:8px;color:#eaf3ff;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;white-space:nowrap}.photoModeToast.show{opacity:1;transform:translateX(-50%) translateY(0)}.photoMode .hud,.photoMode #flightBar,.photoMode #telemetry,.photoMode #openPanel,.photoMode #panel,.photoMode #exploreCard,.photoMode #perfHud{opacity:0!important;pointer-events:none!important}.photoMode.photoCapturing .photoModeToolbar,.photoMode.photoCapturing .photoModeToast{opacity:0!important;pointer-events:none!important}@media (max-width:390px){.photoModeToolbar{gap:5px;padding:6px}.photoModeToolbar button{padding:0 10px}.photoModeLabel span{display:none}}';
     document.head.append(style);
   }
   let trigger=document.querySelector('#photoModeTrigger');
@@ -42,7 +42,7 @@ function ensureUi(){
     toolbar.setAttribute('role','group');
     toolbar.setAttribute('aria-label','目的地攝影模式');
     toolbar.setAttribute('aria-hidden','true');
-    toolbar.innerHTML='<div class="photoModeLabel"><strong id="photoModeName">目的地攝影</strong><span>拖動畫面構圖 · 儲存乾淨影像</span></div><button id="photoModeExit" type="button">返回</button><button id="photoModeCapture" class="photoCapture" type="button">儲存影像</button>';
+    toolbar.innerHTML='<div class="photoModeLabel"><strong id="photoModeName">目的地攝影</strong><span>拖動畫面構圖 · 留影時短暫提升至高畫質</span></div><button id="photoModeExit" type="button">返回</button><button id="photoModeCapture" class="photoCapture" type="button">高畫質留影</button>';
     app.append(toolbar);
     toolbar.querySelector('#photoModeExit').addEventListener('click',exit);
     toolbar.querySelector('#photoModeCapture').addEventListener('click',capture);
@@ -73,6 +73,16 @@ function updateLabel(){
   if(label)label.textContent=(SYSTEM_NAMES[currentId]||currentId)+' · 攝影模式';
 }
 
+function setCaptureBusy(value){
+  captureBusy=!!value;
+  const toolbar=document.querySelector('#photoModeToolbar');
+  if(toolbar)toolbar.setAttribute('aria-busy',captureBusy?'true':'false');
+  const exitButton=document.querySelector('#photoModeExit');
+  const captureButton=document.querySelector('#photoModeCapture');
+  if(exitButton)exitButton.disabled=captureBusy;
+  if(captureButton)captureButton.disabled=captureBusy;
+}
+
 function enter(){
   if(active||!ensureUi())return;
   const api=window.WarpSim;
@@ -88,9 +98,8 @@ function enter(){
 }
 
 function exit(){
-  if(!active)return;
+  if(!active||captureBusy)return;
   active=false;
-  captureBusy=false;
   const app=document.querySelector('#app');
   app?.classList.remove('photoMode','photoCapturing');
   document.querySelector('#photoModeToolbar')?.setAttribute('aria-hidden','true');
@@ -102,7 +111,7 @@ function fileName(){
   return `stellar-wrap-${currentId.toLowerCase()}-${stamp}.png`;
 }
 
-function saveBlob(blob){
+function saveBlob(blob,width,height){
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a');
   link.href=url;
@@ -112,10 +121,29 @@ function saveBlob(blob){
   link.click();
   link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),12000);
-  notify('影像已產生 · 如瀏覽器未自動儲存，請長按影像保存');
+  notify(`高畫質影像 ${width}×${height} 已產生 · 如未自動儲存請長按保存`,2600);
 }
 
-function capture(){
+function nextFrame(){
+  return new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+}
+
+function prepareCaptureQuality(api,state){
+  const previous=state?.qualityMode;
+  const boosted=previous&&previous!=='high'&&typeof api?.setQuality==='function';
+  if(boosted)api.setQuality('high');
+  return{previous,boosted};
+}
+
+function restoreCaptureQuality(api,token){
+  if(token?.boosted&&token.previous&&typeof api?.setQuality==='function')api.setQuality(token.previous);
+}
+
+function canvasBlob(canvas){
+  return new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+}
+
+async function capture(){
   if(!active||captureBusy)return;
   const canvas=document.querySelector('#space');
   const api=window.WarpSim;
@@ -125,17 +153,31 @@ function capture(){
     notify('目前無法產生影像 · 可使用手機截圖',2400);
     return;
   }
-  captureBusy=true;
+  const qualityToken=prepareCaptureQuality(api,state);
   const app=document.querySelector('#app');
+  setCaptureBusy(true);
   app?.classList.add('photoCapturing');
-  requestAnimationFrame(()=>{
-    canvas.toBlob(blob=>{
-      app?.classList.remove('photoCapturing');
-      captureBusy=false;
-      if(!blob){notify('影像產生失敗 · 可使用手機截圖',2400);return}
-      saveBlob(blob);
-    },'image/png');
-  });
+  try{
+    await nextFrame();
+    await nextFrame();
+    let latest;
+    try{latest=api?.state?.()}catch{}
+    if(!active||!safeState(latest)){
+      notify('留影已取消 · 目前不在安全探索狀態',2400);
+      return;
+    }
+    const width=canvas.width,height=canvas.height;
+    const blob=await canvasBlob(canvas);
+    if(!blob){
+      notify('影像產生失敗 · 可使用手機截圖',2400);
+      return;
+    }
+    saveBlob(blob,width,height);
+  }finally{
+    restoreCaptureQuality(api,qualityToken);
+    app?.classList.remove('photoCapturing');
+    setCaptureBusy(false);
+  }
 }
 
 function sample(){
@@ -148,18 +190,19 @@ function sample(){
   const visible=safeState(state);
   const trigger=document.querySelector('#photoModeTrigger');
   if(trigger&&visible!==lastVisible)trigger.classList.toggle('show',visible);
-  if(active&&!visible)exit();
+  if(active&&!visible&&!captureBusy)exit();
   if(active)updateLabel();
   lastVisible=visible;
 }
 
-addEventListener('keydown',event=>{if(event.key==='Escape'&&active)exit()});
+addEventListener('keydown',event=>{if(event.key==='Escape'&&active&&!captureBusy)exit()});
 setInterval(sample,500);
 sample();
 window.WarpPhotoMode={
   enter,
   exit,
   capture,
-  active(){return active}
+  active(){return active},
+  capturing(){return captureBusy}
 };
 })();
