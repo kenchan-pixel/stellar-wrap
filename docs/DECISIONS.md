@@ -114,3 +114,12 @@
 - 本版納入 WebGL context recovery、旅行日誌與距離連續性、LUNA 三點觀測、目的地攝影模式、離線重新啟動／啟動恢復、靜態導航 fallback 及 Arrival Debrief。
 - V4.0 `releases/v4.0-stable.html` 仍為不可覆寫的回歸快照，不因 V4.1.0 發佈而修改。
 - 這項決定只確認 V4.1.0 已出貨行為成為目前產品基線；不等同批准更廣泛或尚未實作的 V5 roadmap。
+
+## D-015｜V5.0.0 成為目前 release baseline
+
+- **狀態：用戶已批准 release baseline／已通過自動與真 Browser 驗證**
+- 2026-08-29，owner 合併 autonomous evolution PR #6 至 `main`，並明確要求把該合併狀態記錄為正式版本更新。
+- V5.0.0 runtime baseline commit 為 `e8eeb3727c09626c348cf5a1b3559c8ba8c76960`；完整 release 紀錄見 `releases/v5.0.0.md`。
+- 本版正式納入七站探索／發現層、Star Atlas 與探索星環、Arrival／Discovery handoff、Scenery-first Explore Hub／Focus Tray、旅程與 reload continuity、Journey Atmosphere／Approach／Corridor presentation、Landmark Guide，以及高畫質 Photo Capture Boost。
+- V4 核心航線、真 3D 方向、完整 flight phases、Hermite arrival、60 Hz 優先、零後端靜態架構及 `releases/v4.0-stable.html` 不可覆寫回歸基線全部保留。
+- 下一批准演進方向為 Cinematic High-tier Quality → Landing Page + Mode Architecture → 原創 Frontier Fiction；這些後續項目不因 V5.0.0 release record 而視作已完成。
