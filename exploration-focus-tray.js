@@ -47,4 +47,5 @@ function active(){
 
 window.WarpExplorationFocusTray={active};
 import('./atlas-constellation.js').catch(()=>{});
+import('./cinematic-quality.js').catch(()=>{});
 })();
