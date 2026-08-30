@@ -1,60 +1,61 @@
-# NADIR WELL｜玄淵觀測站 · Cinematic Composition Guide｜構圖導覽
+# NADIR WELL｜玄淵觀測站 · Fixed Black-Hole Vista
 
-> 狀態：Draft candidate／自主演進驗證中。此切片深化既有 Frontier Fiction 黑洞前線，不新增世界、航線、儲存、renderer 或相機 authority。
+> 狀態：Approved product direction implementation。依 D-015，NADIR 不再以自由旋轉模型作主要體驗；使用與 Real Space／Frontier Scenic 一致的單角度英雄景觀、統一航線入口及高畫質留影。
 
 ## Vertical Slice
 
 ### Goal／使用效果
 
-令 NADIR WELL 由單純自由環視，升級成有三個為手機直向與高畫質留影而設的精心構圖。使用者抵達自由探索後，可一按固定黑洞、觀測站或噴流主題視角；仍可拖動畫面返回自由探索，或重新開啟自動環繞。
+修正「黑洞第一眼不像黑洞」的核心視覺問題。玩家進入 NADIR 後，不需要旋轉或找角度，固定構圖已清楚呈現事件視界、薄吸積盤、光子環及引力透鏡，觀測站只作尺度參照。
 
 ### Scope
 
-- 在既有故事卡內加入三個 44 px 構圖按鈕，只在 `explore` 階段顯示。
-- 三個固定視角：
-  - `引力井全景`：事件視界、吸積盤、透鏡環及觀測站同框，突出整體尺度。
-  - `觀測環切線`：以偏置觀測站作前景，強化站體與引力井之間的危險距離感。
-  - `噴流軸線`：以雙向噴流作直向主軸，利用事件視界負空間形成高對比構圖。
-- 選擇構圖時暫停既有自動環繞，只調整現有 `world` yaw／pitch target 及 `well` roll target；不建立第二 camera、renderer 或場景。
-- 玩家拖動畫面時立即清除 guided state；重新開啟自動環繞亦回到自由模式。
-- 桌面雙擊可把 yaw／pitch 及黑洞本體 roll 平滑返回 neutral 構圖。
-- 原有 `高畫質留影` 直接保存目前 guided 構圖，完成後恢復原本 DPR 並保留選定視角。
+- 將 `frontier-nadir.html` 收斂為固定單角度 NADIR renderer；保留 `WarpFrontierNadir` API 供 `frontier-scenic.html` 統一外殼使用。
+- 黑洞主體改為：
+  - 純黑事件視界 silhouette；
+  - 薄、橢圓透視的程序化吸積盤；
+  - 細光子環；
+  - 吸積盤背面光被壓成事件視界上下方的引力透鏡弧；
+  - 一側較冷亮、另一側較暖暗的 Doppler 不對稱；
+  - 少量彎曲星光作局部 lensing 提示。
+- 移除容易令人聯想到傳送門的巨大雙向錐形噴流。
+- 觀測站移到畫面次要位置，不遮擋事件視界。
+- 保持單一 renderer、無 post-processing、無外部圖像資產；正常 DPR ≤1.25，留影暫時 ≤1.60。
+- 固定鏡頭不可拖動、不可自由 orbit；只有場景內非常輕微的吸積盤 shader filament 流動，不改玩家視角。
 
 ### Acceptance Criteria
 
-1. 三個構圖入口只在 NADIR 最終探索出現，全部至少 44 px 高，390×844 與 360×800 不產生橫向溢出。
-2. 三個構圖使用不同 yaw／pitch／roll target，真 Browser 畫面證據必須可區分，不能只改文字。
-3. 選擇構圖會停止自動環繞；手動拖動或重新開啟自動環繞會清除 guided state。
-4. 導覽只改既有物件 transform；guided 前後 draw calls 與 triangles 不增加。
-5. 原有接近、抵達、自由探索、模式返回、AURELIA 跳轉及高畫質留影全部保留。
-6. 留影仍使用既有短暫 1.60 mobile DPR tier，PNG 完成後恢復原本 DPR，並保留當前 guided 構圖。
-7. 不新增 localStorage、sessionStorage、IndexedDB、網絡請求、後端、analytics、dependency、post-processing 或第二 renderer。
+1. 390×844 及 360×800 最終景觀第一眼可辨認為黑洞，而非黑球、霓虹圓環或傳送門。
+2. 中央黑影、細 photon ring、水平吸積盤及上下 lensing arc 同時可見；Doppler 亮度／色溫不對稱清楚但不誇張。
+3. 不存在巨型 `ConeGeometry` 噴流；觀測站不與事件視界重疊。
+4. `WarpFrontierNadir.state()` 固定回報 `autoOrbit:false`、`vista:'overview'`、`fixed:true`，並提供 draw call／triangle 診斷。
+5. `frontier-scenic.html` 原有統一四按鈕介面、四目的地航線 selector、capture delegation 完全保留。
+6. 高畫質留影 backing buffer 大於正常 render，完成後準確恢復原 DPR。
+7. 不新增 storage、backend、analytics、第二 renderer、重大 dependency 或 Real Space route/timing 改動。
 
 ### Out of Scope
 
-- 不新增 Frontier Fiction 世界。
-- 不改 NADIR 幾何面數、材質數量、抵達時間或世界設定。
-- 不建立自動循環攝影巡遊或影片錄製。
-- 不改 Real Space 路線、Dijkstra、V4 flight phases、八站景觀或模擬 timing。
+- 不實作完整 general-relativity ray tracer 或全畫面 gravitational-lensing post-process。
+- 不新增黑洞 scanner／checklist gameplay。
+- 不改 AURELIA、VESPER、EIDOLON 視覺。
+- 不建立 Frontier Fiction 假距離或 Dijkstra 航線。
+- 不改 Real Space V4+ travel phases、route authority 或 destination data。
 
 ### Validation Evidence
 
-Focused validator 應以 production NADIR runtime 驗證：
+完成 gate 必須包含：
 
-- exactly 3 個 guided preset 與 44 px 手機觸控面積；
-- 390×844、360×800 真 Chromium trusted touch；
-- `free → overview → station → jet → manual drag → free → auto orbit` state transitions；
-- 三個構圖 screenshot evidence 及不同 live orientation；
-- guided state 前後 draw calls／triangles 完全不增加；
-- guided composition 期間高畫質 capture backing buffer 真正提升並恢復；
-- capture 後仍保留 selected guided state；
-- 無 storage／network／第二 renderer authority。
+- focused source contract：event horizon／photon ring／lensed back arc／Doppler asymmetry／no giant jets／single renderer／bounded DPR；
+- `frontier-scenic` production Chromium 390×844、360×800；
+- NADIR final fixed screenshot 人工檢查；
+- capture boost + DPR restore；
+- draw calls／triangles 記錄；
+- 全 repo `npm run check`、V4 stable hash、approved Real Space routes 及完整 flight-state chain 保持綠燈。
 
 ### Risks／補充人手檢查
 
-- 不同手機 GPU／色域可能令吸積盤 additive glow 與黑色事件視界的對比有差異。
-- 實體 iPhone Safari 的拖動手感、長時間 frame pacing／熱力與 PNG save sheet 仍值得補充驗證，但不是此 transform-only 切片的完成 blocker。
+- Shader additive glow 在不同手機色域可能有少量亮度差異；實體 iPhone Safari 長時間熱力、frame pacing 及 PNG Save Sheet 只屬補充驗證，不是此切片 blocker。
 
 ### Completion Signal
 
-NADIR WELL 抵達後可快速取得三個明顯不同、可直接高畫質留影的黑洞前線構圖；真手機尺寸 Browser、trusted touch、capture、效能邊界及完整 repo validation 通過後推送 persistent Draft PR。
+NADIR 在固定手機英雄構圖中已清楚讀成黑洞；主視覺不再依賴玩家旋轉模型，且統一 Frontier Scenic、capture、效能及 V4+ 回歸 gate 全部通過並推送至 persistent Draft PR。
