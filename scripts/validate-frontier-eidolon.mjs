@@ -10,6 +10,7 @@ const eidolon=readFileSync('frontier-eidolon.html','utf8');
 const index=readFileSync('index.html','utf8');
 const sw=readFileSync('sw.js','utf8');
 const doc=readFileSync('docs/MODE_GATEWAY.md','utf8');
+const compositionDoc=readFileSync('docs/EIDOLON_COMPOSITION_GUIDE.md','utf8');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const EVIDENCE_DIR=join(process.cwd(),'artifacts','focus-tray-browser');
 
@@ -29,10 +30,23 @@ assert.match(eidolon,/setPhase\('explore'\)/,'EIDOLON explore state must exist')
 assert.match(eidolon,/window\.WarpFrontierEidolon=/,'EIDOLON must expose bounded test/diagnostic state');
 assert.match(eidolon,/toDataURL\('image\/png'\)/,'EIDOLON capture must export WebGL PNG data');
 assert.doesNotMatch(eidolon,/localStorage|sessionStorage|indexedDB|XMLHttpRequest|sendBeacon/,'EIDOLON must stay stateless/local');
+assert.equal((eidolon.match(/data-eidolon-vista=/g)||[]).length,3,'EIDOLON must expose exactly three guided capture vistas');
+assert.match(eidolon,/\.vistaRail button\{min-height:44px/,'EIDOLON guided vistas must retain 44px mobile touch height');
+assert.match(eidolon,/斷環全景/,'EIDOLON overview vista must exist');
+assert.match(eidolon,/黑幕中軸/,'EIDOLON veil vista must exist');
+assert.match(eidolon,/遺光殘標/,'EIDOLON beacon vista must exist');
+assert.match(eidolon,/TAP_MOVE_TOLERANCE=10/,'EIDOLON guided view must use a deliberate-drag threshold');
+assert.match(eidolon,/VISTA_SETTLE_EPS=\.006,VISTA_SETTLE_MS=1200/,'EIDOLON guided capture must use a bounded settle contract');
+assert.match(eidolon,/async function waitForVistaSettle\(\)/,'EIDOLON guided capture must wait for actual orientation convergence');
+assert.match(eidolon,/const settled=await waitForVistaSettle\(\)/,'EIDOLON capture must settle the selected vista before raising capture DPR');
+assert.match(eidolon,/vista:guidedVista\|\|'free'/,'EIDOLON diagnostic state must expose guided/free composition');
+assert.match(eidolon,/applyVista\(id\)\{return applyVista\(id\)\}/,'EIDOLON must expose composition control for acceptance testing');
 assert.ok(sw.includes("'./frontier-eidolon.html'"),'offline CORE must include EIDOLON runtime');
 assert.match(sw,/CACHE_NAME=`\$\{CACHE_PREFIX\}v15`/,'offline cache-generation contract must remain v15');
 assert.ok(doc.includes('EIDOLON GATE｜遺光門廊'),'Mode Gateway SOT must describe EIDOLON');
-console.log('EIDOLON Frontier static contract: 19/19 passed');
+assert.ok(compositionDoc.includes('斷環全景')&&compositionDoc.includes('黑幕中軸')&&compositionDoc.includes('遺光殘標'),'EIDOLON composition SOT must describe all three capture vistas');
+assert.ok(compositionDoc.includes('0.006')&&compositionDoc.includes('1.2'),'EIDOLON composition SOT must document bounded quick-capture settling');
+console.log('EIDOLON Frontier static contract: 32/32 passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const p=commandPath(c);if(p)return p}return''}
@@ -45,6 +59,7 @@ async function evalJs(cdp,expression,awaitPromise=false){const result=await cdp.
 async function screenshot(cdp,name){mkdirSync(EVIDENCE_DIR,{recursive:true});const result=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const data=Buffer.from(result.data,'base64');writeFileSync(join(EVIDENCE_DIR,name),data);return data.length}
 async function targetPoint(cdp,selector){return evalJs(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return{x,y,width:r.width,height:r.height,top:r.top,left:r.left,right:r.right,bottom:r.bottom,hit:hit?.id||hit?.closest?.('button')?.id||hit?.tagName||null,disabled:!!el.disabled}})()`)}
 async function trustedTap(cdp,selector){const p=await targetPoint(cdp,selector);assert.ok(p,`missing tap target ${selector}`);assert.ok(p.width>=44&&p.height>=44,`${selector} must expose a 44px touch target`);assert.ok(p.left>=0&&p.right<=await evalJs(cdp,'innerWidth')+1&&p.top>=0&&p.bottom<=await evalJs(cdp,'innerHeight')+1,`${selector} must stay inside viewport`);assert.equal(p.disabled,false,`${selector} must be enabled`);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:5,radiusY:5,force:1,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});return p}
+async function trustedDrag(cdp,selector,dx,dy){const p=await targetPoint(cdp,selector);assert.ok(p,`missing drag target ${selector}`);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:5,radiusY:5,force:1,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x+dx,y:p.y+dy,radiusX:5,radiusY:5,force:1,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})}
 
 async function inspect(chrome,base,width,height){
   const viewport=`${width}x${height}`,profile=mkdtempSync(join(tmpdir(),`stellar-eidolon-${width}-`));let browser,cdp,stderr='';
@@ -59,8 +74,19 @@ async function inspect(chrome,base,width,height){
     const initial=await evalJs(cdp,'WarpFrontierEidolon.state()');assert.equal(initial.destination,'EIDOLON');assert.ok(['approach','arrival','explore'].includes(initial.phase));const approachBytes=await screenshot(cdp,`frontier-eidolon-${viewport}-approach.png`);assert.ok(approachBytes>8000,'EIDOLON approach screenshot should contain rendered scene');
     await evalJs(cdp,'WarpFrontierEidolon.skipArrival();true');await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().phase==='explore'&&WarpFrontierEidolon.state().exploring===true"),'EIDOLON explore');await sleep(180);
     const explored=await evalJs(cdp,'WarpFrontierEidolon.state()');assert.equal(explored.cssWidth,width);assert.equal(explored.cssHeight,height);assert.ok(explored.drawCalls>0&&explored.drawCalls<=16,`EIDOLON draw calls bounded: ${explored.drawCalls}`);assert.ok(explored.triangles>0&&explored.triangles<=22000,`EIDOLON triangles bounded: ${explored.triangles}`);
-    const normal={width:explored.backingWidth,height:explored.backingHeight,pixelRatio:explored.pixelRatio};await trustedTap(cdp,'#eidolonOrbit');await waitUntil(()=>evalJs(cdp,'WarpFrontierEidolon.state().autoOrbit===false'),'trusted-touch EIDOLON orbit toggle');const capture=await evalJs(cdp,'WarpFrontierEidolon.capture(false)',true);assert.ok(capture.width>normal.width&&capture.height>normal.height,'EIDOLON capture must raise backing buffer');assert.equal(capture.cssWidth,width);assert.equal(capture.cssHeight,height);assert.ok(capture.bytes>12000,'EIDOLON capture must produce non-trivial PNG data');const restored=await evalJs(cdp,'WarpFrontierEidolon.state()');assert.equal(restored.backingWidth,normal.width);assert.equal(restored.backingHeight,normal.height);assert.equal(restored.pixelRatio,normal.pixelRatio);const exploreBytes=await screenshot(cdp,`frontier-eidolon-${viewport}-explore.png`);assert.ok(exploreBytes>8000);assert.notEqual(exploreBytes,approachBytes,'approach and exploration evidence must differ');
-    console.log(`EIDOLON Frontier browser ${viewport}: trusted touch, ${explored.drawCalls} draws / ${explored.triangles} tris, capture ${capture.width}x${capture.height}, restored DPR ${restored.pixelRatio}`);
+    const normal={width:explored.backingWidth,height:explored.backingHeight,pixelRatio:explored.pixelRatio};
+    for(const id of ['overview','veil','beacon']){const selector=`[data-eidolon-vista="${id}"]`,p=await targetPoint(cdp,selector);assert.ok(p&&p.height>=44&&p.width>=44,`${id} vista must expose 44px trusted-touch target`);assert.ok(p.left>=0&&p.right<=width+1&&p.top>=0&&p.bottom<=height+1,`${id} vista must remain inside ${viewport}`)}
+    await trustedTap(cdp,'[data-eidolon-vista="overview"]');await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().vista==='overview'"),'overview vista');const overview=await evalJs(cdp,'WarpFrontierEidolon.state().orientation');assert.ok(Math.abs(overview.targetYaw-.08)<.001&&Math.abs(overview.targetRoll-.02)<.001,'overview target must use establishing composition');const overviewBytes=await screenshot(cdp,`frontier-eidolon-${viewport}-overview.png`);assert.ok(overviewBytes>8000);
+    await trustedTap(cdp,'[data-eidolon-vista="veil"]');await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().vista==='veil'"),'veil vista');const veil=await evalJs(cdp,'WarpFrontierEidolon.state().orientation');assert.ok(veil.targetYaw<-.3&&veil.targetRoll<-.15,'veil composition must be materially distinct');const veilBytes=await screenshot(cdp,`frontier-eidolon-${viewport}-veil.png`);assert.ok(veilBytes>8000&&veilBytes!==overviewBytes,'veil evidence must differ from overview');
+    await trustedTap(cdp,'[data-eidolon-vista="beacon"]');await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().vista==='beacon'"),'beacon vista');const beacon=await evalJs(cdp,'WarpFrontierEidolon.state().orientation');assert.ok(beacon.targetYaw>.3&&beacon.targetRoll>.18,'beacon composition must be materially distinct');const beaconBytes=await screenshot(cdp,`frontier-eidolon-${viewport}-beacon.png`);assert.ok(beaconBytes>8000&&beaconBytes!==veilBytes,'beacon evidence must differ from veil');
+    await trustedTap(cdp,'#eidolonSpace');await sleep(120);assert.equal(await evalJs(cdp,'WarpFrontierEidolon.state().vista'),'beacon','stationary touch must preserve guided composition');
+    await trustedDrag(cdp,'#eidolonSpace',42,12);await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().vista==='free'"),'deliberate drag exits guided composition');
+    await trustedTap(cdp,'[data-eidolon-vista="veil"]');await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().vista==='veil'"),'veil selected for immediate capture');
+    const preCapture=await evalJs(cdp,'WarpFrontierEidolon.state().orientation');const preGap=Math.max(Math.abs(preCapture.yaw-preCapture.targetYaw),Math.abs(preCapture.pitch-preCapture.targetPitch),Math.abs(preCapture.roll-preCapture.targetRoll));assert.ok(preGap>.02,`regression setup must start before vista settles; gap=${preGap}`);
+    const capture=await evalJs(cdp,'WarpFrontierEidolon.capture(false)',true);assert.equal(capture.settled,true,'quick guided capture must settle the selected vista before PNG');for(const axis of ['yaw','pitch','roll']){const target=`target${axis[0].toUpperCase()}${axis.slice(1)}`,gap=Math.abs(capture.orientation[axis]-capture.orientation[target]);assert.ok(gap<=.0065,`captured ${axis} must match selected target; gap=${gap}`)}assert.ok(capture.width>normal.width&&capture.height>normal.height,'EIDOLON capture must raise backing buffer');assert.equal(capture.cssWidth,width);assert.equal(capture.cssHeight,height);assert.ok(capture.bytes>12000,'EIDOLON capture must produce non-trivial PNG data');
+    const restored=await evalJs(cdp,'WarpFrontierEidolon.state()');assert.equal(restored.backingWidth,normal.width);assert.equal(restored.backingHeight,normal.height);assert.equal(restored.pixelRatio,normal.pixelRatio);assert.equal(restored.vista,'veil','capture must preserve selected guided composition');for(const axis of ['yaw','pitch','roll']){const target=`target${axis[0].toUpperCase()}${axis.slice(1)}`,gap=Math.abs(restored.orientation[axis]-restored.orientation[target]);assert.ok(gap<=.0065,`restored ${axis} must remain on captured vista; gap=${gap}`)}
+    const captureBytes=await screenshot(cdp,`frontier-eidolon-${viewport}-capture-state.png`);assert.ok(captureBytes>8000);
+    console.log(`EIDOLON Frontier browser ${viewport}: three guided vistas, quick-capture gap ${preGap.toFixed(3)} rad, ${explored.drawCalls} draws / ${explored.triangles} tris, capture ${capture.width}x${capture.height}, restored DPR ${restored.pixelRatio}`);
   }catch(error){if(cdp)await screenshot(cdp,`frontier-eidolon-failure-${viewport}.png`).catch(()=>{});throw error}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 
