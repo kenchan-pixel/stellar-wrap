@@ -25,7 +25,10 @@ assert.doesNotMatch(preview,/localStorage|sessionStorage|indexedDB|\bfetch\s*\(|
 assert.ok(sw.includes("'./route-scenic-preview.js'"),'prepared offline shell must include the new presentation module');
 assert.match(pkg,/validate-route-scenic-preview\.mjs/,'main validation must include Scenic Route Preview');
 assert.match(doc,/SOL → LUNA → VEGA → CYG → ORION/,'SOT must retain the approved long-route acceptance case');
-console.log('Scenic Route Preview static contract: 12/12 passed');
+assert.match(preview,/className='routeScenicArrivalCard'/,'preview must append one explicit arrival-finale card after route legs');
+assert.match(preview,/曲速脫離 → 連續減速 → 到站探索/,'arrival finale must preserve the approved arrival-to-exploration story');
+for(const id of ['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX'])assert.ok(preview.includes(`data-destination=\"${id}\"`)||preview.includes(`data-destination="${id}"`),`arrival finale must define a distinct ${id} visual identity`);
+console.log('Scenic Route Preview static contract: 22/22 passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const candidate of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const found=commandPath(candidate);if(found)return found}return''}
@@ -54,12 +57,14 @@ async function inspect(chrome,base,width,height){
     const loaded=cdp.waitEvent('Page.loadEventFired',15000);await cdp.send('Page.navigate',{url:`${base}?mode=real`});await loaded;
     await waitUntil(()=>evalJs(cdp,"document.querySelector('#app')?.classList.contains('ready')&&!!window.WarpSim&&!!window.WarpJourneyAtmosphere&&!!window.WarpRouteScenicPreview"),'Real Space scenic-preview runtime',30000);
     await evalJs(cdp,"document.querySelector('#panel')?.classList.add('open');WarpSim.select('ORION');true");
-    await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().cards===4"),'SOL to ORION scenic cards');
+    await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().cards===4&&WarpRouteScenicPreview.snapshot().arrival?.id==='ORION'"),'SOL to ORION scenic cards + arrival finale');
     await evalJs(cdp,`(()=>{const panel=document.querySelector('#panel'),root=document.querySelector('#routeScenicPreview');if(!panel||!root)return false;panel.scrollTop=Math.max(0,root.offsetTop-Math.max(18,(panel.clientHeight-root.offsetHeight)/2));return true})()`);
     await evalJs(cdp,"new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))",true);
-    const outbound=await evalJs(cdp,`(()=>{const panel=document.querySelector('#panel'),root=document.querySelector('#routeScenicPreview'),track=root?.querySelector('.routeScenicTrack'),r=root?.getBoundingClientRect(),p=panel?.getBoundingClientRect();const cards=[...document.querySelectorAll('.routeScenicCard')];return{snapshot:WarpRouteScenicPreview.snapshot(),names:cards.map(card=>card.querySelector('.routeScenicTitle')?.textContent),buttons:root?.querySelectorAll('button').length||0,root:r?{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}:null,panel:p?{left:p.left,right:p.right,top:p.top,bottom:p.bottom,width:p.width,height:p.height}:null,pageScroll:document.documentElement.scrollWidth,innerWidth,trackScroll:track?.scrollWidth||0,trackClient:track?.clientWidth||0}})()`);
+    const outbound=await evalJs(cdp,`(()=>{const panel=document.querySelector('#panel'),root=document.querySelector('#routeScenicPreview'),track=root?.querySelector('.routeScenicTrack'),r=root?.getBoundingClientRect(),p=panel?.getBoundingClientRect();const cards=[...document.querySelectorAll('.routeScenicCard')],arrival=document.querySelector('.routeScenicArrivalCard');return{snapshot:WarpRouteScenicPreview.snapshot(),names:cards.map(card=>card.querySelector('.routeScenicTitle')?.textContent),buttons:root?.querySelectorAll('button').length||0,arrivalCards:root?.querySelectorAll('.routeScenicArrivalCard').length||0,arrivalDestination:arrival?.dataset.destination||null,arrivalTitle:arrival?.querySelector('.routeScenicTitle')?.textContent||null,arrivalCopy:arrival?.textContent||'',root:r?{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}:null,panel:p?{left:p.left,right:p.right,top:p.top,bottom:p.bottom,width:p.width,height:p.height}:null,pageScroll:document.documentElement.scrollWidth,innerWidth,trackScroll:track?.scrollWidth||0,trackClient:track?.clientWidth||0}})()`);
     assert.deepEqual(outbound.names,['地月影錐','星門引導弧','藍紫導引束','獵戶發射雲絲']);
     assert.equal(outbound.snapshot.key,'SOL>LUNA>VEGA>CYG>ORION');
+    assert.equal(outbound.snapshot.arrival.id,'ORION');assert.equal(outbound.snapshot.arrival.name,'獵戶前哨');
+    assert.equal(outbound.arrivalCards,1,'route trailer must end with exactly one arrival finale');assert.equal(outbound.arrivalDestination,'ORION');assert.equal(outbound.arrivalTitle,'獵戶前哨');assert.match(outbound.arrivalCopy,/曲速脫離.*連續減速.*到站探索/);
     assert.equal(outbound.buttons,0,'Scenic Route Preview is informational and must not add route controls');
     assert.ok(outbound.root&&outbound.root.left>=-1&&outbound.root.right<=width+1,'Scenic Route Preview must stay horizontally inside phone viewport');
     assert.ok(outbound.panel&&outbound.root.top>=outbound.panel.top-1&&outbound.root.bottom<=outbound.panel.bottom+1,'Scenic Route Preview evidence must be fully visible inside the open navigation panel');
@@ -68,15 +73,16 @@ async function inspect(chrome,base,width,height){
     await sleep(120);const imageBytes=await screenshot(cdp,`route-scenic-${viewport}.png`);assert.ok(imageBytes>8000,'route preview screenshot should contain rendered app evidence');
 
     await evalJs(cdp,"WarpSim.jumpTo('ORION');WarpSim.select('SOL');true");
-    await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().key==='ORION>CYG>VEGA>LUNA>SOL'&&WarpRouteScenicPreview.snapshot().cards===4"),'ORION to SOL reverse scenic route');
-    const reverse=await evalJs(cdp,"[...document.querySelectorAll('.routeScenicCard')].map(card=>({name:card.querySelector('.routeScenicTitle')?.textContent,reverse:card.dataset.reverse}))");
-    assert.deepEqual(reverse.map(item=>item.name),['獵戶發射雲絲','藍紫導引束','星門引導弧','地月影錐']);
-    assert.ok(reverse.every(item=>item.reverse==='true'),'reverse travel must reuse canonical corridor presentation profiles');
+    await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().key==='ORION>CYG>VEGA>LUNA>SOL'&&WarpRouteScenicPreview.snapshot().cards===4&&WarpRouteScenicPreview.snapshot().arrival?.id==='SOL'"),'ORION to SOL reverse scenic route + home arrival');
+    const reverse=await evalJs(cdp,"({cards:[...document.querySelectorAll('.routeScenicCard')].map(card=>({name:card.querySelector('.routeScenicTitle')?.textContent,reverse:card.dataset.reverse})),arrival:[...document.querySelectorAll('.routeScenicArrivalCard')].map(card=>card.dataset.destination)})");
+    assert.deepEqual(reverse.cards.map(item=>item.name),['獵戶發射雲絲','藍紫導引束','星門引導弧','地月影錐']);
+    assert.ok(reverse.cards.every(item=>item.reverse==='true'),'reverse travel must reuse canonical corridor presentation profiles');
+    assert.deepEqual(reverse.arrival,['SOL'],'reverse route must end in the SOL-specific arrival composition');
 
     await evalJs(cdp,"WarpSim.jumpTo('SOL');WarpSim.select('SIRIUS');true");
-    await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().key==='SOL>SIRIUS'&&WarpRouteScenicPreview.snapshot().cards===1"),'direct scenic route');
-    const direct=await evalJs(cdp,"document.querySelector('.routeScenicTitle')?.textContent");assert.equal(direct,'冰藍剪切層');
-    console.log(`Scenic Route Preview browser ${viewport}: SOL→ORION 4 scenic legs, centered panel evidence, reverse reuse and SOL→SIRIUS direct preview passed`);
+    await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().key==='SOL>SIRIUS'&&WarpRouteScenicPreview.snapshot().cards===1&&WarpRouteScenicPreview.snapshot().arrival?.id==='SIRIUS'"),'direct scenic route + arrival finale');
+    const direct=await evalJs(cdp,"({corridor:document.querySelector('.routeScenicCard .routeScenicTitle')?.textContent,arrival:document.querySelector('.routeScenicArrivalCard')?.dataset.destination,arrivalCount:document.querySelectorAll('.routeScenicArrivalCard').length})");assert.equal(direct.corridor,'冰藍剪切層');assert.equal(direct.arrival,'SIRIUS');assert.equal(direct.arrivalCount,1);
+    console.log(`Scenic Route Preview browser ${viewport}: SOL→ORION 4 scenic legs + ORION arrival finale, reverse SOL finale and SOL→SIRIUS direct finale passed`);
   }catch(error){if(cdp)await screenshot(cdp,`route-scenic-failure-${viewport}.png`).catch(()=>{});throw error}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 
