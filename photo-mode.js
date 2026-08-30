@@ -137,7 +137,8 @@ function updateFrameGuide(){
   const guide=document.querySelector('#photoFrameGuide');
   const windowEl=guide?.querySelector('.photoFrameWindow');
   if(!guide||!windowEl)return;
-  const rect=cropRect(innerWidth,innerHeight,frameMode);
+  const bounds=guide.getBoundingClientRect();
+  const rect=cropRect(bounds.width,bounds.height,frameMode);
   guide.dataset.mode=frameMode;
   guide.classList.toggle('show',active&&frameMode!=='full');
   windowEl.style.width=`${rect.width}px`;
