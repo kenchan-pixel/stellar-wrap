@@ -83,7 +83,7 @@ During final exploration, VESPER now provides three session-only **Industrial Ca
 - `撈取切線` — a tilted limb view places the extraction tethers and skimmers across the luminous atmosphere.
 - `貨運夜弧` — an oblique night-side cargo composition uses the warm refinery arc against the teal cloud layers.
 
-Selecting a vista pauses auto-orbit and applies a bounded yaw / pitch / roll composition. A stationary canvas touch keeps the selected vista; only a deliberate drag beyond the existing 10 px interaction tolerance returns to free-look. High-quality capture preserves the selected composition while using the existing temporary DPR boost and restores the normal DPR afterward. The guide is session-only and adds no renderer, Three.js object, storage, network or route authority.
+Selecting a vista pauses auto-orbit and applies a bounded yaw / pitch / roll composition. A stationary canvas touch keeps the selected vista; only a deliberate drag beyond the existing 10 px interaction tolerance returns to free-look. High-quality capture now blocks further input while the selected vista converges to within `0.006` rad on yaw / pitch / roll, with a bounded `1.2 s` settle window and an exact-target fallback before the PNG frame if convergence is still incomplete. This prevents a rapid vista-select → capture action from saving a transitional angle. Capture then uses the existing temporary DPR boost and restores the normal DPR afterward. The guide is session-only and adds no renderer, Three.js object, storage, network or route authority.
 
 ## EIDOLON GATE｜遺光門廊
 
@@ -124,7 +124,7 @@ The Mode Gateway / Journey Gallery is DOM-only presentation. It adds no render l
 5. All four Frontier worlds remain outside Real Space routing and retain their standalone approach / arrival / exploration behavior.
 6. Production Chromium at 390×844 and 360×800 proves viewport containment and trusted-touch interaction for affected gateway/gallery paths.
 7. Existing Frontier capture flows remain bounded, temporarily increase backing resolution and restore prior DPR with `preserveDrawingBuffer:false`.
-8. VESPER exposes exactly three ≥44 px Industrial Capture Vista actions; trusted touch can select each, stationary touch preserves it, deliberate drag returns to free-look, and capture keeps the selected composition without increasing scene geometry.
+8. VESPER exposes exactly three ≥44 px Industrial Capture Vista actions; trusted touch can select each, stationary touch preserves it, deliberate drag returns to free-look, and an immediate guided capture must verify actual yaw / pitch / roll are within the selected preset tolerance before PNG export without increasing scene geometry.
 9. V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
 10. All four Frontier pages remain in the existing v15 offline shell contract.
 
