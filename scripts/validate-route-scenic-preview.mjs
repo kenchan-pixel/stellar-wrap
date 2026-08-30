@@ -55,11 +55,14 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"document.querySelector('#app')?.classList.contains('ready')&&!!window.WarpSim&&!!window.WarpJourneyAtmosphere&&!!window.WarpRouteScenicPreview"),'Real Space scenic-preview runtime',30000);
     await evalJs(cdp,"document.querySelector('#panel')?.classList.add('open');WarpSim.select('ORION');true");
     await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().cards===4"),'SOL to ORION scenic cards');
-    const outbound=await evalJs(cdp,`(()=>{const root=document.querySelector('#routeScenicPreview'),track=root?.querySelector('.routeScenicTrack'),r=root?.getBoundingClientRect();root?.scrollIntoView({block:'center',inline:'nearest'});const cards=[...document.querySelectorAll('.routeScenicCard')];return{snapshot:WarpRouteScenicPreview.snapshot(),names:cards.map(card=>card.querySelector('.routeScenicTitle')?.textContent),buttons:root?.querySelectorAll('button').length||0,root:r?{left:r.left,right:r.right,width:r.width}:null,pageScroll:document.documentElement.scrollWidth,innerWidth,trackScroll:track?.scrollWidth||0,trackClient:track?.clientWidth||0}})()`);
+    await evalJs(cdp,`(()=>{const panel=document.querySelector('#panel'),root=document.querySelector('#routeScenicPreview');if(!panel||!root)return false;panel.scrollTop=Math.max(0,root.offsetTop-Math.max(18,(panel.clientHeight-root.offsetHeight)/2));return true})()`);
+    await evalJs(cdp,"new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))",true);
+    const outbound=await evalJs(cdp,`(()=>{const panel=document.querySelector('#panel'),root=document.querySelector('#routeScenicPreview'),track=root?.querySelector('.routeScenicTrack'),r=root?.getBoundingClientRect(),p=panel?.getBoundingClientRect();const cards=[...document.querySelectorAll('.routeScenicCard')];return{snapshot:WarpRouteScenicPreview.snapshot(),names:cards.map(card=>card.querySelector('.routeScenicTitle')?.textContent),buttons:root?.querySelectorAll('button').length||0,root:r?{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}:null,panel:p?{left:p.left,right:p.right,top:p.top,bottom:p.bottom,width:p.width,height:p.height}:null,pageScroll:document.documentElement.scrollWidth,innerWidth,trackScroll:track?.scrollWidth||0,trackClient:track?.clientWidth||0}})()`);
     assert.deepEqual(outbound.names,['地月影錐','星門引導弧','藍紫導引束','獵戶發射雲絲']);
     assert.equal(outbound.snapshot.key,'SOL>LUNA>VEGA>CYG>ORION');
     assert.equal(outbound.buttons,0,'Scenic Route Preview is informational and must not add route controls');
     assert.ok(outbound.root&&outbound.root.left>=-1&&outbound.root.right<=width+1,'Scenic Route Preview must stay horizontally inside phone viewport');
+    assert.ok(outbound.panel&&outbound.root.top>=outbound.panel.top-1&&outbound.root.bottom<=outbound.panel.bottom+1,'Scenic Route Preview evidence must be fully visible inside the open navigation panel');
     assert.ok(outbound.pageScroll<=width+1,'Scenic Route Preview must not create page-level horizontal overflow');
     assert.ok(outbound.trackScroll>=outbound.trackClient,'Scenic Route Preview cards must remain bounded inside their own track');
     await sleep(120);const imageBytes=await screenshot(cdp,`route-scenic-${viewport}.png`);assert.ok(imageBytes>8000,'route preview screenshot should contain rendered app evidence');
@@ -73,7 +76,7 @@ async function inspect(chrome,base,width,height){
     await evalJs(cdp,"WarpSim.jumpTo('SOL');WarpSim.select('SIRIUS');true");
     await waitUntil(()=>evalJs(cdp,"WarpRouteScenicPreview.snapshot().key==='SOL>SIRIUS'&&WarpRouteScenicPreview.snapshot().cards===1"),'direct scenic route');
     const direct=await evalJs(cdp,"document.querySelector('.routeScenicTitle')?.textContent");assert.equal(direct,'冰藍剪切層');
-    console.log(`Scenic Route Preview browser ${viewport}: SOL→ORION 4 scenic legs, reverse reuse and SOL→SIRIUS direct preview passed`);
+    console.log(`Scenic Route Preview browser ${viewport}: SOL→ORION 4 scenic legs, centered panel evidence, reverse reuse and SOL→SIRIUS direct preview passed`);
   }catch(error){if(cdp)await screenshot(cdp,`route-scenic-failure-${viewport}.png`).catch(()=>{});throw error}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 
