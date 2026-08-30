@@ -46,7 +46,7 @@ if(!window.__stellarSiriusPhaseApertureAddHook){
   window.__stellarSiriusPhaseApertureAddHook={previousAdd,addWrapper};
 }
 function material(phase,colorA,colorB){
-  return new THREE.ShaderMaterial({
+  const shader=new THREE.ShaderMaterial({
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
     uniforms:{uPhase:{value:phase},uA:{value:new THREE.Color(colorA)},uB:{value:new THREE.Color(colorB)}},
     vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
@@ -61,6 +61,8 @@ function material(phase,colorA,colorB){
       gl_FragColor=vec4(color,alpha);
     }`
   });
+  shader.forceSinglePass=true;
+  return shader;
 }
 function build(){
   if(!relay||objects.length)return;
@@ -87,7 +89,7 @@ function sync(){
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{};
   const active=shouldRun(state)&&objects.length===2;
-  return{visualPass:VISUAL_PASS,target:'SIRIUS',quality:state.qualityMode||null,active,captured:!!relay,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles};
+  return{visualPass:VISUAL_PASS,target:'SIRIUS',quality:state.qualityMode||null,active,captured:!!relay,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,singlePass:active&&objects.every(object=>object.material?.forceSinglePass===true)};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');

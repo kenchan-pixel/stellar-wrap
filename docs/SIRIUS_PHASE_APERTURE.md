@@ -20,7 +20,8 @@ Make SIRIUS read immediately as a purpose-built interstellar relay station rathe
 - Gate the extension to safe final exploration, `qualityMode === 'high'`, and current destination `SIRIUS`.
 - Standard／Low: zero phase-aperture extension objects.
 - High: exactly 2 phase-aperture objects, measured **3,072 triangles / 2 draw calls**.
-- Existing shared SIRIUS High plus this extension: 6 owned visual objects, **16,064 triangles / 6 draw calls** in total.
+- The two transparent `DoubleSide` aperture materials explicitly use Three.js `forceSinglePass`, keeping each mesh to one renderer submission instead of the default transparent-double-side two-pass path.
+- Existing shared SIRIUS High plus this extension: 6 owned visual objects, **16,064 triangles / 6 incremental draw calls** over the lower-tier scene.
 - Synchronize state with a bounded 4 Hz fallback outside the renderer loop.
 - Also observe only the existing WebGL canvas `width` / `height` backing attributes. Core quality changes already resize that backing canvas, so this event-driven trigger activates/deactivates the High extension before the next animation frame. This specifically guarantees that a one-shot Photo Capture started from Standard / Low can include the High aperture during PNG extraction rather than waiting up to 250 ms for the fallback sampler.
 - The backing-canvas observer does not watch frame content, does not create a render loop, and is disconnected on teardown.
@@ -32,11 +33,11 @@ The phase aperture intentionally strengthens **artificial landmark identity** ra
 ## Acceptance Criteria
 
 1. Standard SIRIUS exploration has zero phase-aperture extension objects.
-2. High SIRIUS exploration has exactly 2 extension objects, 3,072 measured triangles and 2 draw calls.
-3. The existing shared SIRIUS High layer remains 4 objects / 12,992 triangles / 4 draw calls; combined bounded High cost is therefore 16,064 triangles / 6 draw calls.
+2. High SIRIUS exploration has exactly 2 extension objects, 3,072 measured triangles and 2 draw calls, with both live materials reporting `forceSinglePass === true`.
+3. The existing shared SIRIUS High layer remains 4 objects / 12,992 triangles / 4 draw calls; the production-browser gate reads the existing renderer diagnostic `DRAW` count and requires an actual **High − Standard delta of 6 calls**, rather than trusting duplicated profile constants.
 4. Real production-WebGL Standard and High screenshots differ while CSS viewport size and final `explore` phase remain unchanged at 390×844 and 360×800.
-5. A direct Photo Capture initiated from Standard activates the aperture before the WebGL canvas `toBlob()` export at both phone viewports, then restores Standard and releases the extension.
-6. High → Low disposes the extension; Low → High rebuilds it; SIRIUS → another system → SIRIUS rebuilds without accumulation.
+5. A direct Photo Capture initiated from Standard activates the aperture before the WebGL canvas `toBlob()` export at both phone viewports, with live single-pass material state, then restores Standard and releases the extension.
+6. High → Low disposes the extension and the measured renderer `DRAW` count returns to the lower-tier baseline; Low → High rebuilds it; SIRIUS → another system → SIRIUS rebuilds without accumulation.
 7. Existing route planning, flight phases, arrival timing, camera authority, renderer count, DPR ceilings, storage, network/backend paths and dependencies remain unchanged.
 8. The existing Photo Preview / Capture Boost path reveals the extra High detail without forcing permanent High quality.
 
@@ -51,7 +52,7 @@ The phase aperture intentionally strengthens **artificial landmark identity** ra
 
 ## Validation evidence
 
-The focused source/runtime validator is `scripts/validate-sirius-phase-aperture.mjs`; the production-WebGL gate is `scripts/validate-sirius-phase-aperture-browser.mjs`. The browser gate explicitly probes the aperture state at the actual canvas `toBlob()` extraction during a direct Standard → transient High Photo Capture at both 390×844 and 360×800. Exact CI run, screenshots, artifact digest and commit SHA are recorded in the persistent Draft PR receipt for the delivered cycle.
+The focused source/runtime validator is `scripts/validate-sirius-phase-aperture.mjs`; the production-WebGL gate is `scripts/validate-sirius-phase-aperture-browser.mjs`. The browser gate explicitly probes the aperture state at the actual canvas `toBlob()` extraction during a direct Standard → transient High Photo Capture at both 390×844 and 360×800. It also enables the existing renderer diagnostic HUD, records the real lower-tier and High `DRAW` counts after stable frames, requires exactly six incremental High submissions for the four shared cinematic objects plus two phase-aperture meshes, and verifies the count returns to the lower-tier baseline after disposal. Exact CI run, screenshots, artifact digest and commit SHA are recorded in the persistent Draft PR receipt for the delivered cycle.
 
 ## Risks / supplementary manual checks
 
@@ -59,4 +60,4 @@ Additive cyan/white intensity can vary slightly with mobile GPU and colour manag
 
 ## Completion signal
 
-SIRIUS High / photo frames show a recognizable intersecting relay aperture with stronger depth and artificial landmark identity; direct one-shot captures from the normal Standard tier include that High detail; Standard / Low remains unchanged outside the transient boost; and the approved V4+ travel/performance authorities stay intact.
+SIRIUS High / photo frames show a recognizable intersecting relay aperture with stronger depth and artificial landmark identity; direct one-shot captures from the normal Standard tier include that High detail; the real renderer budget proves the extension does not silently double-submit transparent double-sided materials; Standard / Low remains unchanged outside the transient boost; and the approved V4+ travel/performance authorities stay intact.
