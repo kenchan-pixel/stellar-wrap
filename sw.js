@@ -12,6 +12,7 @@ const CORE=[
   './frontier-vesper.html',
   './frontier-eidolon.html',
   './journey-atmosphere.js',
+  './route-scenic-preview.js',
   './exploration-survey.js',
   './star-atlas.js',
   './vega-survey.js',
