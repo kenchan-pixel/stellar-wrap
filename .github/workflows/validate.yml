@@ -37,5 +37,6 @@ jobs:
             artifacts/focus-tray-browser/
             artifacts/photo-mode-browser/
             artifacts/mode-gateway-browser/
+            artifacts/frontier-destination-handoff/
           if-no-files-found: ignore
           retention-days: 7
