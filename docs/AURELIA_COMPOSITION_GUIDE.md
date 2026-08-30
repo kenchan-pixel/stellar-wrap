@@ -1,4 +1,4 @@
-# AURELIA Cinematic Composition Guide｜曙光環域構圖導覽
+# AURELIA ARC｜曙光環域 · Cinematic Composition Guide｜構圖導覽
 
 > 狀態：Draft candidate／自主演進驗證中。這個切片深化既有 Frontier Fiction 旗艦目的地，不新增世界、航線、儲存或第二套相機 authority。
 
