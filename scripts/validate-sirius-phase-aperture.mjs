@@ -23,7 +23,9 @@ check(/upper\.rotation\.set\(\.42,\.16,-\.58\)/.test(source)&&/lower\.rotation\.
 check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='SIRIUS'/.test(source),'SIRIUS aperture is safe-final-exploration and High-only');
 check(/if\(!high&&objects\.length\)disposeOwn\(\)/.test(source)&&/if\(high&&relay&&!objects\.length\)build\(\)/.test(source),'SIRIUS aperture disposes on downgrade/departure and rebuilds on demand');
 check(/geometry\.index\?\.count/.test(source)&&/geometry\.attributes\?\.position\?\.count/.test(source),'SIRIUS aperture diagnostics measure actual BufferGeometry triangles');
-check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'SIRIUS aperture synchronization is bounded to 4 Hz outside the renderer loop');
+check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'SIRIUS aperture synchronization retains a bounded 4 Hz fallback outside the renderer loop');
+check(/new MutationObserver\(sync\)/.test(source)&&/attributeFilter:\['width','height'\]/.test(source),'SIRIUS aperture reacts immediately to renderer backing-size quality changes so one-shot Photo Capture includes High detail');
+check(/qualityObserver\?\.disconnect\(\)/.test(source),'SIRIUS quality observer is disconnected on teardown');
 check(!/requestAnimationFrame\s*\(/.test(source),'SIRIUS aperture adds no independent render loop');
 check(!/localStorage|sessionStorage|indexedDB/.test(source),'SIRIUS aperture adds no persistence authority');
 check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'SIRIUS aperture adds no runtime network or analytics path');
@@ -31,9 +33,9 @@ check(/object\.geometry\?\.dispose/.test(source)&&/material\?\.dispose/.test(sou
 check(/__stellarSiriusPhaseApertureAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'SIRIUS construction hook is explicitly restorable on teardown');
 check(/window\.WarpSiriusPhaseAperture=/.test(source),'SIRIUS aperture exposes a bounded diagnostic API');
 check(doc.includes('3,072')&&doc.includes('2 draw calls')&&doc.includes('Standard／Low'),'SIRIUS aperture SOT records bounded High cost and zero lower-tier cost');
-check(doc.includes('phase aperture')&&doc.includes('photographic'),'SIRIUS SOT records the intended relay-station photographic identity');
+check(doc.includes('Photo Capture')&&doc.includes('backing-canvas'),'SIRIUS SOT records direct-capture synchronization and its event-driven backing-canvas trigger');
 
-const browser=spawnSync(process.execPath,['scripts/validate-sirius-phase-aperture-browser.mjs'],{encoding:'utf8',timeout:120000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
+const browser=spawnSync(process.execPath,['scripts/validate-sirius-phase-aperture-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
-check(browser.status===0,'real production WebGL SIRIUS aperture passes measured-budget, disposal, rebuild, revisit and both phone viewport gates');
+check(browser.status===0,'real production WebGL SIRIUS aperture passes direct-capture, measured-budget, disposal, rebuild, revisit and both phone viewport gates');
 console.log(`SIRIUS Phase Aperture validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);

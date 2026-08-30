@@ -90,8 +90,11 @@ function snapshot(){
   return{visualPass:VISUAL_PASS,target:'SIRIUS',quality:state.qualityMode||null,active,captured:!!relay,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles};
 }
 const timer=setInterval(sync,SAMPLE_MS);
+const canvas=document.querySelector('#space');
+const qualityObserver=canvas?new MutationObserver(sync):null;
+qualityObserver?.observe(canvas,{attributes:true,attributeFilter:['width','height']});
 addEventListener('beforeunload',()=>{
-  clearInterval(timer);disposeOwn();
+  clearInterval(timer);qualityObserver?.disconnect();disposeOwn();
   const hook=window.__stellarSiriusPhaseApertureAddHook;
   if(hook?.addWrapper===addWrapper&&THREE.Object3D.prototype.add===addWrapper)THREE.Object3D.prototype.add=hook.previousAdd;
   if(hook?.addWrapper===addWrapper)delete window.__stellarSiriusPhaseApertureAddHook;
