@@ -19,7 +19,7 @@ The top-level gateway remains exactly four actions:
 1. **Continue Journey** — return to the current/restored Real Space state without replanning.
 2. **Real Space** — existing eight-system V4+ map and travel.
 3. **Frontier Fiction** — focus the unified four-destination Frontier selector; it no longer silently enters AURELIA.
-4. **Gallery / Captures** — existing read-only journey/discovery record surface and Real Space Photo Mode handoff.
+4. **Gallery / Captures** — existing read-only Journey Gallery, discovery archive and current-dock Capture Handoff using the existing Travel Journal / Star Atlas / Photo Mode authorities.
 
 Frontier destinations are now one equal 2×2 mobile grid:
 
@@ -42,6 +42,10 @@ There is no separate `Featured Expedition` pointer and no destination receives h
 - capture delegates to the existing destination renderer/capture authority and retains the existing temporary DPR boost.
 
 The existing four destination HTML files remain rendering sources for this slice. They are not deleted so their current scene geometry, capture paths and destination-specific validators remain available while the user-facing interaction converges.
+
+### Journey Gallery / Capture Handoff compatibility
+
+This slice does not redesign the existing Gallery. The Journey Gallery remains a read-only view over `WarpTravelJournal` and `WarpStarAtlas`, and the current-dock Capture Handoff continues to delegate to the existing Real Space `WarpPhotoMode`. No second journey, discovery or image persistence authority is created.
 
 ## Architecture boundary
 
