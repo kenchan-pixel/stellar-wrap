@@ -5,6 +5,7 @@ import {spawnSync} from 'node:child_process';
 const source=fs.readFileSync(new URL('../cyg-cinematic-quality.js',import.meta.url),'utf8');
 const focus=fs.readFileSync(new URL('../exploration-focus-tray.js',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const doc=fs.readFileSync(new URL('../docs/CYG_RESONANT_BEACON.md',import.meta.url),'utf8');
 let passed=0;
 function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);passed++;console.log(`PASS CYG ${passed}: ${label}`)}
 
@@ -16,10 +17,14 @@ check(/primaryCenter:new THREE\.Vector3\(-18,10,-108\)/.test(source)&&/primaryRa
 check(/companionCenter:new THREE\.Vector3\(18,-7,-118\)/.test(source)&&/companionRadius:8/.test(source),'CYG companion star anchor matches the existing core scene');
 check(/beaconCenter:new THREE\.Vector3\(0,0,-92\)/.test(source)&&/beaconRadius:19/.test(source),'CYG outer beacon anchor matches the existing core torus');
 check(/triangles:12992/.test(source)&&/drawCalls:4/.test(source),'CYG High budget is explicitly bounded to 12,992 triangles / four draw calls');
+check(/VISUAL_PASS='resonant-beacon-v1'/.test(source)&&/visualPass:VISUAL_PASS/.test(source),'CYG diagnostics identify the resonant beacon capture pass');
 check(/new THREE\.SphereGeometry\(1,64,40\)/.test(source)&&/primary-detail/.test(source),'CYG primary gains higher-frequency real 3D stellar detail');
 check(/new THREE\.SphereGeometry\(1,48,32\)/.test(source)&&/companion-detail/.test(source),'CYG companion gains bounded real 3D stellar detail');
-check(/binary-halo/.test(source)&&/haloMaterial/.test(source),'CYG High adds a bounded additive blue-violet halo');
-check(/new THREE\.TorusGeometry\(PROFILE\.beaconRadius,\.28,8,128\)/.test(source)&&/beacon\.add\(track\)/.test(source),'CYG beacon track attaches to the existing outer rotating torus');
+check(/const resonance=\.5\+\.5\*Math\.cos\(lon\*2\.0-lat\*\.8-\.55\)/.test(source)&&/const resonance=\.5\+\.5\*Math\.cos\(lon\*2\.0\+lat\*\.72\+2\.45\)/.test(source),'CYG twin-star textures carry complementary resonance hot bands');
+check(/float lon=atan\(vP\.z,vP\.x\)/.test(source)&&/float lobeA=pow/.test(source)&&/float lobeB=pow/.test(source),'CYG binary halo uses asymmetric longitude/latitude magnetic lobes');
+check(/float phase=fract\(vUv\.x\*18\.0\)/.test(source)&&/float lock=pow\(max\(0\.0,cos\(\(vUv\.x-\.13\)\*6\.2831853\)\),24\.0\)/.test(source),'CYG beacon track uses bounded segmented rails and a fixed lock wedge');
+check(/binary-halo/.test(source)&&/haloMaterial/.test(source),'CYG High retains one bounded additive blue-violet halo');
+check(/new THREE\.TorusGeometry\(PROFILE\.beaconRadius,\.28,8,128\)/.test(source)&&/beacon\.add\(track\)/.test(source),'CYG beacon track still attaches to the existing outer rotating torus');
 check(/geometry\.index\?\.count/.test(source)&&/geometry\.attributes\?\.position\?\.count/.test(source),'CYG diagnostics measure actual BufferGeometry triangles');
 check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='CYG'/.test(source),'CYG objects are safe-final-exploration and High-only');
 check(/if\(!high&&objects\.length\)disposeOwn\(\)/.test(source)&&/if\(high&&primary&&companion&&beacon&&!objects\.length\)build\(\)/.test(source),'CYG High objects dispose on downgrade/departure and rebuild on demand');
@@ -30,6 +35,8 @@ check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'CYG adds
 check(/material\.map\?\.dispose/.test(source)&&/object\.geometry\?\.dispose/.test(source),'CYG owned textures, materials and geometries are explicitly released');
 check(/__stellarCygCinematicAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'CYG construction hook is explicitly restorable on teardown');
 check(/window\.WarpCygCinematicQuality=/.test(source),'CYG diagnostic API exposes autonomous validation state');
+check(doc.includes('12,992')&&doc.includes('4 draw')&&doc.includes('Standard／Low'),'CYG SOT records the unchanged High budget and zero-cost lower tiers');
+check(doc.includes('resonance hot-band')&&doc.includes('lock wedge'),'CYG SOT describes the user-visible resonant beacon treatment');
 
 const browser=spawnSync(process.execPath,['scripts/validate-cyg-cinematic-quality-browser.mjs'],{encoding:'utf8',timeout:180000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
