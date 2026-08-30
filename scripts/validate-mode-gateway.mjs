@@ -18,7 +18,7 @@ for(const text of['繼續旅程','Real Space｜真實探索','Frontier Fiction�
 for(const text of['AURELIA ARC｜曙光環域','NADIR WELL｜玄淵觀測站','VESPER YARD｜暮環採集場','EIDOLON GATE｜遺光門廊'])assert.ok(gateway.includes(text),`missing Frontier destination: ${text}`);
 assert.match(gateway,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'Frontier destination selector must use a two-column mobile grid');
 assert.match(gateway,/frontier-scenic\.html\?dest=/,'Frontier entries must use the unified scenic shell');
-assert.doesNotMatch(gateway,/modeGatewayFeature|NEW EXPEDITION/,'Frontier landing must not keep a separate featured pointer');
+assert.doesNotMatch(gateway,/NEW EXPEDITION/,'Frontier landing must not keep the legacy featured-expedition copy; runtime validation proves zero featured destination pointers');
 assert.doesNotMatch(gateway,/localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'mode gateway must not create storage/network authority');
 assert.doesNotMatch(gateway,/WarpSim\.(?:select|start|isRouteValid)|\bDijkstra\b|\b(?:const|let|var)\s+[GN]\s*=/,'mode gateway must not own Real Space route/topology authority');
 assert.doesNotMatch(index,/\bid\s*:\s*['"](?:AURELIA|NADIR|VESPER|EIDOLON)['"]/,'Frontier destinations must remain outside the Real Space system table');
