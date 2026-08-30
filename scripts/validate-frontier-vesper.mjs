@@ -28,10 +28,18 @@ assert.match(vesper,/setPhase\('explore'\)/,'VESPER explore state must exist');
 assert.match(vesper,/window\.WarpFrontierVesper=/,'VESPER must expose bounded test/diagnostic state');
 assert.match(vesper,/toDataURL\('image\/png'\)/,'VESPER capture must export WebGL PNG data');
 assert.doesNotMatch(vesper,/localStorage|sessionStorage|indexedDB|XMLHttpRequest|sendBeacon/,'VESPER must stay stateless/local');
+assert.equal((vesper.match(/data-vesper-vista=/g)||[]).length,3,'VESPER must expose exactly three composition vistas');
+assert.match(vesper,/雲頂主環/,'VESPER overview vista must exist');
+assert.match(vesper,/撈取切線/,'VESPER tether vista must exist');
+assert.match(vesper,/貨運夜弧/,'VESPER cargo vista must exist');
+assert.match(vesper,/TAP_MOVE_TOLERANCE=10/,'VESPER guided view must use a deliberate-drag threshold');
+assert.match(vesper,/vista:guidedVista\|\|'free'/,'VESPER diagnostic state must expose guided/free composition');
+assert.match(vesper,/applyVista\(id\)\{return applyVista\(id\)\}/,'VESPER must expose composition control for acceptance testing');
 assert.ok(sw.includes("'./frontier-vesper.html'"),'offline CORE must include VESPER runtime');
 assert.match(sw,/CACHE_NAME=`\$\{CACHE_PREFIX\}v15`/,'offline cache-generation contract must remain v15');
 assert.ok(doc.includes('VESPER YARD｜暮環採集場'),'Mode Gateway SOT must describe VESPER');
-console.log('VESPER Frontier static contract: 19/19 passed');
+assert.ok(doc.includes('雲頂主環')&&doc.includes('撈取切線')&&doc.includes('貨運夜弧'),'Mode Gateway SOT must describe VESPER capture vistas');
+console.log('VESPER Frontier static contract: 27/27 passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const p=commandPath(c);if(p)return p}return''}
@@ -44,6 +52,7 @@ async function evalJs(cdp,expression,awaitPromise=false){const result=await cdp.
 async function screenshot(cdp,name){mkdirSync(EVIDENCE_DIR,{recursive:true});const result=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const data=Buffer.from(result.data,'base64');writeFileSync(join(EVIDENCE_DIR,name),data);return data.length}
 async function targetPoint(cdp,selector){return evalJs(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return{x,y,width:r.width,height:r.height,top:r.top,left:r.left,right:r.right,bottom:r.bottom,hit:hit?.id||hit?.closest?.('button')?.id||hit?.tagName||null,disabled:!!el.disabled}})()`)}
 async function trustedTap(cdp,selector){const p=await targetPoint(cdp,selector);assert.ok(p,`missing tap target ${selector}`);assert.ok(p.width>=44&&p.height>=44,`${selector} must expose a 44px touch target`);assert.ok(p.left>=0&&p.right<=await evalJs(cdp,'innerWidth')+1&&p.top>=0&&p.bottom<=await evalJs(cdp,'innerHeight')+1,`${selector} must stay inside viewport`);assert.equal(p.disabled,false,`${selector} must be enabled`);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:5,radiusY:5,force:1,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});return p}
+async function trustedDrag(cdp,selector,dx=36,dy=10){const p=await targetPoint(cdp,selector);assert.ok(p,`missing drag target ${selector}`);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:5,radiusY:5,force:1,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x+dx,y:p.y+dy,radiusX:5,radiusY:5,force:1,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})}
 
 async function inspect(chrome,base,width,height){
   const viewport=`${width}x${height}`,profile=mkdtempSync(join(tmpdir(),`stellar-vesper-${width}-`));let browser,cdp,stderr='';
@@ -57,11 +66,20 @@ async function inspect(chrome,base,width,height){
     await evalJs(cdp,"document.querySelector('#frontierVesperQuick')?.scrollIntoView({block:'center',inline:'center'});true");await sleep(120);const quick=await targetPoint(cdp,'#frontierVesperQuick');assert.ok(quick&&quick.width>=44&&quick.height>=44);await trustedTap(cdp,'#frontierVesperQuick');await waitUntil(()=>evalJs(cdp,"location.pathname.endsWith('/frontier-vesper.html')"),'VESPER navigation');await waitUntil(()=>evalJs(cdp,"!!window.WarpFrontierVesper&&document.querySelector('#vesperApp')?.classList.contains('ready')"),'VESPER runtime',30000);
     const initial=await evalJs(cdp,'WarpFrontierVesper.state()');assert.equal(initial.destination,'VESPER');assert.ok(['approach','arrival','explore'].includes(initial.phase));const approachBytes=await screenshot(cdp,`frontier-vesper-${viewport}-approach.png`);assert.ok(approachBytes>8000,'VESPER approach screenshot should contain rendered scene');
     await evalJs(cdp,'WarpFrontierVesper.skipArrival();true');await waitUntil(()=>evalJs(cdp,"WarpFrontierVesper.state().phase==='explore'&&WarpFrontierVesper.state().exploring===true"),'VESPER explore');await sleep(180);
-    const explored=await evalJs(cdp,'WarpFrontierVesper.state()');assert.equal(explored.cssWidth,width);assert.equal(explored.cssHeight,height);assert.ok(explored.drawCalls>0&&explored.drawCalls<=16,`VESPER draw calls bounded: ${explored.drawCalls}`);assert.ok(explored.triangles>0&&explored.triangles<=22000,`VESPER triangles bounded: ${explored.triangles}`);
+    const explored=await evalJs(cdp,'WarpFrontierVesper.state()');assert.equal(explored.cssWidth,width);assert.equal(explored.cssHeight,height);assert.ok(explored.drawCalls>0&&explored.drawCalls<=16,`VESPER draw calls bounded: ${explored.drawCalls}`);assert.ok(explored.triangles>0&&explored.triangles<=22000,`VESPER triangles bounded: ${explored.triangles}`);assert.ok(await evalJs(cdp,'document.documentElement.scrollWidth<=innerWidth+1'),'VESPER must not introduce horizontal overflow');
     const normal={width:explored.backingWidth,height:explored.backingHeight,pixelRatio:explored.pixelRatio};await trustedTap(cdp,'#vesperOrbit');await waitUntil(()=>evalJs(cdp,'WarpFrontierVesper.state().autoOrbit===false'),'trusted-touch VESPER orbit toggle');
-    const capture=await evalJs(cdp,'WarpFrontierVesper.capture(false)',true);assert.ok(capture.width>normal.width&&capture.height>normal.height,'VESPER capture must raise backing buffer');assert.equal(capture.cssWidth,width);assert.equal(capture.cssHeight,height);assert.ok(capture.bytes>12000,'VESPER capture must produce non-trivial PNG data');const restored=await evalJs(cdp,'WarpFrontierVesper.state()');assert.equal(restored.backingWidth,normal.width);assert.equal(restored.backingHeight,normal.height);assert.equal(restored.pixelRatio,normal.pixelRatio);
+
+    const vistas=[['overview','雲頂主環'],['tether','撈取切線'],['cargo','貨運夜弧']];
+    for(const [id,label] of vistas){
+      const selector=`[data-vesper-vista="${id}"]`;await trustedTap(cdp,selector);await waitUntil(()=>evalJs(cdp,`WarpFrontierVesper.state().vista===${JSON.stringify(id)}&&WarpFrontierVesper.state().autoOrbit===false`),`${label} guided composition`);await sleep(420);const state=await evalJs(cdp,'WarpFrontierVesper.state()');assert.equal(state.vista,id);assert.ok(Math.abs(state.orientation.targetRoll)<=.25,'VESPER guided roll must stay bounded');const bytes=await screenshot(cdp,`frontier-vesper-${viewport}-vista-${id}.png`);assert.ok(bytes>8000,`${label} screenshot should contain rendered scene`);
+    }
+    const cargoTarget=await evalJs(cdp,'WarpFrontierVesper.state().orientation');assert.ok(cargoTarget.targetYaw>.3&&cargoTarget.targetRoll>.2,'cargo composition must be materially distinct');
+    await trustedTap(cdp,'#vesperSpace');await sleep(120);assert.equal(await evalJs(cdp,'WarpFrontierVesper.state().vista'),'cargo','stationary touch must preserve guided composition');
+    await trustedDrag(cdp,'#vesperSpace',42,12);await waitUntil(()=>evalJs(cdp,"WarpFrontierVesper.state().vista==='free'"),'deliberate drag exits guided composition');
+    await trustedTap(cdp,'[data-vesper-vista="overview"]');await waitUntil(()=>evalJs(cdp,"WarpFrontierVesper.state().vista==='overview'"),'overview restored for capture');
+    const capture=await evalJs(cdp,'WarpFrontierVesper.capture(false)',true);assert.ok(capture.width>normal.width&&capture.height>normal.height,'VESPER capture must raise backing buffer');assert.equal(capture.cssWidth,width);assert.equal(capture.cssHeight,height);assert.ok(capture.bytes>12000,'VESPER capture must produce non-trivial PNG data');const restored=await evalJs(cdp,'WarpFrontierVesper.state()');assert.equal(restored.backingWidth,normal.width);assert.equal(restored.backingHeight,normal.height);assert.equal(restored.pixelRatio,normal.pixelRatio);assert.equal(restored.vista,'overview','capture must preserve selected guided composition');
     const exploreBytes=await screenshot(cdp,`frontier-vesper-${viewport}-explore.png`);assert.ok(exploreBytes>8000);assert.notEqual(exploreBytes,approachBytes,'approach and exploration evidence must differ');
-    console.log(`VESPER Frontier browser ${viewport}: trusted touch, ${explored.drawCalls} draws / ${explored.triangles} tris, capture ${capture.width}x${capture.height}, restored DPR ${restored.pixelRatio}`);
+    console.log(`VESPER Frontier browser ${viewport}: 3 trusted-touch vistas, stationary-tap preservation + drag exit, ${explored.drawCalls} draws / ${explored.triangles} tris, capture ${capture.width}x${capture.height}, restored DPR ${restored.pixelRatio}`);
   }catch(error){if(cdp)await screenshot(cdp,`frontier-vesper-failure-${viewport}.png`).catch(()=>{});throw error}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 

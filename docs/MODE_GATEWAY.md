@@ -77,6 +77,14 @@ Original extreme-object destination with black central silhouette, layered accre
 
 Original industrial-atmosphere destination around a fictional teal gas giant: luminous storm bands, refinery ring, skimmers, extraction tethers, cargo traffic and dedicated cloud-top arrival composition.
 
+During final exploration, VESPER now provides three session-only **Industrial Capture Vistas** that reuse the existing scene and camera transform rather than adding render cost:
+
+- `雲頂主環` — the gas-giant cloud top, refinery ring and cargo field share one readable establishing frame.
+- `撈取切線` — a tilted limb view places the extraction tethers and skimmers across the luminous atmosphere.
+- `貨運夜弧` — an oblique night-side cargo composition uses the warm refinery arc against the teal cloud layers.
+
+Selecting a vista pauses auto-orbit and applies a bounded yaw / pitch / roll composition. A stationary canvas touch keeps the selected vista; only a deliberate drag beyond the existing 10 px interaction tolerance returns to free-look. High-quality capture preserves the selected composition while using the existing temporary DPR boost and restores the normal DPR afterward. The guide is session-only and adds no renderer, Three.js object, storage, network or route authority.
+
 ## EIDOLON GATE｜遺光門廊
 
 Original ancient deep-space gate / ruin destination. It completes the fourth preferred Frontier archetype without copying a named franchise or recognizable protected location.
@@ -116,8 +124,9 @@ The Mode Gateway / Journey Gallery is DOM-only presentation. It adds no render l
 5. All four Frontier worlds remain outside Real Space routing and retain their standalone approach / arrival / exploration behavior.
 6. Production Chromium at 390×844 and 360×800 proves viewport containment and trusted-touch interaction for affected gateway/gallery paths.
 7. Existing Frontier capture flows remain bounded, temporarily increase backing resolution and restore prior DPR with `preserveDrawingBuffer:false`.
-8. V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
-9. All four Frontier pages remain in the existing v15 offline shell contract.
+8. VESPER exposes exactly three ≥44 px Industrial Capture Vista actions; trusted touch can select each, stationary touch preserves it, deliberate drag returns to free-look, and capture keeps the selected composition without increasing scene geometry.
+9. V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
+10. All four Frontier pages remain in the existing v15 offline shell contract.
 
 ## Out of Scope
 
