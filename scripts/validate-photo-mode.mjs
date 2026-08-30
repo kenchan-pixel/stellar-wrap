@@ -31,7 +31,14 @@ check(/function cropRect\(width,height,mode=frameMode\)/.test(source)&&/Math\.mi
 check(/createImageBitmap\(blob\)/.test(source)&&/context\.drawImage\(bitmap,rect\.x,rect\.y,rect\.width,rect\.height,0,0,rect\.width,rect\.height\)/.test(source),'framed output crops decoded boosted pixels without a second WebGL renderer');
 check(/photoCapturing \.photoFrameGuide/.test(source),'crop preview is hidden from the saved capture frame');
 check(/id=\"photoFrameToggle\"/.test(source)&&/min-height:44px/.test(source),'frame selector preserves the mobile 44 px touch baseline');
-check(/photoGuideToggle,.photoFrameToggle/.test(source)&&/photoModeLabel\{flex:1 0 100%\}/.test(source),'small-phone toolbar gives framing controls a bounded second-row layout');
+check(/id=\"photoPreviewToggle\"/.test(source)&&/aria-pressed=\"false\"/.test(source),'photo mode exposes an explicit session-only High preview toggle');
+check(/\.photoPreviewToggle\[aria-pressed="true"\]/.test(source),'High preview has a visible active state without adding scene authority');
+check(/function setPreviewBoost\(next,announce=true\)/.test(source)&&/previewPreviousQuality=state\.qualityMode/.test(source),'preview boost snapshots the previous renderer quality before requesting High');
+check(/previewPreviousQuality!==\'high\'\)api\.setQuality\('high'\)/.test(source),'preview boost reuses the existing High renderer tier only when needed');
+check(/previous&&previous!==\'high\'/.test(source)&&/api\.setQuality\(previous\)/.test(source),'preview boost restores the exact previous quality when disabled or exited');
+check(/setPreviewBoost\(false,false\);\s*active=false/.test(source),'leaving Photo Mode restores preview quality before closing the mode');
+check(/previewButton\.disabled=captureBusy/.test(source),'capture locks the preview-quality toggle against renderer authority races');
+check(/photoGuideToggle,.photoFrameToggle,.photoPreviewToggle/.test(source)&&/photoModeLabel\{flex:1 0 100%\}/.test(source),'small-phone toolbar includes the preview toggle in its bounded wrap layout');
 check(/photoCapturing \.photoCompositionGuide/.test(source),'composition aid is hidden during the capture frame');
 check(/classList\.add\('photoCapturing'\)/.test(source)&&/photoCapturing \.photoModeToolbar/.test(source),'capture hides its own toolbar from the saved frame');
 check(/async function capture\(\)/.test(source)&&((source.match(/await nextFrame\(\)/g)||[]).length>=2),'capture waits two rendered frames before PNG extraction');
@@ -44,7 +51,7 @@ check(/-9x16/.test(source)&&/-square/.test(source),'framed files carry an explic
 check(/高畫質 \$\{label\}影像/.test(source)&&/width.*height/.test(source),'capture feedback reports final framed image dimensions');
 check(/aria-busy/.test(source)&&/captureBusy/.test(source),'capture blocks duplicate actions while the high-quality frame is being prepared');
 check(/if\(active&&!visible&&!captureBusy\)exit\(\)/.test(source),'flight/context changes leave photo mode safely outside an active capture');
-check(/window\.WarpPhotoMode=\{/.test(source)&&/capturing\(\)/.test(source)&&/guide\(\)/.test(source)&&/frame\(\)/.test(source)&&/crop\(width,height,mode\)/.test(source),'diagnostic photo-mode API exposes capture, guide and frame state for validation');
+check(/window\.WarpPhotoMode=\{/.test(source)&&/previewBoosted\(\)/.test(source)&&/setPreviewBoost\(next\)/.test(source)&&/capturing\(\)/.test(source)&&/guide\(\)/.test(source)&&/frame\(\)/.test(source)&&/crop\(width,height,mode\)/.test(source),'diagnostic photo-mode API exposes preview boost, capture, guide and frame state for validation');
 check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'photo mode adds no network or analytics path');
 check(!/localStorage|sessionStorage|indexedDB/.test(source),'photo mode stores no user data directly');
 

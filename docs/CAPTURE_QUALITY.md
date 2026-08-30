@@ -110,6 +110,47 @@
 
 使用者在任何 Real Space 最終目的地可於同一 Photo Mode 直接預覽及輸出原幅、9:16 或 1:1 高畫質 PNG；真手機尺寸 Chromium 證明畫幅、裁切像素、工具列安全區及原畫質恢復全部正確。
 
+## Vertical Slice｜Live Photo Preview Boost v1
+
+### Goal / intended player outcome
+
+讓使用者在真正按下留影之前，就可以用攝影模式直接看到既有 High tier 的高解像畫面與目的地 cinematic detail，避免「低畫質構圖、高畫質輸出」造成構圖時看不到最終細節。提升只限靜態攝影狀態，由使用者主動開啟，離開攝影模式即自動恢復。
+
+### Scope
+
+- 在既有 Photo Mode toolbar 加入 44 px `預覽：原 → 高` session-only 切換，不保存偏好。
+- 開啟高畫質預覽時，暫時重用既有 `WarpSim.setQuality('high')`；不提高 High tier DPR 上限、不新增第二 renderer。
+- 因現有 cinematic-quality layer 本身只在安全 High 探索啟用，高畫質預覽會同時顯示已批准的目的地 High-tier 大氣、表面、環／站體等 bounded 3D detail，而不是只在 CSS 上放大畫面。
+- 關閉高畫質預覽或離開 Photo Mode 時，恢復進入高畫質預覽前的原畫質；若原本已是 High，保持 High。
+- 高畫質預覽開啟期間按「高畫質留影」，capture 直接使用已在 High 的 renderer；完成後仍保持預覽 High，直到使用者關閉預覽或離開 Photo Mode。
+- capture 期間預覽按鈕與其他控制一樣 disabled，避免 quality authority 競態。
+- 不新增儲存、網絡、後端、相機 authority、Three.js 物件或新的 polling／render-loop 工作。
+
+### Acceptance Criteria
+
+1. 預設仍使用進入 Photo Mode 前的原畫質，不永久提高一般探索或航程負載。
+2. 從 Low 進入 Photo Mode 後，以真 trusted touch 開啟高畫質預覽，`qualityMode` 必須變成 High，WebGL backing buffer 實際提高而 CSS viewport 尺寸不變。
+3. 在具 cinematic-quality profile 的 LUNA 驗證：預覽 High 後既有 cinematic layer 必須實際 active 且建立既有 bounded 4 個物件；關閉預覽或退出後物件回到 0，證明不是單純改按鈕或只放大 DPR。
+4. 390×844 與 360×800 真 Chromium 均需證明預覽按鈕 ≥44 px、toolbar 無橫向溢出、High → 原畫質恢復及再次進入 Photo Mode 預覽狀態為關閉。
+5. 預覽 High 期間 capture 不得把模式錯誤降回原畫質；只有關閉預覽／離開 Photo Mode 才恢復進入預覽前的 quality。
+6. 航行開始、WebGL context lost 或其他安全狀態令 Photo Mode 退出時，同樣必須恢復原畫質。
+7. 不改 High tier 1.60 mobile／1.90 desktop DPR 上限、flight timing、route、camera、destination geometry 或既有 capture crop contract。
+8. 不新增 storage key、analytics、network、backend、dependency、renderer 或 60 Hz 額外工作。
+
+### Out of Scope
+
+- 自動偵測 GPU 後永久鎖 High、背景持續 High、4K 強制 preview。
+- 新增曝光、濾鏡、HDR 合成、後製或自由裁切工具。
+- 提高既有 cinematic-quality geometry budget；本切片只讓攝影構圖階段可主動看到現有 High-tier detail。
+
+### Performance / risk
+
+高畫質預覽會在使用者主動開啟期間承擔既有 High tier 的 DPR 與目的地 cinematic detail 成本，因此必須嚴格局限在 Photo Mode，並以明確切換／退出恢復作成本邊界。這不是一般航程的永久畫質升級。實體 iPhone Safari 的短時間溫升與記憶體峰值仍屬補充證據；自動完成 gate 以真 Chromium backing buffer、cinematic layer lifecycle、手機 layout 與完整 repo validation 為準。
+
+### Completion signal
+
+使用者可在手機 Photo Mode 主動切換高畫質預覽，直接以真正 High renderer／cinematic detail 構圖，再留影；退出後一般探索畫質與 GPU 物件配置可靠恢復，沒有把 High 成本帶回航程。
+
 ## 下一個畫質切片候選
 
-繼續提升 High tier 的**實際 3D visual ceiling**或旅程／抵達構圖：優先程序化星體表面、大氣／halo、遠景層次與具有 destination identity 的 arrival spectacle；每項需以手機 fill-rate、draw call、記憶體及真 Browser 畫面證據限制成本，而不是只提高 DPR。
+在完成靜態攝影畫質工作後，下一步回到**實際 3D visual ceiling**：優先程序化星體表面、大氣／halo、遠景層次與具有 destination identity 的 arrival spectacle；每項需以手機 fill-rate、draw call、記憶體及真 Browser 畫面證據限制成本，而不是永久提高 DPR。

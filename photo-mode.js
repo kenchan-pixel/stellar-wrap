@@ -15,6 +15,8 @@ let captureBusy=false;
 let toastTimer=0;
 let guideMode='thirds';
 let frameMode='full';
+let previewBoost=false;
+let previewPreviousQuality=null;
 
 function safeState(state){
   return !!state&&SYSTEM_NAMES[state.current]&&state.exploring&&!state.flying&&!state.contextLost;
@@ -28,7 +30,7 @@ function ensureUi(){
   if(!document.querySelector('#photoModeStyle')){
     const style=document.createElement('style');
     style.id='photoModeStyle';
-    style.textContent='.photoModeTrigger{display:none}.photoModeTrigger.show{display:block}.photoModeToolbar{position:absolute;z-index:18;left:var(--safeL);right:var(--safeR);bottom:var(--safeB);display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(181,216,255,.2);border-radius:14px;background:rgba(3,7,15,.72);backdrop-filter:blur(16px);box-shadow:0 12px 38px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s,transform .18s}.photoMode .photoModeToolbar{opacity:1;transform:none;pointer-events:auto}.photoModeToolbar button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.055);color:var(--text);font-size:10px;font-weight:780;padding:0 12px}.photoModeToolbar button:disabled{opacity:.46}.photoModeToolbar .photoCapture{flex:1;border-color:rgba(178,216,255,.38);background:linear-gradient(180deg,rgba(150,195,255,.22),rgba(91,145,220,.1))}.photoModeLabel{min-width:0;flex:1.2}.photoModeLabel strong{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.photoModeLabel span{display:block;margin-top:2px;font-size:7px;color:var(--muted)}.photoCompositionGuide,.photoFrameGuide{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .18s ease}.photoCompositionGuide{z-index:17}.photoFrameGuide{z-index:16;overflow:hidden}.photoFrameWindow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(230,242,255,.62);box-shadow:0 0 0 100vmax rgba(1,4,10,.36),0 0 20px rgba(150,202,255,.12);pointer-events:none;opacity:.9;transition:width .18s ease,height .18s ease}.photoMode .photoFrameGuide.show{opacity:1}.photoCompositionGuide span{position:absolute;pointer-events:none;display:none;background:rgba(232,244,255,.46);box-shadow:0 0 0 1px rgba(0,0,0,.18)}.photoCompositionGuide .photoGuideV{top:0;bottom:0;width:1px}.photoCompositionGuide .photoGuideH{left:0;right:0;height:1px}.photoCompositionGuide .photoGuideV1{left:33.333%}.photoCompositionGuide .photoGuideV2{left:66.667%}.photoCompositionGuide .photoGuideH1{top:33.333%}.photoCompositionGuide .photoGuideH2{top:66.667%}.photoCompositionGuide .photoGuideVC{left:50%}.photoCompositionGuide .photoGuideHC{top:50%}.photoCompositionGuide .photoGuideMark{left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border:1px solid rgba(232,244,255,.56);border-radius:50%;background:transparent;box-shadow:0 0 0 1px rgba(0,0,0,.18)}.photoMode .photoCompositionGuide[data-mode="thirds"],.photoMode .photoCompositionGuide[data-mode="center"]{opacity:.62}.photoCompositionGuide[data-mode="thirds"] .photoGuideV1,.photoCompositionGuide[data-mode="thirds"] .photoGuideV2,.photoCompositionGuide[data-mode="thirds"] .photoGuideH1,.photoCompositionGuide[data-mode="thirds"] .photoGuideH2{display:block}.photoCompositionGuide[data-mode="center"] .photoGuideVC,.photoCompositionGuide[data-mode="center"] .photoGuideHC,.photoCompositionGuide[data-mode="center"] .photoGuideMark{display:block}.photoModeToast{position:absolute;z-index:19;left:50%;bottom:calc(var(--safeB) + 68px);transform:translateX(-50%) translateY(7px);max-width:82vw;padding:7px 10px;border-radius:999px;border:1px solid rgba(182,216,255,.18);background:rgba(3,7,15,.82);font-size:8px;color:#eaf3ff;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;white-space:nowrap}.photoModeToast.show{opacity:1;transform:translateX(-50%) translateY(0)}.photoMode .hud,.photoMode #flightBar,.photoMode #telemetry,.photoMode #openPanel,.photoMode #panel,.photoMode #exploreCard,.photoMode #perfHud{opacity:0!important;pointer-events:none!important}.photoMode.photoCapturing .photoModeToolbar,.photoMode.photoCapturing .photoModeToast,.photoMode.photoCapturing .photoCompositionGuide,.photoMode.photoCapturing .photoFrameGuide{opacity:0!important;pointer-events:none!important}@media (max-width:390px){.photoModeToolbar{gap:5px;padding:6px;flex-wrap:wrap}.photoModeToolbar button{padding:0 8px}.photoModeLabel{flex:1 0 100%}.photoModeLabel span{display:none}.photoGuideToggle,.photoFrameToggle{flex:0 0 auto}.photoCapture{min-width:104px}.photoModeToast{bottom:calc(var(--safeB) + 112px)}}@media (prefers-reduced-motion:reduce){.photoCompositionGuide,.photoFrameGuide,.photoFrameWindow{transition:none}}';
+    style.textContent='.photoModeTrigger{display:none}.photoModeTrigger.show{display:block}.photoModeToolbar{position:absolute;z-index:18;left:var(--safeL);right:var(--safeR);bottom:var(--safeB);display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(181,216,255,.2);border-radius:14px;background:rgba(3,7,15,.72);backdrop-filter:blur(16px);box-shadow:0 12px 38px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s,transform .18s}.photoMode .photoModeToolbar{opacity:1;transform:none;pointer-events:auto}.photoModeToolbar button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.055);color:var(--text);font-size:10px;font-weight:780;padding:0 12px}.photoModeToolbar button:disabled{opacity:.46}.photoModeToolbar .photoCapture{flex:1;border-color:rgba(178,216,255,.38);background:linear-gradient(180deg,rgba(150,195,255,.22),rgba(91,145,220,.1))}.photoPreviewToggle[aria-pressed="true"]{border-color:rgba(168,220,255,.42);background:linear-gradient(180deg,rgba(131,201,255,.2),rgba(86,137,225,.1));box-shadow:inset 0 0 0 1px rgba(255,255,255,.035)}.photoModeLabel{min-width:0;flex:1.2}.photoModeLabel strong{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.photoModeLabel span{display:block;margin-top:2px;font-size:7px;color:var(--muted)}.photoCompositionGuide,.photoFrameGuide{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .18s ease}.photoCompositionGuide{z-index:17}.photoFrameGuide{z-index:16;overflow:hidden}.photoFrameWindow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid rgba(230,242,255,.62);box-shadow:0 0 0 100vmax rgba(1,4,10,.36),0 0 20px rgba(150,202,255,.12);pointer-events:none;opacity:.9;transition:width .18s ease,height .18s ease}.photoMode .photoFrameGuide.show{opacity:1}.photoCompositionGuide span{position:absolute;pointer-events:none;display:none;background:rgba(232,244,255,.46);box-shadow:0 0 0 1px rgba(0,0,0,.18)}.photoCompositionGuide .photoGuideV{top:0;bottom:0;width:1px}.photoCompositionGuide .photoGuideH{left:0;right:0;height:1px}.photoCompositionGuide .photoGuideV1{left:33.333%}.photoCompositionGuide .photoGuideV2{left:66.667%}.photoCompositionGuide .photoGuideH1{top:33.333%}.photoCompositionGuide .photoGuideH2{top:66.667%}.photoCompositionGuide .photoGuideVC{left:50%}.photoCompositionGuide .photoGuideHC{top:50%}.photoCompositionGuide .photoGuideMark{left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border:1px solid rgba(232,244,255,.56);border-radius:50%;background:transparent;box-shadow:0 0 0 1px rgba(0,0,0,.18)}.photoMode .photoCompositionGuide[data-mode="thirds"],.photoMode .photoCompositionGuide[data-mode="center"]{opacity:.62}.photoCompositionGuide[data-mode="thirds"] .photoGuideV1,.photoCompositionGuide[data-mode="thirds"] .photoGuideV2,.photoCompositionGuide[data-mode="thirds"] .photoGuideH1,.photoCompositionGuide[data-mode="thirds"] .photoGuideH2{display:block}.photoCompositionGuide[data-mode="center"] .photoGuideVC,.photoCompositionGuide[data-mode="center"] .photoGuideHC,.photoCompositionGuide[data-mode="center"] .photoGuideMark{display:block}.photoModeToast{position:absolute;z-index:19;left:50%;bottom:calc(var(--safeB) + 68px);transform:translateX(-50%) translateY(7px);max-width:82vw;padding:7px 10px;border-radius:999px;border:1px solid rgba(182,216,255,.18);background:rgba(3,7,15,.82);font-size:8px;color:#eaf3ff;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;white-space:nowrap}.photoModeToast.show{opacity:1;transform:translateX(-50%) translateY(0)}.photoMode .hud,.photoMode #flightBar,.photoMode #telemetry,.photoMode #openPanel,.photoMode #panel,.photoMode #exploreCard,.photoMode #perfHud{opacity:0!important;pointer-events:none!important}.photoMode.photoCapturing .photoModeToolbar,.photoMode.photoCapturing .photoModeToast,.photoMode.photoCapturing .photoCompositionGuide,.photoMode.photoCapturing .photoFrameGuide{opacity:0!important;pointer-events:none!important}@media (max-width:390px){.photoModeToolbar{gap:5px;padding:6px;flex-wrap:wrap}.photoModeToolbar button{padding:0 7px}.photoModeLabel{flex:1 0 100%}.photoModeLabel span{display:none}.photoGuideToggle,.photoFrameToggle,.photoPreviewToggle{flex:0 0 auto}.photoCapture{min-width:104px}.photoModeToast{bottom:calc(var(--safeB) + 158px)}}@media (prefers-reduced-motion:reduce){.photoCompositionGuide,.photoFrameGuide,.photoFrameWindow{transition:none}}';
     document.head.append(style);
   }
   let trigger=document.querySelector('#photoModeTrigger');
@@ -67,10 +69,11 @@ function ensureUi(){
     toolbar.setAttribute('role','group');
     toolbar.setAttribute('aria-label','目的地攝影模式');
     toolbar.setAttribute('aria-hidden','true');
-    toolbar.innerHTML='<div class="photoModeLabel"><strong id="photoModeName">目的地攝影</strong><span>拖動畫面構圖 · 格線／畫幅只作預覽，不會烙印到 PNG</span></div><button id="photoGuideToggle" class="photoGuideToggle" type="button">格線：三分</button><button id="photoFrameToggle" class="photoFrameToggle" type="button">畫幅：原幅</button><button id="photoModeExit" type="button">返回</button><button id="photoModeCapture" class="photoCapture" type="button">高畫質留影</button>';
+    toolbar.innerHTML='<div class="photoModeLabel"><strong id="photoModeName">目的地攝影</strong><span>拖動畫面構圖 · 高畫質預覽只在攝影模式暫時啟用</span></div><button id="photoGuideToggle" class="photoGuideToggle" type="button">格線：三分</button><button id="photoFrameToggle" class="photoFrameToggle" type="button">畫幅：原幅</button><button id="photoPreviewToggle" class="photoPreviewToggle" type="button" aria-pressed="false">預覽：原</button><button id="photoModeExit" type="button">返回</button><button id="photoModeCapture" class="photoCapture" type="button">高畫質留影</button>';
     app.append(toolbar);
     toolbar.querySelector('#photoGuideToggle').addEventListener('click',cycleGuide);
     toolbar.querySelector('#photoFrameToggle').addEventListener('click',cycleFrame);
+    toolbar.querySelector('#photoPreviewToggle').addEventListener('click',togglePreviewBoost);
     toolbar.querySelector('#photoModeExit').addEventListener('click',exit);
     toolbar.querySelector('#photoModeCapture').addEventListener('click',capture);
   }
@@ -85,6 +88,7 @@ function ensureUi(){
   uiReady=true;
   setGuideMode(guideMode,false);
   setFrameMode(frameMode,false);
+  updatePreviewButton();
   return true;
 }
 
@@ -100,6 +104,47 @@ function notify(message,delay=1800){
 function updateLabel(){
   const label=document.querySelector('#photoModeName');
   if(label)label.textContent=(SYSTEM_NAMES[currentId]||currentId)+' · 攝影模式';
+}
+
+function updatePreviewButton(){
+  const button=document.querySelector('#photoPreviewToggle');
+  if(!button)return;
+  button.textContent=previewBoost?'預覽：高':'預覽：原';
+  button.setAttribute('aria-pressed',previewBoost?'true':'false');
+  button.setAttribute('aria-label',previewBoost?'高畫質預覽已啟用 · 按下恢復原本畫質':'高畫質預覽未啟用 · 按下只在攝影模式暫時提升畫質');
+}
+
+function setPreviewBoost(next,announce=true){
+  const desired=!!next;
+  if(desired===previewBoost){updatePreviewButton();return previewBoost}
+  const api=window.WarpSim;
+  if(desired){
+    let state;
+    try{state=api?.state?.()}catch{return false}
+    if(!active||captureBusy||!safeState(state)||typeof api?.setQuality!=='function')return false;
+    previewPreviousQuality=state.qualityMode||null;
+    previewBoost=true;
+    if(previewPreviousQuality!=='high')api.setQuality('high');
+    updatePreviewButton();
+    if(announce)notify('高畫質預覽已啟用 · 離開攝影模式會自動恢復',1800);
+    return true;
+  }
+  const previous=previewPreviousQuality;
+  previewBoost=false;
+  previewPreviousQuality=null;
+  if(previous&&previous!=='high'&&typeof api?.setQuality==='function'){
+    let state;
+    try{state=api?.state?.()}catch{}
+    if(state?.qualityMode==='high')api.setQuality(previous);
+  }
+  updatePreviewButton();
+  if(announce&&active)notify('已恢復原本預覽畫質',1300);
+  return false;
+}
+
+function togglePreviewBoost(){
+  if(captureBusy)return;
+  setPreviewBoost(!previewBoost);
 }
 
 function setGuideMode(mode,announce=true){
@@ -169,10 +214,12 @@ function setCaptureBusy(value){
   if(toolbar)toolbar.setAttribute('aria-busy',captureBusy?'true':'false');
   const guideButton=document.querySelector('#photoGuideToggle');
   const frameButton=document.querySelector('#photoFrameToggle');
+  const previewButton=document.querySelector('#photoPreviewToggle');
   const exitButton=document.querySelector('#photoModeExit');
   const captureButton=document.querySelector('#photoModeCapture');
   if(guideButton)guideButton.disabled=captureBusy;
   if(frameButton)frameButton.disabled=captureBusy;
+  if(previewButton)previewButton.disabled=captureBusy;
   if(exitButton)exitButton.disabled=captureBusy;
   if(captureButton)captureButton.disabled=captureBusy;
 }
@@ -184,8 +231,11 @@ function enter(){
   try{state=api?.state?.()}catch{return}
   if(!safeState(state))return;
   currentId=state.current;
+  previewBoost=false;
+  previewPreviousQuality=null;
   active=true;
   updateLabel();
+  updatePreviewButton();
   setGuideMode(guideMode,false);
   setFrameMode(frameMode,false);
   document.querySelector('#app')?.classList.add('photoMode');
@@ -196,6 +246,7 @@ function enter(){
 
 function exit(){
   if(!active||captureBusy)return;
+  setPreviewBoost(false,false);
   active=false;
   const app=document.querySelector('#app');
   app?.classList.remove('photoMode','photoCapturing');
@@ -328,6 +379,8 @@ window.WarpPhotoMode={
   capture,
   active(){return active},
   capturing(){return captureBusy},
+  previewBoosted(){return previewBoost},
+  setPreviewBoost(next){return setPreviewBoost(next)},
   guide(){return guideMode},
   setGuide(mode){return setGuideMode(mode)},
   frame(){return frameMode},
