@@ -4,7 +4,7 @@ if(window.WarpRouteScenicPreview)return;
 
 const STYLE_ID='routeScenicPreviewStyle';
 let root=null,track=null,summary=null,observer=null,routeHost=null,scheduled=false;
-let lastSnapshot={visible:false,cards:0,key:'',corridors:[]};
+let lastSnapshot={visible:false,cards:0,key:'',corridors:[],arrival:null};
 
 function source(){
   try{
@@ -68,11 +68,42 @@ function ensureStyle(){
 .routeScenicCard[data-corridor="SIRIUS>PROX"] .routeScenicFar{border:1px solid rgba(153,220,255,.3);border-right-color:transparent;border-radius:50%;transform:rotate(24deg)}
 .routeScenicCard[data-corridor="SIRIUS>PROX"] .routeScenicMid{background:radial-gradient(ellipse at 75% 45%,rgba(255,95,66,.25),transparent 48%),linear-gradient(120deg,rgba(188,233,255,.14),transparent 52%)}
 .routeScenicCard[data-corridor="SIRIUS>PROX"] .routeScenicNear{background:linear-gradient(125deg,transparent 32%,rgba(255,179,110,.32) 34% 37%,transparent 39%);transform:rotate(13deg)}
+.routeScenicArrivalCard{flex:0 0 min(78vw,250px);min-height:132px;padding:7px 8px 8px;border:1px solid rgba(207,226,255,.22);border-radius:11px;background:linear-gradient(150deg,rgba(95,158,255,.1),rgba(136,102,213,.05));scroll-snap-align:start;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}
+.routeScenicArrivalVisual{position:relative;height:62px;border-radius:8px;overflow:hidden;isolation:isolate;background:radial-gradient(circle at 50% 42%,rgba(177,215,255,.12),transparent 38%),linear-gradient(150deg,#071126,#02050e 72%);box-shadow:inset 0 0 0 1px rgba(216,232,255,.1)}
+.routeScenicArrivalVisual::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 8% 18%,rgba(255,255,255,.65) 0 1px,transparent 1.3px),radial-gradient(circle at 82% 16%,rgba(203,226,255,.5) 0 1px,transparent 1.3px),radial-gradient(circle at 55% 82%,rgba(255,255,255,.45) 0 1px,transparent 1.2px);opacity:.62}
+.routeScenicArrivalVisual .routeScenicFar,.routeScenicArrivalVisual .routeScenicMid,.routeScenicArrivalVisual .routeScenicNear{position:absolute;display:block;pointer-events:none}
+.routeScenicArrivalVisual .routeScenicFar{inset:5px 8px 7px}.routeScenicArrivalVisual .routeScenicMid{inset:9px 17px 8px 28px}.routeScenicArrivalVisual .routeScenicNear{inset:27px 8px 5px 48%}
+.routeScenicArrivalLabel{position:absolute;left:7px;bottom:5px;z-index:4;font-size:5.8px;letter-spacing:.12em;color:rgba(237,246,255,.78);text-shadow:0 1px 5px #02040b}
+.routeScenicArrivalVisual[data-destination="SOL"] .routeScenicFar{border:1px solid rgba(111,190,255,.45);border-radius:50%;transform:rotate(15deg)}
+.routeScenicArrivalVisual[data-destination="SOL"] .routeScenicMid{border-radius:50%;background:radial-gradient(circle at 62% 52%,#7fc4ff 0 18%,#173b78 20% 31%,rgba(60,140,230,.12) 39%,transparent 52%)}
+.routeScenicArrivalVisual[data-destination="SOL"] .routeScenicNear{border-radius:50%;background:radial-gradient(circle at 70% 46%,rgba(229,235,235,.84) 0 12%,transparent 14%)}
+.routeScenicArrivalVisual[data-destination="LUNA"] .routeScenicFar{border-radius:50%;background:radial-gradient(circle at 37% 52%,rgba(212,215,218,.82) 0 28%,rgba(94,99,109,.45) 29% 34%,transparent 38%)}
+.routeScenicArrivalVisual[data-destination="LUNA"] .routeScenicMid{border:1px solid rgba(206,231,255,.42);border-left-color:transparent;border-radius:50%;transform:rotate(19deg)}
+.routeScenicArrivalVisual[data-destination="LUNA"] .routeScenicNear{border-radius:50%;background:radial-gradient(circle at 75% 38%,rgba(91,172,255,.72) 0 10%,transparent 13%)}
+.routeScenicArrivalVisual[data-destination="VEGA"] .routeScenicFar{background:radial-gradient(circle at 22% 40%,rgba(218,243,255,.85) 0 9%,rgba(104,199,255,.12) 21%,transparent 36%)}
+.routeScenicArrivalVisual[data-destination="VEGA"] .routeScenicMid{border:2px solid rgba(128,214,255,.48);border-radius:50%;box-shadow:0 0 0 5px rgba(192,236,255,.12)}
+.routeScenicArrivalVisual[data-destination="VEGA"] .routeScenicNear{border:1px solid rgba(224,247,255,.5);border-radius:50%;transform:rotate(-12deg)}
+.routeScenicArrivalVisual[data-destination="CYG"] .routeScenicFar{background:radial-gradient(circle at 28% 42%,rgba(155,204,255,.85) 0 9%,rgba(91,164,255,.12) 18%,transparent 28%),radial-gradient(circle at 72% 55%,rgba(204,172,255,.8) 0 8%,rgba(152,108,255,.12) 17%,transparent 28%)}
+.routeScenicArrivalVisual[data-destination="CYG"] .routeScenicMid{border:1px solid rgba(176,206,255,.38);border-radius:50%;transform:rotate(27deg)}
+.routeScenicArrivalVisual[data-destination="CYG"] .routeScenicNear{background:linear-gradient(115deg,transparent 38%,rgba(135,205,255,.38) 40% 43%,transparent 45%)}
+.routeScenicArrivalVisual[data-destination="ORION"] .routeScenicFar{background:radial-gradient(circle at 72% 38%,rgba(255,126,76,.9) 0 17%,rgba(255,96,49,.18) 29%,transparent 43%),radial-gradient(ellipse at 24% 72%,rgba(214,90,73,.2),transparent 48%)}
+.routeScenicArrivalVisual[data-destination="ORION"] .routeScenicMid{background:linear-gradient(151deg,transparent 23%,rgba(255,174,110,.18) 31%,transparent 42% 60%,rgba(174,91,255,.12) 68%,transparent 76%)}
+.routeScenicArrivalVisual[data-destination="ORION"] .routeScenicNear{border-radius:58% 42% 50% 50%;background:linear-gradient(160deg,rgba(125,72,56,.72),rgba(48,29,28,.2));border-top:1px solid rgba(255,177,125,.35)}
+.routeScenicArrivalVisual[data-destination="TAU"] .routeScenicFar{border-radius:50%;background:radial-gradient(circle at 48% 48%,rgba(205,97,187,.82) 0 24%,rgba(115,66,158,.22) 30%,transparent 39%)}
+.routeScenicArrivalVisual[data-destination="TAU"] .routeScenicMid{border:2px solid rgba(245,171,222,.48);border-top-color:rgba(180,120,233,.2);border-radius:50%;transform:rotate(18deg) scaleX(1.18)}
+.routeScenicArrivalVisual[data-destination="TAU"] .routeScenicNear{background:radial-gradient(ellipse at 50% 70%,rgba(238,108,199,.22),transparent 64%);border-radius:50%}
+.routeScenicArrivalVisual[data-destination="SIRIUS"] .routeScenicFar{background:radial-gradient(circle at 25% 40%,rgba(198,246,255,.9) 0 11%,rgba(100,215,255,.14) 21%,transparent 31%),radial-gradient(circle at 72% 54%,rgba(245,252,255,.82) 0 7%,transparent 15%)}
+.routeScenicArrivalVisual[data-destination="SIRIUS"] .routeScenicMid{border:1px solid rgba(153,239,255,.45);border-radius:50%;transform:rotate(-18deg)}
+.routeScenicArrivalVisual[data-destination="SIRIUS"] .routeScenicNear{border:1px solid rgba(222,250,255,.32);border-left-color:transparent;border-radius:50%}
+.routeScenicArrivalVisual[data-destination="PROX"] .routeScenicFar{background:radial-gradient(circle at 23% 38%,rgba(255,99,69,.88) 0 13%,rgba(255,82,48,.16) 25%,transparent 38%)}
+.routeScenicArrivalVisual[data-destination="PROX"] .routeScenicMid{border-radius:50%;background:radial-gradient(circle at 62% 57%,rgba(255,112,63,.74) 0 18%,rgba(106,38,30,.42) 20% 29%,transparent 33%)}
+.routeScenicArrivalVisual[data-destination="PROX"] .routeScenicNear{border:1px solid rgba(255,173,130,.42);border-right-color:transparent;border-radius:50%;transform:rotate(14deg)}
 .routeScenicStep{margin-top:6px;font-size:6.5px;letter-spacing:.13em;color:rgba(164,204,255,.58);font-weight:800}
 .routeScenicTitle{margin-top:3px;font-size:9px;font-weight:800;color:#f0f6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .routeScenicSignature{margin-top:4px;font-size:7px;line-height:1.4;color:rgba(218,232,255,.58)}
 .routeScenicDestination{margin-top:5px;font-size:6.5px;color:#a9d2ff}
-@media(min-width:700px){.routeScenicCard{flex-basis:218px}}
+.routeScenicArrivalCard .routeScenicStep{color:rgba(207,225,255,.72)}.routeScenicArrivalCard .routeScenicDestination{color:#c8e2ff}
+@media(min-width:700px){.routeScenicCard{flex-basis:218px}.routeScenicArrivalCard{flex-basis:236px}}
 @media(prefers-reduced-motion:reduce){.routeScenicTrack{scroll-behavior:auto}}
 `;
   document.head.append(style);
@@ -107,7 +138,7 @@ function clear(){
   track?.replaceChildren();
   root?.classList.remove('show');
   if(summary)summary.textContent='未選擇航線';
-  lastSnapshot={visible:false,cards:0,key:'',corridors:[]};
+  lastSnapshot={visible:false,cards:0,key:'',corridors:[],arrival:null};
   return false;
 }
 function makeVisual(item){
@@ -118,6 +149,18 @@ function makeVisual(item){
   const vector=document.createElement('span');vector.className='routeScenicVector';vector.textContent=`${item.from} → ${item.to}`;
   visual.append(far,mid,near,vector);
   return visual;
+}
+function makeArrivalCard(id,profile){
+  if(!id||!profile)return null;
+  const card=document.createElement('article');card.className='routeScenicArrivalCard';card.dataset.destination=id;
+  const visual=document.createElement('div');visual.className='routeScenicArrivalVisual';visual.dataset.destination=id;visual.setAttribute('aria-hidden','true');
+  const far=document.createElement('span');far.className='routeScenicFar';const mid=document.createElement('span');mid.className='routeScenicMid';const near=document.createElement('span');near.className='routeScenicNear';const label=document.createElement('span');label.className='routeScenicArrivalLabel';label.textContent=`ARRIVAL · ${id}`;visual.append(far,mid,near,label);
+  const step=document.createElement('div');step.className='routeScenicStep';step.textContent='抵達構圖';
+  const title=document.createElement('div');title.className='routeScenicTitle';title.textContent=profile.name||id;
+  const signature=document.createElement('div');signature.className='routeScenicSignature';signature.textContent=profile.signature||profile.corridor||'目的地近場景觀';
+  const destination=document.createElement('div');destination.className='routeScenicDestination';destination.textContent='曲速脫離 → 連續減速 → 到站探索';
+  card.append(visual,step,title,signature,destination);
+  return card;
 }
 function render(){
   if(!ensureUi())return clear();
@@ -141,9 +184,11 @@ function render(){
     const destination=document.createElement('div');destination.className='routeScenicDestination';destination.textContent=`→ ${item.destination}`;
     card.append(visual,step,title,signature,destination);track.append(card);
   });
-  summary.textContent=`${cards.length} 段 · ${new Set(cards.map(card=>card.id||card.name)).size} 個識別航道`;
+  const arrivalId=route[route.length-1],arrivalProfile=src.profiles[arrivalId],arrivalCard=makeArrivalCard(arrivalId,arrivalProfile);
+  if(arrivalCard)track.append(arrivalCard);
+  summary.textContent=arrivalProfile?`${cards.length} 段 · 抵達 ${arrivalProfile.name}`:`${cards.length} 段 · ${new Set(cards.map(card=>card.id||card.name)).size} 個識別航道`;
   root.classList.add('show');
-  lastSnapshot={visible:true,cards:cards.length,key,corridors:cards.map(card=>({id:card.id,name:card.name,reverse:card.reverse,from:card.from,to:card.to}))};
+  lastSnapshot={visible:true,cards:cards.length,key,corridors:cards.map(card=>({id:card.id,name:card.name,reverse:card.reverse,from:card.from,to:card.to})),arrival:arrivalProfile?{id:arrivalId,name:arrivalProfile.name||arrivalId,signature:arrivalProfile.signature||''}:null};
   return true;
 }
 function schedule(){
@@ -157,7 +202,7 @@ function init(){
 }
 window.WarpRouteScenicPreview={
   render,
-  snapshot(){return{...lastSnapshot,corridors:lastSnapshot.corridors.map(item=>({...item}))}}
+  snapshot(){return{...lastSnapshot,corridors:lastSnapshot.corridors.map(item=>({...item})),arrival:lastSnapshot.arrival?{...lastSnapshot.arrival}:null}}
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
