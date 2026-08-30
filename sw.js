@@ -31,6 +31,7 @@ const CORE=[
   './cinematic-quality.js',
   './cyg-cinematic-quality.js',
   './orion-prominence-quality.js',
+  './sirius-phase-aperture.js',
   './landmark-guide.js',
   './offline-bootstrap.js'
 ];
