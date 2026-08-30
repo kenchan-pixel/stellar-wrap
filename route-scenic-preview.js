@@ -3,7 +3,7 @@
 if(window.WarpRouteScenicPreview)return;
 
 const STYLE_ID='routeScenicPreviewStyle';
-let root=null,track=null,summary=null,observer=null,routeHost=null,scheduled=false;
+let root=null,track=null,summary=null,nav=null,startButton=null,arrivalButton=null,observer=null,routeHost=null,scheduled=false;
 let lastSnapshot={visible:false,cards:0,key:'',corridors:[],arrival:null};
 
 function source(){
@@ -103,10 +103,22 @@ function ensureStyle(){
 .routeScenicSignature{margin-top:4px;font-size:7px;line-height:1.4;color:rgba(218,232,255,.58)}
 .routeScenicDestination{margin-top:5px;font-size:6.5px;color:#a9d2ff}
 .routeScenicArrivalCard .routeScenicStep{color:rgba(207,225,255,.72)}.routeScenicArrivalCard .routeScenicDestination{color:#c8e2ff}
+.routeScenicNav{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.routeScenicNav button{min-height:44px;border:1px solid rgba(176,211,255,.18);border-radius:10px;background:rgba(111,164,255,.07);color:#dcecff;font:inherit;font-size:7.5px;font-weight:760;letter-spacing:.035em;touch-action:manipulation}
+.routeScenicNav button:last-child{border-color:rgba(206,218,255,.26);background:linear-gradient(145deg,rgba(107,171,255,.14),rgba(133,103,218,.08));color:#f0f5ff}
+.routeScenicNav button:focus-visible{outline:2px solid rgba(180,218,255,.72);outline-offset:2px}
+.routeScenicNav button:disabled{opacity:.38}
 @media(min-width:700px){.routeScenicCard{flex-basis:218px}.routeScenicArrivalCard{flex-basis:236px}}
 @media(prefers-reduced-motion:reduce){.routeScenicTrack{scroll-behavior:auto}}
 `;
   document.head.append(style);
+}
+function scrollToEdge(edge){
+  if(!track||!root?.classList.contains('show'))return false;
+  const left=edge==='arrival'?Math.max(0,track.scrollWidth-track.clientWidth):0;
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  track.scrollTo({left,behavior:reduced?'auto':'smooth'});
+  return true;
 }
 function ensureUi(){
   const host=document.querySelector('#routeLegs');
@@ -121,7 +133,11 @@ function ensureUi(){
     summary=document.createElement('span');summary.textContent='未選擇航線';
     head.append(title,summary);
     track=document.createElement('div');track.className='routeScenicTrack';
-    root.append(head,track);
+    nav=document.createElement('div');nav.className='routeScenicNav';nav.setAttribute('aria-label','航道預覽導覽');
+    startButton=document.createElement('button');startButton.type='button';startButton.dataset.routeScenicJump='start';startButton.textContent='起點景觀';startButton.addEventListener('click',()=>scrollToEdge('start'));
+    arrivalButton=document.createElement('button');arrivalButton.type='button';arrivalButton.dataset.routeScenicJump='arrival';arrivalButton.textContent='看抵達構圖';arrivalButton.addEventListener('click',()=>scrollToEdge('arrival'));
+    nav.append(startButton,arrivalButton);
+    root.append(head,track,nav);
     host.insertAdjacentElement('afterend',root);
   }else if(root.previousElementSibling!==host){
     host.insertAdjacentElement('afterend',root);
@@ -138,6 +154,8 @@ function clear(){
   track?.replaceChildren();
   root?.classList.remove('show');
   if(summary)summary.textContent='未選擇航線';
+  if(startButton)startButton.disabled=true;
+  if(arrivalButton){arrivalButton.disabled=true;arrivalButton.removeAttribute('aria-label')}
   lastSnapshot={visible:false,cards:0,key:'',corridors:[],arrival:null};
   return false;
 }
@@ -187,6 +205,8 @@ function render(){
   const arrivalId=route[route.length-1],arrivalProfile=src.profiles[arrivalId],arrivalCard=makeArrivalCard(arrivalId,arrivalProfile);
   if(arrivalCard)track.append(arrivalCard);
   summary.textContent=arrivalProfile?`${cards.length} 段 · 抵達 ${arrivalProfile.name}`:`${cards.length} 段 · ${new Set(cards.map(card=>card.id||card.name)).size} 個識別航道`;
+  if(startButton)startButton.disabled=false;
+  if(arrivalButton){arrivalButton.disabled=!arrivalCard;if(arrivalProfile)arrivalButton.setAttribute('aria-label',`查看${arrivalProfile.name||arrivalId}抵達構圖`)}
   root.classList.add('show');
   lastSnapshot={visible:true,cards:cards.length,key,corridors:cards.map(card=>({id:card.id,name:card.name,reverse:card.reverse,from:card.from,to:card.to})),arrival:arrivalProfile?{id:arrivalId,name:arrivalProfile.name||arrivalId,signature:arrivalProfile.signature||''}:null};
   return true;
