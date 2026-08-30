@@ -27,8 +27,8 @@ assert.match(pkg,/validate-route-scenic-preview\.mjs/,'main validation must incl
 assert.match(doc,/SOL → LUNA → VEGA → CYG → ORION/,'SOT must retain the approved long-route acceptance case');
 assert.match(preview,/className='routeScenicArrivalCard'/,'preview must append one explicit arrival-finale card after route legs');
 assert.match(preview,/曲速脫離 → 連續減速 → 到站探索/,'arrival finale must preserve the approved arrival-to-exploration story');
-assert.match(preview,/data\.routeScenicJump='start'/,'preview must expose a presentation-only start jump');
-assert.match(preview,/data\.routeScenicJump='arrival'/,'preview must expose a presentation-only arrival jump');
+assert.match(preview,/dataset\.routeScenicJump='start'/,'preview must expose a presentation-only start jump');
+assert.match(preview,/dataset\.routeScenicJump='arrival'/,'preview must expose a presentation-only arrival jump');
 assert.match(preview,/\.routeScenicNav button\{min-height:44px/,'preview navigation must preserve the 44 px mobile touch baseline');
 assert.match(preview,/track\.scrollTo\(\{left,behavior:/,'preview navigation must move only its bounded horizontal card track');
 assert.match(preview,/matchMedia\?\.\('\(prefers-reduced-motion: reduce\)'\)/,'preview navigation must respect reduced-motion preference');
