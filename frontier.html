@@ -37,11 +37,11 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 const app=document.querySelector('#frontierApp'),canvas=document.querySelector('#frontierSpace');
 const phaseName=document.querySelector('#frontierPhaseName'),phaseMeta=document.querySelector('#frontierPhaseMeta'),storyCopy=document.querySelector('#frontierStoryCopy');
 const orbitButton=document.querySelector('#frontierOrbit'),captureButton=document.querySelector('#frontierCapture'),toast=document.querySelector('#frontierToast'),vistaRail=document.querySelector('#frontierVistaRail'),vistaButtons=[...document.querySelectorAll('[data-frontier-vista]')];
-const MAX_NORMAL_DPR=1.25,MAX_CAPTURE_DPR=1.60,TEST_MODE=new URLSearchParams(location.search).get('test')==='1';
+const MAX_NORMAL_DPR=1.25,MAX_CAPTURE_DPR=1.60,NEUTRAL_ROLL=.1,TEST_MODE=new URLSearchParams(location.search).get('test')==='1';
 const APPROACH_MS=TEST_MODE?1200:7600;
 const FREE_COPY='你已停泊在曙光環域外緣。環內城市光點、中央能源核心與外圍碎屑帶形成三層深度，可自由環視或留影。';
 const VISTAS={
-  overview:{label:'環域全景',yaw:-.05,pitch:.02,roll:.1,copy:'完整棲息環、中央核心與遠方伴星同時落入視野，突出這座無母星巨構的尺度。'},
+  overview:{label:'環域全景',yaw:-.05,pitch:.02,roll:NEUTRAL_ROLL,copy:'完整棲息環、中央核心與遠方伴星同時落入視野，突出這座無母星巨構的尺度。'},
   night:{label:'夜側港弧',yaw:-.52,pitch:.08,roll:-.46,copy:'沿夜側港弧傾斜觀察，城市冷光與外圍碎屑帶形成更強的前後景深。'},
   core:{label:'核心視窗',yaw:.46,pitch:-.18,roll:.62,copy:'把中央能源核心收進內環框景，讓主樑、發光內環與核心形成近距層次。'}
 };
@@ -54,7 +54,7 @@ const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x050511,.0041);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,1400);camera.position.set(0,0,0);
 scene.add(new THREE.AmbientLight(0x5f668e,.42));const key=new THREE.DirectionalLight(0xcfd9ff,1.8);key.position.set(-1,1.2,1.6);scene.add(key);
 const world=new THREE.Group();world.position.set(0,0,-132);scene.add(world);
-const habitat=new THREE.Group();habitat.position.set(7,-3,0);habitat.rotation.set(.95,.17,.1);world.add(habitat);
+const habitat=new THREE.Group();habitat.position.set(7,-3,0);habitat.rotation.set(.95,.17,NEUTRAL_ROLL);world.add(habitat);
 
 function seeded(seed){return()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296)}
 const rnd=seeded(17031);
@@ -81,6 +81,7 @@ function applySize(dpr=normalDpr()){renderer.setPixelRatio(dpr);renderer.setSize
 function smooth(t){t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)}
 function setOrbit(next){autoOrbit=!!next;orbitButton.setAttribute('aria-pressed',autoOrbit?'true':'false');orbitButton.textContent=`自動環繞：${autoOrbit?'開':'暫停'}`}
 function clearVista(resetCopy=true){guidedVista='';targetRoll=null;vistaButtons.forEach(button=>button.setAttribute('aria-pressed','false'));if(resetCopy&&phase==='explore'){phaseMeta.textContent='拖動畫面觀察 · 可高畫質留影';storyCopy.textContent=FREE_COPY}}
+function resetView(){targetYaw=targetPitch=0;guidedVista='';targetRoll=NEUTRAL_ROLL;vistaButtons.forEach(button=>button.setAttribute('aria-pressed','false'));if(phase==='explore'){phaseMeta.textContent='拖動畫面觀察 · 可高畫質留影';storyCopy.textContent=FREE_COPY;showToast('視角已回正')}}
 function applyVista(id){const preset=VISTAS[id];if(!preset||phase!=='explore')return false;setOrbit(false);guidedVista=id;targetYaw=preset.yaw;targetPitch=preset.pitch;targetRoll=preset.roll;vistaButtons.forEach(button=>button.setAttribute('aria-pressed',button.dataset.frontierVista===id?'true':'false'));phaseMeta.textContent=`構圖導覽 · ${preset.label}`;storyCopy.textContent=preset.copy;showToast(`${preset.label} · 已固定構圖`);return true}
 function setPhase(next){if(phase===next)return;phase=next;if(next==='arrival'){phaseName.textContent='巨構抵達';phaseMeta.textContent='晨昏環與城市弧線進入近景';storyCopy.textContent='環域以十六條主樑固定內外結構，光帶不是裝飾：它標示人工日照區與夜側港口。'}else if(next==='explore'){phaseName.textContent='自由探索';phaseMeta.textContent='拖動畫面觀察 · 可高畫質留影';storyCopy.textContent=FREE_COPY;captureButton.disabled=false;vistaRail.hidden=false}}
 function updateApproach(now){if(phase==='explore')return;const u=Math.min(1,(now-phaseStarted)/APPROACH_MS);if(u<.68){setPhase('approach');const k=smooth(u/.68);world.position.z=-132+(62*k);camera.fov=62-5*k}else{setPhase('arrival');const k=smooth((u-.68)/.32);world.position.z=-70+(15*k);camera.fov=57-3*k}camera.updateProjectionMatrix();if(u>=1){world.position.z=-55;camera.fov=54;camera.updateProjectionMatrix();setPhase('explore')}}
@@ -97,14 +98,14 @@ async function capture(download=true){
     return result;
   }finally{renderer.setPixelRatio(before);renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();app.classList.remove('capturing');capturing=false;captureButton.disabled=phase!=='explore'}
 }
-function frame(now){requestAnimationFrame(frame);if(hidden)return;const dt=Math.min(.05,(now-last)/1000||.016);last=now;updateApproach(now);lookYaw+=(targetYaw-lookYaw)*(1-Math.pow(.001,dt));lookPitch+=(targetPitch-lookPitch)*(1-Math.pow(.001,dt));if(phase==='explore'&&autoOrbit&&!dragging)habitat.rotation.z+=dt*.028;else if(targetRoll!==null)habitat.rotation.z+=(targetRoll-habitat.rotation.z)*(1-Math.pow(.0015,dt));habitat.rotation.y=.17+lookYaw;habitat.rotation.x=.95+lookPitch;rim.material.opacity=.72+.16*Math.sin(now*.0011);coreGlow.material.opacity=.4+.12*Math.sin(now*.0016);moon.rotation.y+=dt*.018;renderer.render(scene,camera)}
-canvas.addEventListener('pointerdown',event=>{if(phase!=='explore')return;if(guidedVista)clearVista();dragging=true;lastX=event.clientX;lastY=event.clientY;canvas.classList.add('dragging');canvas.setPointerCapture?.(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(!dragging)return;const dx=event.clientX-lastX,dy=event.clientY-lastY;lastX=event.clientX;lastY=event.clientY;targetYaw=Math.max(-.58,Math.min(.58,targetYaw-dx*.0042));targetPitch=Math.max(-.34,Math.min(.34,targetPitch-dy*.0042))});for(const name of['pointerup','pointercancel'])canvas.addEventListener(name,event=>{dragging=false;canvas.classList.remove('dragging');canvas.releasePointerCapture?.(event.pointerId)});canvas.addEventListener('dblclick',()=>{targetYaw=targetPitch=0;clearVista()});
+function frame(now){requestAnimationFrame(frame);if(hidden)return;const dt=Math.min(.05,(now-last)/1000||.016);last=now;updateApproach(now);lookYaw+=(targetYaw-lookYaw)*(1-Math.pow(.001,dt));lookPitch+=(targetPitch-lookPitch)*(1-Math.pow(.001,dt));if(targetRoll!==null){habitat.rotation.z+=(targetRoll-habitat.rotation.z)*(1-Math.pow(.0015,dt));if(Math.abs(targetRoll-habitat.rotation.z)<.001){habitat.rotation.z=targetRoll;targetRoll=null}}else if(phase==='explore'&&autoOrbit&&!dragging)habitat.rotation.z+=dt*.028;habitat.rotation.y=.17+lookYaw;habitat.rotation.x=.95+lookPitch;rim.material.opacity=.72+.16*Math.sin(now*.0011);coreGlow.material.opacity=.4+.12*Math.sin(now*.0016);moon.rotation.y+=dt*.018;renderer.render(scene,camera)}
+canvas.addEventListener('pointerdown',event=>{if(phase!=='explore')return;if(guidedVista)clearVista();dragging=true;lastX=event.clientX;lastY=event.clientY;canvas.classList.add('dragging');canvas.setPointerCapture?.(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(!dragging)return;const dx=event.clientX-lastX,dy=event.clientY-lastY;lastX=event.clientX;lastY=event.clientY;targetYaw=Math.max(-.58,Math.min(.58,targetYaw-dx*.0042));targetPitch=Math.max(-.34,Math.min(.34,targetPitch-dy*.0042))});for(const name of['pointerup','pointercancel'])canvas.addEventListener(name,event=>{dragging=false;canvas.classList.remove('dragging');canvas.releasePointerCapture?.(event.pointerId)});canvas.addEventListener('dblclick',resetView);
 vistaButtons.forEach(button=>button.addEventListener('click',()=>applyVista(button.dataset.frontierVista)));
 orbitButton.addEventListener('click',()=>{const next=!autoOrbit;setOrbit(next);if(next)clearVista()});captureButton.addEventListener('click',()=>capture(true));document.querySelector('#frontierModes').addEventListener('click',()=>{location.href='./index.html?landing=1'});document.querySelector('#frontierReal').addEventListener('click',()=>{location.href='./index.html?mode=real'});
 addEventListener('resize',()=>applySize(),{passive:true});document.addEventListener('visibilitychange',()=>{hidden=document.hidden;last=performance.now()});
 applySize();app.classList.add('ready');setTimeout(()=>document.querySelector('#frontierLoading')?.remove(),500);requestAnimationFrame(frame);
 window.WarpFrontier={
-  state(){const info=renderer.info.render;return{destination:'AURELIA',name:'AURELIA ARC｜曙光環域',phase,exploring:phase==='explore',autoOrbit,capturing,vista:guidedVista||'free',pixelRatio:renderer.getPixelRatio(),drawCalls:info.calls,triangles:info.triangles,backingWidth:canvas.width,backingHeight:canvas.height,cssWidth:Math.round(canvas.getBoundingClientRect().width),cssHeight:Math.round(canvas.getBoundingClientRect().height)}},
+  state(){const info=renderer.info.render;return{destination:'AURELIA',name:'AURELIA ARC｜曙光環域',phase,exploring:phase==='explore',autoOrbit,capturing,vista:guidedVista||'free',orientation:{yaw:lookYaw,pitch:lookPitch,roll:habitat.rotation.z,targetYaw,targetPitch,targetRoll},pixelRatio:renderer.getPixelRatio(),drawCalls:info.calls,triangles:info.triangles,backingWidth:canvas.width,backingHeight:canvas.height,cssWidth:Math.round(canvas.getBoundingClientRect().width),cssHeight:Math.round(canvas.getBoundingClientRect().height)}},
   capture(download=false){return capture(download)},
   applyVista(id){return applyVista(id)},
   skipArrival(){world.position.z=-55;camera.fov=54;camera.updateProjectionMatrix();setPhase('explore')}

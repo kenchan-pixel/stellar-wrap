@@ -17,6 +17,7 @@
   - `核心視窗`：把中央能源核心與內環結構放入更強的近景層次。
 - 選擇構圖時暫停既有自動環繞，只調整現有 habitat 的 yaw／pitch／roll target；不建立第二部 camera 或 renderer。
 - 玩家開始手動拖動或重新開啟自動環繞時，構圖導覽回到自由模式。
+- 雙擊回正必須把 yaw／pitch 連同 habitat roll 一起平滑返回原始 neutral 構圖（roll `0.1`），不可保留 Night／Core 的傾斜角度。
 - 原有 `高畫質留影` 直接保存目前構圖，完成後仍恢復原本 DPR。
 
 ### Acceptance Criteria
@@ -25,7 +26,7 @@
 2. 三個構圖使用不同 yaw／pitch／roll target，畫面證據必須可區分，不能只是改文字。
 3. 選擇構圖會停止自動環繞，避免已選畫面繼續漂走；重新開啟自動環繞會清除 guided state。
 4. 導覽只調整既有 `habitat` transform，不新增 WebGL draw call、triangle、mesh、shader、貼圖或 post-processing。
-5. 原有拖動、雙擊回正、模式選擇、Real Space 返回及高畫質留影全部保留。
+5. 原有拖動、模式選擇、Real Space 返回及高畫質留影全部保留；雙擊回正必須清除 guided state，並將 yaw／pitch／roll 全部返回原始 neutral 構圖。
 6. 留影時仍使用既有短暫 1.60 mobile DPR capture tier，完成後恢復正常 DPR，並保留選定構圖。
 7. 不新增 localStorage、sessionStorage、IndexedDB、網絡請求、後端、analytics、dependency 或第二 renderer。
 
@@ -42,7 +43,8 @@ Focused validator 應以 production AURELIA runtime 驗證：
 
 - exactly 3 個構圖 preset 與 44 px 手機觸控面積；
 - 390×844、360×800 真 Chromium trusted touch；
-- `free → night → core → free auto-orbit` state transitions；
+- `free → night → core → trusted double-click neutral reset → free auto-orbit` state transitions；
+- double-click 後 `vista=free`，yaw／pitch 回到 0、roll 回到原始 `0.1`，不可只驗證 DOM 文案；
 - 三個構圖截圖互相不同；
 - guided state 前後 draw calls／triangles 完全不增加；
 - guided composition 期間高畫質 capture backing buffer 真正提升並恢復；
@@ -55,4 +57,4 @@ Focused validator 應以 production AURELIA runtime 驗證：
 
 ### Completion Signal
 
-AURELIA 由單純自由拖動景觀升級成可快速取得三個明顯不同、可直接高畫質留影的旗艦構圖；真手機尺寸 Browser、capture、效能邊界及完整 repo validation 通過後推送 persistent Draft PR。
+AURELIA 由單純自由拖動景觀升級成可快速取得三個明顯不同、可直接高畫質留影的旗艦構圖；guided 構圖後雙擊亦能完整回正至 neutral yaw／pitch／roll。真手機尺寸 Browser、capture、效能邊界及完整 repo validation 通過後推送 persistent Draft PR。
