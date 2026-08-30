@@ -19,7 +19,7 @@ The current destination slices now cover all eight existing systems:
 5. **ORION｜獵戶前哨** — red-supergiant / rocky-outpost / nebula depth.
 6. **TAU｜金牛塵海** — ringed gas giant depth.
 7. **SIRIUS｜天狼中繼站** — blue-white primary / ice body / relay-ring depth.
-8. **PROX｜比鄰星港** — lava fissure / hot atmosphere / red-dwarf / starport depth.
+8. **PROX｜比鄰星港** — lava fissure / hot atmosphere / red-dwarf / starport depth, plus a focused High-only traffic-lattice extension around the existing rotating starport.
 
 ## Runtime contract
 
@@ -35,7 +35,7 @@ Extra objects are created only when all are true:
 
 When any condition stops being true, the modules remove and dispose their owned geometry, materials and procedural textures. Returning to High or revisiting a supported destination rebuilds them from the current core scene.
 
-There is no second renderer, requestAnimationFrame loop, storage key, network request, analytics path or external visual asset. CYG is implemented as a focused destination extension loaded after the shared cinematic layer; it follows the same authority and lifecycle contract and samples state at the same bounded 4 Hz outside the renderer loop.
+There is no second renderer, requestAnimationFrame loop, storage key, network request, analytics path or external visual asset. CYG, ORION, SIRIUS and PROX may use focused destination extensions loaded after the shared cinematic layer; each follows the same safe-state authority and bounded lifecycle contract outside the renderer loop.
 
 ## SOL budget
 
@@ -154,25 +154,41 @@ The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the f
 
 Below High, owned SIRIUS objects return to zero.
 
-## PROX budget
+## PROX shared budget
 
-High adds four owned objects to the existing red-dwarf / lava-planet / starport composition:
+The shared High layer adds four owned objects to the existing red-dwarf / lava-planet / starport composition:
 
 - higher-frequency incandescent fissure detail attached to the existing lava-planet surface;
 - additive orange-red atmospheric / heat limb around the lava planet;
 - a bounded red-dwarf halo that strengthens the distant light source without adding another star;
 - segmented luminous starport track attached to the existing orbital torus, inheriting the core starport rotation instead of adding another animation authority.
 
-Budget:
+Shared budget:
 
 - additional draw calls: **4**
 - additional triangles: **12,992**
 
-The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the four High-only PROX meshes (4,992 + 2,976 + 2,976 + 2,048). Below High, owned PROX objects return to zero.
+The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the four High-only PROX shared meshes (4,992 + 2,976 + 2,976 + 2,048).
+
+### PROX Starport Transit Lattice extension
+
+A focused High-only extension makes the starport read as an active industrial orbital structure:
+
+- two partial-torus traffic lanes attach to the existing 20-unit outer starport torus and inherit its core rotation;
+- **36** bounded cyan/amber approach beacons create layered traffic depth without another animation loop;
+- direct Photo Capture is synchronized from the existing backing-canvas quality change so Standard → High capture includes the lattice before PNG extraction.
+
+Extension budget:
+
+- additional draw calls: **3**
+- additional mesh triangles: **2,304**
+- additional points: **36**
+
+Therefore the PROX destination-specific High enhancement above the untouched core scene is bounded to **7 draw calls** and **15,296 mesh triangles** across the shared cinematic layer plus this extension. Standard／Low own zero objects from both layers after disposal. Exact extension acceptance is recorded in `docs/PROX_STARPORT_TRANSIT_LATTICE.md`.
 
 ## Capture handoff
 
-Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic modules listen to that same quality authority, so a high-quality capture at any of the eight existing destinations receives its destination-specific 3D layers automatically. After capture restores the previous quality tier, the extra cinematic objects are disposed.
+Destination Photo Mode already performs a temporary switch to the existing High renderer tier before exporting a PNG. The cinematic modules listen to that same quality authority, so a high-quality capture at any of the eight existing destinations receives its destination-specific 3D layers automatically. Focused extensions that depend on the High backing-canvas transition also observe that existing canvas size change; after capture restores the previous quality tier, their extra objects are disposed.
 
 ## Acceptance
 
@@ -188,13 +204,15 @@ Automated source validation must prove:
 
 Real Chromium at **390×844** and **360×800** must prove for all eight destinations:
 
-1. Standard has zero extra cinematic objects.
-2. High has exactly four extra objects and the measured geometry count matches the documented triangle budget.
+1. Standard has zero extra shared cinematic objects.
+2. High shared layers have exactly four extra objects and the measured geometry count matches the documented triangle budget.
 3. Standard and High evidence screenshots are not identical.
 4. High → Low disposes all extra objects.
 5. Low → High rebuilds the layer.
 6. Destination → another system → destination rebuilds successfully without accumulation.
 7. CSS viewport remains unchanged and phase remains final exploration.
+
+Focused extensions add their own exact renderer-delta, direct-capture and lifecycle gates where applicable; profile constants alone are not accepted as renderer-cost evidence.
 
 ## Performance boundary
 
