@@ -13,11 +13,16 @@ const sw=readFileSync('sw.js','utf8');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const EVIDENCE_DIR=join(process.cwd(),'artifacts','mode-gateway-browser');
 const DESTS=['AURELIA','NADIR','VESPER','EIDOLON'];
+const ORDERS=['01','02','03','04'];
 
 assert.match(journal,/import\('\.\/mode-gateway\.js'\)/,'Travel Journal bootstrap must load the mode gateway');
 for(const text of['繼續旅程','Real Space｜真實探索','Frontier Fiction｜科幻空域','Gallery / Captures｜探索記錄'])assert.ok(gateway.includes(text),`missing mode entry: ${text}`);
 for(const text of['AURELIA ARC｜曙光環域','NADIR WELL｜玄淵觀測站','VESPER YARD｜暮環採集場','EIDOLON GATE｜遺光門廊'])assert.ok(gateway.includes(text),`missing Frontier destination: ${text}`);
-assert.match(gateway,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'Frontier destination selector must use a two-column mobile grid');
+assert.match(gateway,/\.modeGatewayDest\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,'wider Frontier selector may retain the compact two-column layout');
+assert.match(gateway,/@media\(max-width:520px\)\{[^`]*\.modeGatewayDest\{grid-template-columns:1fr\}/s,'phone Landing selector must collapse to one ordered column');
+assert.match(scenic,/@media\(max-width:520px\)\{\.destGrid\{grid-template-columns:1fr\}/,'phone scenic selector must use the same one-column rail');
+for(const order of ORDERS)assert.ok(gateway.includes(`data-order="${order}"`),`Landing selector must expose stable order ${order}`);
+assert.match(gateway,/aria-label="AURELIA ARC｜曙光環域，開啟固定景觀"/,'Landing destination controls need explicit accessible labels');
 assert.match(gateway,/frontier-scenic\.html\?dest=/,'Frontier entries must use the unified scenic shell');
 assert.doesNotMatch(gateway,/NEW EXPEDITION/,'Frontier landing must not keep the legacy featured-expedition copy; runtime validation proves zero featured destination pointers');
 assert.doesNotMatch(gateway,/localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'mode gateway must not create storage/network authority');
@@ -31,7 +36,7 @@ for(const control of['模式選擇','科幻航線','Real Space','高畫質留影
 assert.doesNotMatch(scenic,/localStorage|sessionStorage|indexedDB|XMLHttpRequest|sendBeacon/,'scenic shell must remain stateless');
 assert.ok(sw.includes("'./frontier-scenic.html'"),'offline CORE must include unified scenic shell');
 assert.match(sw,/CACHE_NAME=`\$\{CACHE_PREFIX\}v15`/,'existing offline cache generation must remain v15');
-console.log('Mode Gateway + Frontier Scenic semantic/static contract: 32/32 passed');
+console.log('Mode Gateway + Frontier Scenic semantic/static contract: 38/38 passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const p=commandPath(c);if(p)return p}return''}
@@ -44,6 +49,7 @@ async function evalJs(cdp,expression,awaitPromise=false){const result=await cdp.
 async function screenshot(cdp,name){mkdirSync(EVIDENCE_DIR,{recursive:true});const result=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const data=Buffer.from(result.data,'base64');writeFileSync(join(EVIDENCE_DIR,name),data);return data.length}
 async function targetPoint(cdp,selector){return evalJs(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2,width:r.width,height:r.height,left:r.left,right:r.right,top:r.top,bottom:r.bottom,disabled:!!el.disabled}})()`)}
 async function trustedTap(cdp,selector){const p=await targetPoint(cdp,selector);assert.ok(p,`missing tap target ${selector}`);assert.ok(p.width>=44&&p.height>=44,`${selector} must expose a 44px touch target`);assert.ok(p.left>=0&&p.top>=0,`${selector} must stay inside viewport`);assert.equal(p.disabled,false,`${selector} must be enabled`);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,radiusX:5,radiusY:5,force:1,id:1}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});return p}
+function assertPhoneRail(boxes,label,width){assert.equal(boxes.length,4,`${label} must have four destinations`);assert.deepEqual(boxes.map(box=>box.order),ORDERS,`${label} must preserve 01–04 order`);for(const [i,box] of boxes.entries()){assert.ok(box.h>=44,`${label} ${box.order} must expose 44px touch height`);assert.ok(box.left>=0&&box.right<=width+1,`${label} ${box.order} must stay inside viewport`);assert.ok(box.aria&&box.aria.length>8,`${label} ${box.order} must have an accessible label`);if(i>0)assert.ok(box.top>=boxes[i-1].bottom-1,`${label} ${box.order} must occupy its own row`)}}
 
 async function inspect(chrome,base,width,height){
   const viewport=`${width}x${height}`,profile=mkdtempSync(join(tmpdir(),`stellar-scenic-${width}-`));let browser,cdp,stderr='';
@@ -54,14 +60,14 @@ async function inspect(chrome,base,width,height){
     let loaded=cdp.waitEvent('Page.loadEventFired',15000);await cdp.send('Page.navigate',{url:base});await loaded;
     await waitUntil(()=>evalJs(cdp,"!!window.WarpSim&&!!window.WarpModeGateway&&document.querySelector('#app')?.classList.contains('ready')&&WarpModeGateway.snapshot().visible"),'mode gateway + Real Space runtime',30000);
     const gatewayState=await evalJs(cdp,'WarpModeGateway.snapshot()');assert.equal(gatewayState.buttons,4);assert.equal(gatewayState.frontierDestinations,4);assert.equal(gatewayState.frontierFeatured,0);
-    const boxes=await evalJs(cdp,"[...document.querySelectorAll('.modeGatewayDest button')].map(el=>{const r=el.getBoundingClientRect();return{h:r.height,left:r.left,right:r.right}})");for(const box of boxes){assert.ok(box.h>=44);assert.ok(box.left>=0&&box.right<=width+1)}
+    const boxes=await evalJs(cdp,"[...document.querySelectorAll('.modeGatewayDest button')].map(el=>{const r=el.getBoundingClientRect();return{order:el.dataset.order,aria:el.getAttribute('aria-label'),h:r.height,left:r.left,right:r.right,top:r.top,bottom:r.bottom}})");assertPhoneRail(boxes,'Landing Frontier rail',width);
     assert.ok((await screenshot(cdp,`frontier-gateway-${viewport}.png`))>8000);
     await trustedTap(cdp,'#gatewayFrontier');await waitUntil(()=>evalJs(cdp,"document.activeElement?.id==='frontierAureliaQuick'"),'Frontier selector focus');assert.ok((await evalJs(cdp,'location.pathname')).endsWith('/'));
     await trustedTap(cdp,'#frontierAureliaQuick');await waitUntil(()=>evalJs(cdp,"location.pathname.endsWith('/frontier-scenic.html')&&new URLSearchParams(location.search).get('dest')==='AURELIA'"),'AURELIA scenic shell');
     let captureEvidence=null;
     for(let i=0;i<DESTS.length;i++){
       const id=DESTS[i];
-      if(i>0){await trustedTap(cdp,'#routeButton');await waitUntil(()=>evalJs(cdp,'WarpFrontierScenic.state().routeOpen===true'),'Frontier route panel');await trustedTap(cdp,`[data-dest="${id}"]`);await waitUntil(()=>evalJs(cdp,`WarpFrontierScenic.state().destination==='${id}'&&WarpFrontierScenic.state().child`),`${id} scenic child`,30000)}
+      if(i>0){await trustedTap(cdp,'#routeButton');await waitUntil(()=>evalJs(cdp,'WarpFrontierScenic.state().routeOpen===true'),'Frontier route panel');if(i===1){const scenicBoxes=await evalJs(cdp,"[...document.querySelectorAll('#destGrid button')].map(el=>{const r=el.getBoundingClientRect();return{order:el.dataset.order,aria:el.getAttribute('aria-label'),h:r.height,left:r.left,right:r.right,top:r.top,bottom:r.bottom}})");assertPhoneRail(scenicBoxes,'In-destination Frontier rail',width);assert.ok((await screenshot(cdp,`frontier-aurelia-rail-${viewport}.png`))>8000)}await trustedTap(cdp,`[data-dest="${id}"]`);await waitUntil(()=>evalJs(cdp,`WarpFrontierScenic.state().destination==='${id}'&&WarpFrontierScenic.state().child`),`${id} scenic child`,30000)}
       await waitUntil(()=>evalJs(cdp,'!!window.WarpFrontierScenic&&WarpFrontierScenic.state().child'),`${id} child runtime`,30000);
       await evalJs(cdp,'WarpFrontierScenic.skipArrival()');
       await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().child?.phase==='explore'&&WarpFrontierScenic.state().child?.autoOrbit===false&&WarpFrontierScenic.state().child?.vista==='overview'"),`${id} fixed scenic view`,12000);
@@ -71,11 +77,11 @@ async function inspect(chrome,base,width,height){
         const normal={w:state.child.backingWidth,h:state.child.backingHeight,dpr:state.child.pixelRatio};const capture=await evalJs(cdp,'WarpFrontierScenic.capture(false)',true);assert.ok(capture.width>normal.w&&capture.height>normal.h);const restored=await evalJs(cdp,'WarpFrontierScenic.state().child');assert.equal(restored.backingWidth,normal.w);assert.equal(restored.backingHeight,normal.h);assert.equal(restored.pixelRatio,normal.dpr);captureEvidence={width:capture.width,height:capture.height,dpr:restored.pixelRatio};
       }
     }
-    assert.ok(captureEvidence);console.log(`Frontier Scenic browser ${viewport}: 4-destination fixed overview + zero featured pointers + NADIR capture ${captureEvidence.width}x${captureEvidence.height}, restored DPR ${captureEvidence.dpr}`);
+    assert.ok(captureEvidence);console.log(`Frontier Scenic browser ${viewport}: matching Landing/in-destination 01–04 phone rails + 4 fixed overviews + NADIR capture ${captureEvidence.width}x${captureEvidence.height}, restored DPR ${captureEvidence.dpr}`);
   }catch(error){if(cdp)await screenshot(cdp,`frontier-scenic-failure-${viewport}.png`).catch(()=>{});throw error}
   finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 
 const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for mode gateway validation');console.log('Mode gateway browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`,server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
-try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('Mode Gateway + Frontier Scenic browser validation: all four fixed-angle destinations passed at 390×844 and 360×800')}finally{await stop(server)}
+try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('Mode Gateway + Frontier Scenic browser validation: matching phone rails and all four fixed-angle destinations passed at 390×844 and 360×800')}finally{await stop(server)}

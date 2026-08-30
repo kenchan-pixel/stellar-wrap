@@ -21,14 +21,14 @@ The top-level gateway remains exactly four actions:
 3. **Frontier Fiction** — focus the unified four-destination Frontier selector; it does not silently enter a preferred destination.
 4. **Gallery / Captures** — existing read-only Journey Gallery, discovery archive and current-dock Capture Handoff using the existing Travel Journal / Star Atlas / Photo Mode authorities.
 
-Frontier destinations remain one equal 2×2 mobile grid:
+Frontier destinations remain one equal destination set:
 
 - `AURELIA ARC｜曙光環域`
 - `NADIR WELL｜玄淵觀測站`
 - `VESPER YARD｜暮環採集場`
 - `EIDOLON GATE｜遺光門廊`
 
-There is no separate `Featured Expedition` pointer and no destination receives hidden priority.
+At phone widths up to 520 px, both the Landing Page selector and the in-destination selector use the same ordered **01–04 single-column rail**. Wider layouts may compact the same four equal destinations into a 2×2 grid. There is no separate `Featured Expedition` pointer and no destination receives hidden priority.
 
 ### Frontier Scenic Destination shell
 
@@ -39,6 +39,7 @@ There is no separate `Featured Expedition` pointer and no destination receives h
 - after the existing approach/arrival reaches final exploration, the shell applies that destination's curated `overview` composition and disables auto-orbit;
 - one consistent control row is used for every destination: **模式選擇 / 科幻目的地 / Real Space / 高畫質留影**;
 - **科幻目的地** opens the same equal four-destination selector everywhere;
+- on phone widths the selector repeats the same 01–04 single-column order used on the Landing Page, so the hierarchy does not change after entry;
 - the selector marks exactly one **目前景觀**, so the user's current location in the four-world hierarchy is explicit;
 - capture delegates to the existing destination renderer/capture authority and retains the existing temporary DPR boost.
 
@@ -85,7 +86,7 @@ This slice does not redesign the existing Gallery. Journey Gallery remains a rea
 ## Acceptance Criteria
 
 1. Landing exposes exactly four top-level mode actions and exactly four equal Frontier destination actions.
-2. At 390×844 and 360×800, destination selectors use ≥44 px touch targets and have no horizontal overflow.
+2. At 390×844 and 360×800, both Frontier destination selectors use the same 01–04 single-column order, ≥44 px touch targets and no horizontal overflow.
 3. Tapping **Frontier Fiction** focuses the unified destination selector; it does not implicitly enter AURELIA or another preferred destination.
 4. Selecting any Frontier destination opens the same `frontier-scenic.html` shell with the selected destination ID.
 5. The scenic shell exposes exactly four consistent controls, with visible **科幻目的地** language rather than a fake route label.
@@ -107,8 +108,8 @@ This slice does not redesign the existing Gallery. Journey Gallery remains a rea
 
 ## Validation evidence required
 
-- Repository/static validation for four equal destinations, zero Featured pointer, destination wording, one-current-marker state, no storage/backend/route authority and offline-shell inclusion.
-- Production Chromium trusted-touch checks at **390×844** and **360×800** for AURELIA → NADIR handoff, visible transition, input locking, one-current-marker transfer, fixed overview and viewport containment.
+- Repository/static validation for four equal destinations, stable 01–04 order, phone single-column rail, zero Featured pointer, destination wording, one-current-marker state, no storage/backend/route authority and offline-shell inclusion.
+- Production Chromium trusted-touch checks at **390×844** and **360×800** for the Landing Page rail plus AURELIA → NADIR handoff, in-destination rail geometry, visible transition, input locking, one-current-marker transfer, fixed overview and viewport containment.
 - Production-relevant backend contract for all four child pages, including 4/4 shell capture/restore at both phone viewports.
 - Exact-current-HEAD CI and review before the cycle is reported complete.
 
@@ -118,4 +119,4 @@ Physical iPhone Safari remains useful for long-duration thermal/frame pacing, sa
 
 ## Completion signal
 
-The slice is complete when Frontier no longer presents destination switching as a fake route, the active destination is unambiguous, AURELIA → NADIR handoff is visibly coherent and trusted-touch verified at both phone sizes, all four fixed scenic renderers/capture contracts remain green, V4+ regressions remain green, and exact-head review has no actionable P0/P1 finding.
+The slice is complete when Landing and in-destination Frontier selectors present the same ordered phone hierarchy, Frontier no longer presents destination switching as a fake route, the active destination is unambiguous, AURELIA → NADIR handoff is visibly coherent and trusted-touch verified at both phone sizes, all four fixed scenic renderers/capture contracts remain green, V4+ regressions remain green, and exact-head review has no actionable P0/P1 finding.
