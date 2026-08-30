@@ -2,26 +2,29 @@
 'use strict';
 
 const SYSTEM_NAMES={SOL:'地球近軌',LUNA:'月環基地',VEGA:'織女星門',CYG:'天鵝航標',ORION:'獵戶前哨',TAU:'金牛塵海',SIRIUS:'天狼中繼站',PROX:'比鄰星港'};
+const GUIDE_MODES=Object.freeze(['thirds','center','off']);
+const GUIDE_LABELS=Object.freeze({thirds:'格線：三分',center:'格線：中心',off:'格線：關'});
 let uiReady=false;
 let active=false;
 let currentId='SOL';
 let lastVisible=false;
 let captureBusy=false;
 let toastTimer=0;
+let guideMode='thirds';
 
 function safeState(state){
   return !!state&&SYSTEM_NAMES[state.current]&&state.exploring&&!state.flying&&!state.contextLost;
 }
 
 function ensureUi(){
-  if(uiReady&&document.querySelector('#photoModeToolbar')&&document.querySelector('#photoModeTrigger'))return true;
+  if(uiReady&&document.querySelector('#photoModeToolbar')&&document.querySelector('#photoModeTrigger')&&document.querySelector('#photoCompositionGuide'))return true;
   const actions=document.querySelector('#exploreCard .exploreActions');
   const app=document.querySelector('#app');
   if(!actions||!app)return false;
   if(!document.querySelector('#photoModeStyle')){
     const style=document.createElement('style');
     style.id='photoModeStyle';
-    style.textContent='.photoModeTrigger{display:none}.photoModeTrigger.show{display:block}.photoModeToolbar{position:absolute;z-index:18;left:var(--safeL);right:var(--safeR);bottom:var(--safeB);display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(181,216,255,.2);border-radius:14px;background:rgba(3,7,15,.72);backdrop-filter:blur(16px);box-shadow:0 12px 38px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s,transform .18s}.photoMode .photoModeToolbar{opacity:1;transform:none;pointer-events:auto}.photoModeToolbar button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.055);color:var(--text);font-size:10px;font-weight:780;padding:0 12px}.photoModeToolbar button:disabled{opacity:.46}.photoModeToolbar .photoCapture{flex:1;border-color:rgba(178,216,255,.38);background:linear-gradient(180deg,rgba(150,195,255,.22),rgba(91,145,220,.1))}.photoModeLabel{min-width:0;flex:1.2}.photoModeLabel strong{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.photoModeLabel span{display:block;margin-top:2px;font-size:7px;color:var(--muted)}.photoModeToast{position:absolute;z-index:19;left:50%;bottom:calc(var(--safeB) + 68px);transform:translateX(-50%) translateY(7px);max-width:82vw;padding:7px 10px;border-radius:999px;border:1px solid rgba(182,216,255,.18);background:rgba(3,7,15,.82);font-size:8px;color:#eaf3ff;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;white-space:nowrap}.photoModeToast.show{opacity:1;transform:translateX(-50%) translateY(0)}.photoMode .hud,.photoMode #flightBar,.photoMode #telemetry,.photoMode #openPanel,.photoMode #panel,.photoMode #exploreCard,.photoMode #perfHud{opacity:0!important;pointer-events:none!important}.photoMode.photoCapturing .photoModeToolbar,.photoMode.photoCapturing .photoModeToast{opacity:0!important;pointer-events:none!important}@media (max-width:390px){.photoModeToolbar{gap:5px;padding:6px}.photoModeToolbar button{padding:0 10px}.photoModeLabel span{display:none}}';
+    style.textContent='.photoModeTrigger{display:none}.photoModeTrigger.show{display:block}.photoModeToolbar{position:absolute;z-index:18;left:var(--safeL);right:var(--safeR);bottom:var(--safeB);display:flex;align-items:center;gap:7px;padding:7px;border:1px solid rgba(181,216,255,.2);border-radius:14px;background:rgba(3,7,15,.72);backdrop-filter:blur(16px);box-shadow:0 12px 38px rgba(0,0,0,.35);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s,transform .18s}.photoMode .photoModeToolbar{opacity:1;transform:none;pointer-events:auto}.photoModeToolbar button{min-height:44px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.055);color:var(--text);font-size:10px;font-weight:780;padding:0 12px}.photoModeToolbar button:disabled{opacity:.46}.photoModeToolbar .photoCapture{flex:1;border-color:rgba(178,216,255,.38);background:linear-gradient(180deg,rgba(150,195,255,.22),rgba(91,145,220,.1))}.photoModeLabel{min-width:0;flex:1.2}.photoModeLabel strong{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.photoModeLabel span{display:block;margin-top:2px;font-size:7px;color:var(--muted)}.photoCompositionGuide{position:absolute;z-index:17;inset:0;pointer-events:none;opacity:0;transition:opacity .18s ease}.photoCompositionGuide span{position:absolute;pointer-events:none;display:none;background:rgba(232,244,255,.46);box-shadow:0 0 0 1px rgba(0,0,0,.18)}.photoCompositionGuide .photoGuideV{top:0;bottom:0;width:1px}.photoCompositionGuide .photoGuideH{left:0;right:0;height:1px}.photoCompositionGuide .photoGuideV1{left:33.333%}.photoCompositionGuide .photoGuideV2{left:66.667%}.photoCompositionGuide .photoGuideH1{top:33.333%}.photoCompositionGuide .photoGuideH2{top:66.667%}.photoCompositionGuide .photoGuideVC{left:50%}.photoCompositionGuide .photoGuideHC{top:50%}.photoCompositionGuide .photoGuideMark{left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border:1px solid rgba(232,244,255,.56);border-radius:50%;background:transparent;box-shadow:0 0 0 1px rgba(0,0,0,.18)}.photoMode .photoCompositionGuide[data-mode="thirds"],.photoMode .photoCompositionGuide[data-mode="center"]{opacity:.62}.photoCompositionGuide[data-mode="thirds"] .photoGuideV1,.photoCompositionGuide[data-mode="thirds"] .photoGuideV2,.photoCompositionGuide[data-mode="thirds"] .photoGuideH1,.photoCompositionGuide[data-mode="thirds"] .photoGuideH2{display:block}.photoCompositionGuide[data-mode="center"] .photoGuideVC,.photoCompositionGuide[data-mode="center"] .photoGuideHC,.photoCompositionGuide[data-mode="center"] .photoGuideMark{display:block}.photoModeToast{position:absolute;z-index:19;left:50%;bottom:calc(var(--safeB) + 68px);transform:translateX(-50%) translateY(7px);max-width:82vw;padding:7px 10px;border-radius:999px;border:1px solid rgba(182,216,255,.18);background:rgba(3,7,15,.82);font-size:8px;color:#eaf3ff;opacity:0;pointer-events:none;transition:opacity .16s,transform .16s;white-space:nowrap}.photoModeToast.show{opacity:1;transform:translateX(-50%) translateY(0)}.photoMode .hud,.photoMode #flightBar,.photoMode #telemetry,.photoMode #openPanel,.photoMode #panel,.photoMode #exploreCard,.photoMode #perfHud{opacity:0!important;pointer-events:none!important}.photoMode.photoCapturing .photoModeToolbar,.photoMode.photoCapturing .photoModeToast,.photoMode.photoCapturing .photoCompositionGuide{opacity:0!important;pointer-events:none!important}@media (max-width:390px){.photoModeToolbar{gap:5px;padding:6px;flex-wrap:wrap}.photoModeToolbar button{padding:0 9px}.photoModeLabel{flex:1 0 calc(100% - 96px)}.photoModeLabel span{display:none}.photoGuideToggle{flex:0 0 auto}.photoCapture{min-width:118px}.photoModeToast{bottom:calc(var(--safeB) + 112px)}}@media (prefers-reduced-motion:reduce){.photoCompositionGuide{transition:none}}';
     document.head.append(style);
   }
   let trigger=document.querySelector('#photoModeTrigger');
@@ -34,6 +37,15 @@ function ensureUi(){
     trigger.addEventListener('click',enter);
     actions.append(trigger);
   }
+  let guide=document.querySelector('#photoCompositionGuide');
+  if(!guide){
+    guide=document.createElement('div');
+    guide.id='photoCompositionGuide';
+    guide.className='photoCompositionGuide';
+    guide.setAttribute('aria-hidden','true');
+    guide.innerHTML='<span class="photoGuideV photoGuideV1"></span><span class="photoGuideV photoGuideV2"></span><span class="photoGuideH photoGuideH1"></span><span class="photoGuideH photoGuideH2"></span><span class="photoGuideV photoGuideVC"></span><span class="photoGuideH photoGuideHC"></span><span class="photoGuideMark"></span>';
+    app.append(guide);
+  }
   let toolbar=document.querySelector('#photoModeToolbar');
   if(!toolbar){
     toolbar=document.createElement('div');
@@ -42,8 +54,9 @@ function ensureUi(){
     toolbar.setAttribute('role','group');
     toolbar.setAttribute('aria-label','目的地攝影模式');
     toolbar.setAttribute('aria-hidden','true');
-    toolbar.innerHTML='<div class="photoModeLabel"><strong id="photoModeName">目的地攝影</strong><span>拖動畫面構圖 · 留影時短暫提升至高畫質</span></div><button id="photoModeExit" type="button">返回</button><button id="photoModeCapture" class="photoCapture" type="button">高畫質留影</button>';
+    toolbar.innerHTML='<div class="photoModeLabel"><strong id="photoModeName">目的地攝影</strong><span>拖動畫面構圖 · 格線只作構圖輔助，不會寫入 PNG</span></div><button id="photoGuideToggle" class="photoGuideToggle" type="button">格線：三分</button><button id="photoModeExit" type="button">返回</button><button id="photoModeCapture" class="photoCapture" type="button">高畫質留影</button>';
     app.append(toolbar);
+    toolbar.querySelector('#photoGuideToggle').addEventListener('click',cycleGuide);
     toolbar.querySelector('#photoModeExit').addEventListener('click',exit);
     toolbar.querySelector('#photoModeCapture').addEventListener('click',capture);
   }
@@ -56,6 +69,7 @@ function ensureUi(){
     app.append(toast);
   }
   uiReady=true;
+  setGuideMode(guideMode,false);
   return true;
 }
 
@@ -73,12 +87,33 @@ function updateLabel(){
   if(label)label.textContent=(SYSTEM_NAMES[currentId]||currentId)+' · 攝影模式';
 }
 
+function setGuideMode(mode,announce=true){
+  const next=GUIDE_MODES.includes(mode)?mode:'thirds';
+  guideMode=next;
+  const guide=document.querySelector('#photoCompositionGuide');
+  if(guide)guide.dataset.mode=guideMode;
+  const button=document.querySelector('#photoGuideToggle');
+  if(button){
+    button.textContent=GUIDE_LABELS[guideMode];
+    button.setAttribute('aria-label',`${GUIDE_LABELS[guideMode]} · 按下切換構圖輔助`);
+  }
+  if(announce&&active)notify(guideMode==='off'?'構圖格線已關閉':guideMode==='thirds'?'已切換三分構圖格線':'已切換中心構圖格線',1300);
+  return guideMode;
+}
+
+function cycleGuide(){
+  const index=GUIDE_MODES.indexOf(guideMode);
+  setGuideMode(GUIDE_MODES[(index+1)%GUIDE_MODES.length]);
+}
+
 function setCaptureBusy(value){
   captureBusy=!!value;
   const toolbar=document.querySelector('#photoModeToolbar');
   if(toolbar)toolbar.setAttribute('aria-busy',captureBusy?'true':'false');
+  const guideButton=document.querySelector('#photoGuideToggle');
   const exitButton=document.querySelector('#photoModeExit');
   const captureButton=document.querySelector('#photoModeCapture');
+  if(guideButton)guideButton.disabled=captureBusy;
   if(exitButton)exitButton.disabled=captureBusy;
   if(captureButton)captureButton.disabled=captureBusy;
 }
@@ -92,6 +127,7 @@ function enter(){
   currentId=state.current;
   active=true;
   updateLabel();
+  setGuideMode(guideMode,false);
   document.querySelector('#app')?.classList.add('photoMode');
   document.querySelector('#photoModeToolbar')?.setAttribute('aria-hidden','false');
   notify('已隱藏航行介面 · 可拖動畫面構圖');
@@ -203,6 +239,8 @@ window.WarpPhotoMode={
   exit,
   capture,
   active(){return active},
-  capturing(){return captureBusy}
+  capturing(){return captureBusy},
+  guide(){return guideMode},
+  setGuide(mode){return setGuideMode(mode)}
 };
 })();
