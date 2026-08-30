@@ -36,5 +36,6 @@ jobs:
           path: |
             artifacts/focus-tray-browser/
             artifacts/photo-mode-browser/
+            artifacts/mode-gateway-browser/
           if-no-files-found: ignore
           retention-days: 7
