@@ -1,5 +1,5 @@
 const CACHE_PREFIX='stellar-wrap-shell-';
-const CACHE_NAME=`${CACHE_PREFIX}v15`;
+const CACHE_NAME=`${CACHE_PREFIX}v16`;
 const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const CORE=[
   './',
@@ -30,6 +30,7 @@ const CORE=[
   './atlas-constellation.js',
   './cinematic-quality.js',
   './cyg-cinematic-quality.js',
+  './orion-prominence-quality.js',
   './landmark-guide.js',
   './offline-bootstrap.js'
 ];

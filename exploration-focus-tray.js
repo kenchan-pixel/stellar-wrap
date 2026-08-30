@@ -47,6 +47,6 @@ function active(){
 
 window.WarpExplorationFocusTray={active};
 import('./atlas-constellation.js').catch(()=>{});
-import('./cinematic-quality.js').then(()=>import('./cyg-cinematic-quality.js')).catch(()=>{});
+import('./cinematic-quality.js').then(()=>import('./cyg-cinematic-quality.js')).then(()=>import('./orion-prominence-quality.js')).catch(()=>{});
 import('./route-scenic-preview.js').catch(()=>{});
 })();
