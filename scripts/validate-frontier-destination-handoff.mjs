@@ -45,8 +45,8 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().child?.phase==='explore'&&WarpFrontierScenic.state().child?.autoOrbit===false&&WarpFrontierScenic.state().child?.vista==='overview'"),'AURELIA fixed overview',12000);
     await trustedTap(cdp,'#routeButton');
     await waitUntil(()=>evalJs(cdp,'WarpFrontierScenic.state().selectorOpen===true'),'destination selector');
-    let selector=await evalJs(cdp,"(()=>{const current=[...document.querySelectorAll('#destGrid [aria-current=\"page\"]')];const buttons=[...document.querySelectorAll('#destGrid button')];return{current:current.map(x=>x.dataset.dest),currentText:current.map(x=>x.innerText),buttons:buttons.map(x=>{const r=x.getBoundingClientRect();return{id:x.dataset.dest,h:r.height,left:r.left,right:r.right}})}})()");
-    assert.deepEqual(selector.current,['AURELIA']);assert.ok(selector.currentText[0].includes('目前景觀'));assert.equal(selector.buttons.length,4);for(const box of selector.buttons){assert.ok(box.h>=44);assert.ok(box.left>=0&&box.right<=width+1)}
+    let selector=await evalJs(cdp,"(()=>{const current=[...document.querySelectorAll('#destGrid [aria-current=\"page\"]')];const buttons=[...document.querySelectorAll('#destGrid button')];const marks=current.map(x=>x.querySelector('.currentMark'));return{current:current.map(x=>x.dataset.dest),currentMark:marks.map(x=>x?.textContent||''),markerVisible:marks.every(x=>{if(!x)return false;const r=x.getBoundingClientRect(),s=getComputedStyle(x);return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0}),buttons:buttons.map(x=>{const r=x.getBoundingClientRect();return{id:x.dataset.dest,h:r.height,left:r.left,right:r.right}})}})()");
+    assert.deepEqual(selector.current,['AURELIA']);assert.deepEqual(selector.currentMark,['目前景觀']);assert.equal(selector.markerVisible,true);assert.equal(selector.buttons.length,4);for(const box of selector.buttons){assert.ok(box.h>=44);assert.ok(box.left>=0&&box.right<=width+1)}
     await trustedTap(cdp,'[data-dest="NADIR"]');
     await waitUntil(()=>evalJs(cdp,'WarpFrontierScenic.state().switching===true&&WarpFrontierScenic.state().transitionVisible===true'),'bounded scenic handoff',1800);
     const handoff=await evalJs(cdp,"({from:document.querySelector('#transitionFrom')?.textContent,to:document.querySelector('#transitionTo')?.textContent,aria:document.querySelector('#transition')?.getAttribute('aria-hidden'),captureDisabled:document.querySelector('#capture')?.disabled})");
@@ -56,10 +56,10 @@ async function inspect(chrome,base,width,height){
     await evalJs(cdp,'WarpFrontierScenic.skipArrival()');
     await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().child?.phase==='explore'&&WarpFrontierScenic.state().child?.autoOrbit===false&&WarpFrontierScenic.state().child?.vista==='overview'"),'NADIR fixed overview',12000);
     await trustedTap(cdp,'#routeButton');await waitUntil(()=>evalJs(cdp,'WarpFrontierScenic.state().selectorOpen===true'),'NADIR selector');
-    selector=await evalJs(cdp,"(()=>{const current=[...document.querySelectorAll('#destGrid [aria-current=\"page\"]')];return{current:current.map(x=>x.dataset.dest),markers:WarpFrontierScenic.state().currentMarkers,overflow:document.documentElement.scrollWidth>innerWidth+1}})()");
-    assert.deepEqual(selector.current,['NADIR']);assert.equal(selector.markers,1);assert.equal(selector.overflow,false);
+    selector=await evalJs(cdp,"(()=>{const current=[...document.querySelectorAll('#destGrid [aria-current=\"page\"]')];const mark=current[0]?.querySelector('.currentMark');const r=mark?.getBoundingClientRect();const s=mark?getComputedStyle(mark):null;return{current:current.map(x=>x.dataset.dest),markerText:mark?.textContent||'',markerVisible:!!mark&&s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0,markers:WarpFrontierScenic.state().currentMarkers,overflow:document.documentElement.scrollWidth>innerWidth+1}})()");
+    assert.deepEqual(selector.current,['NADIR']);assert.equal(selector.markerText,'目前景觀');assert.equal(selector.markerVisible,true);assert.equal(selector.markers,1);assert.equal(selector.overflow,false);
     assert.ok((await screenshot(cdp,`frontier-nadir-selector-${viewport}.png`))>8000);
-    console.log(`Frontier Destination Handoff browser ${viewport}: AURELIA → bounded handoff → NADIR, one current marker, fixed overview`);
+    console.log(`Frontier Destination Handoff browser ${viewport}: AURELIA → bounded handoff → NADIR, one visible current marker, fixed overview`);
   }catch(error){if(cdp)await screenshot(cdp,`frontier-handoff-failure-${viewport}.png`).catch(()=>{});throw error}
   finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
