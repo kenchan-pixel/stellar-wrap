@@ -1,142 +1,90 @@
-# Mode Gateway + Frontier Fiction Destinations
+# Mode Gateway + Frontier Scenic Route
 
 ## Status
 
-- **Candidate vertical slice on `autonomous-evolution`**
-- Product direction is approved by `docs/ROADMAP.md`; each destination and mode enhancement remains candidate until merged/released.
-- This document records implementation and acceptance boundaries only.
+- Persistent `autonomous-evolution` Draft PR vertical slice.
+- Product direction is approved in `docs/DECISIONS.md` D-015.
+- Real Space V4.1 remains the release baseline and navigation authority.
 
 ## Goal / intended user outcome
 
-Give Stellar Wrap a useful mobile exploration entrance while expanding Frontier Fiction through a small number of visually distinct original destinations, and make Gallery / Captures a useful record surface rather than a decorative summary.
+Make Frontier Fiction feel like part of the same product instead of four independent rotatable model demos. A player should choose a science-fiction destination from one clear landing hierarchy, arrive through the existing destination approach, then view one curated scenic composition with the same compact controls everywhere.
+
+## Scope
+
+### Landing / destination hierarchy
 
 The top-level gateway remains exactly four actions:
 
-- **Continue Journey** — return to current/restored Real Space state without replanning.
-- **Real Space** — existing eight-system map and approved V4+ travel.
-- **Frontier Fiction** — original science-fiction exploration line.
-- **Gallery / Captures** — read-only Journey Gallery, discovery archive and current-dock Photo Mode handoff using existing local authorities.
+1. **Continue Journey** — return to the current/restored Real Space state without replanning.
+2. **Real Space** — existing eight-system V4+ map and travel.
+3. **Frontier Fiction** — focus the unified four-destination Frontier selector; it no longer silently enters AURELIA.
+4. **Gallery / Captures** — existing read-only journey/discovery record surface and Real Space Photo Mode handoff.
 
-The compact always-visible Frontier strip keeps three established worlds, while a fourth **featured expedition** is presented as a separate full-width destination so 360 px phones do not compress four dense cards into one row:
+Frontier destinations are now one equal 2×2 mobile grid:
 
-1. `AURELIA ARC｜曙光環域` — artificial ring habitat / megastructure.
-2. `NADIR WELL｜玄淵觀測站` — extreme-object frontier observatory around a fictional black-hole-like gravity well.
-3. `VESPER YARD｜暮環採集場` — industrial gas-giant harvesting zone with atmospheric skimmers, refinery ring and cargo traffic.
-4. `EIDOLON GATE｜遺光門廊` — featured ancient deep-space gate / ruin expedition with fractured rings, surviving glyph light and relic debris.
+- `AURELIA ARC｜曙光環域`
+- `NADIR WELL｜玄淵觀測站`
+- `VESPER YARD｜暮環採集場`
+- `EIDOLON GATE｜遺光門廊`
+
+There is no separate `Featured Expedition` pointer and no destination receives hidden priority.
+
+### Frontier Scenic Route shell
+
+`frontier-scenic.html?dest=<ID>` is the user-facing Frontier shell. It reuses the existing standalone Three.js pages as rendering runtimes but removes their free-rotation presentation from the user path:
+
+- the child canvas is display-only from the shell (`pointer-events:none`);
+- the child destination HUD, vista buttons and orbit controls are hidden;
+- after the existing approach/arrival reaches final exploration, the shell applies that destination's curated `overview` composition and disables auto-orbit;
+- one consistent control row is used for every destination: **模式選擇 / 科幻航線 / Real Space / 高畫質留影**;
+- `科幻航線` opens the same equal four-destination selector in every Frontier destination;
+- capture delegates to the existing destination renderer/capture authority and retains the existing temporary DPR boost.
+
+The existing four destination HTML files remain rendering sources for this slice. They are not deleted so their current scene geometry, capture paths and destination-specific validators remain available while the user-facing interaction converges.
 
 ## Architecture boundary
 
-Real Space remains authoritative in `index.html`: existing eight-system `N` data, 6.0 LY Dijkstra graph, true-direction turns, flight phases, Hermite arrival, Travel Journal and Star Atlas.
+- Real Space remains authoritative in `index.html`: existing eight-system data, 6.0 LY Dijkstra graph, coordinate-based turns, flight phases, continuous arrival, Travel Journal and Star Atlas.
+- Frontier Scenic Route does **not** add AURELIA/NADIR/VESPER/EIDOLON to the Real Space graph and does not invent LY distances or a fake route planner.
+- The scenic shell owns presentation/navigation only. It has no WebGL renderer of its own; each loaded child keeps its existing single renderer/camera.
+- Shell state is session-only. No new `localStorage`, account, backend, analytics or network API is introduced.
+- A bounded 5 Hz state sync reads only the active child destination state to update the shell phase/capture availability and apply the fixed vista once.
 
-Frontier Fiction does **not** add AURELIA, NADIR, VESPER or EIDOLON to the Real Space `N` / `G` graph. None becomes a Real Space node or changes established shortest paths. Each Frontier destination is a separate static Three.js runtime with one renderer and one camera. `mode-gateway.js` is presentation/navigation only; it creates no persistence key and no second route/discovery authority.
-
-## Gallery / Captures｜Journey Gallery + Capture Handoff
-
-### Goal
-
-Turn the fourth gateway action into a genuinely useful record surface: players can review where they travelled, what they discovered and how far they have travelled, then jump directly into the existing Photo Mode when currently docked in a safe Real Space exploration state.
-
-### Scope
-
-- Read completed journeys only through `WarpTravelJournal.entries()` and `visited()`.
-- Read discoveries and their existing metadata only through `WarpStarAtlas.snapshot()`.
-- Show four compact summary metrics: completed journeys, Real Space systems visited, external discoveries and cumulative recorded LY.
-- Show at most the five most recent completed journeys with destination, route, date/time, recorded distance, active flight time and current discovery outcome.
-- Show the existing seven external-system discovery records as collected / pending cards; do not duplicate their persistence.
-- Offer `拍攝目前停泊點` only when the live Real Space state is final exploration, not flying, and not in WebGL context loss; this action delegates to the existing `WarpPhotoMode.enter()` authority.
-- Keep downloaded PNG files device-local. The browser cannot silently re-read previously downloaded PNGs, so this slice deliberately does not invent a fake image library or new file/storage permission.
-- Keep all four top-level mode actions and all four Frontier destinations unchanged.
+## Goal / Scope / Acceptance / Out of Scope
 
 ### Acceptance Criteria
 
-1. Gallery remains read-only over existing Travel Journal / Star Atlas data and introduces no new storage, network, account or backend authority.
-2. A populated Gallery renders recent journey cards, exactly seven external discovery cards, cumulative LY and discovery outcomes without horizontal overflow at 390×844 or 360×800.
-3. Recent journey rendering is bounded to five records even though the underlying journal may retain up to twelve.
-4. Close and capture controls retain at least 44 px mobile touch height.
-5. Current-dock capture is disabled outside safe final exploration.
-6. In a safe final-exploration state, trusted phone touch on the Gallery capture action hands off to the existing Photo Mode and closes the gateway.
-7. The Gallery does not claim downloaded PNG files are stored inside the app; PNG save/download remains the existing device-local behavior.
-8. Continue Journey, Real Space, Frontier Fiction, AURELIA/NADIR/VESPER/EIDOLON, V4+ route/flight/Hermite behavior, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL recovery remain unchanged.
+1. Landing exposes exactly four top-level mode actions and exactly four equal Frontier destination actions.
+2. At 390×844 and 360×800, the destination selector is a 2×2 grid with ≥44 px touch targets and no horizontal overflow.
+3. Tapping **Frontier Fiction** keeps the user on the landing page and focuses the unified destination selector; it no longer enters AURELIA implicitly.
+4. Selecting any Frontier destination opens `frontier-scenic.html` with the selected destination ID.
+5. The scenic shell exposes exactly four consistent controls and a four-destination route panel.
+6. Final exploration is fixed to the destination `overview` composition; the displayed child canvas is not draggable and auto-orbit is off.
+7. AURELIA/NADIR/VESPER/EIDOLON retain their existing approach, arrival, scene identity and high-resolution capture implementations.
+8. Capture from the shell raises the active child's WebGL backing resolution to the existing capture tier, exports PNG and restores normal DPR.
+9. Real Space V4+ route/flight/Hermite behavior, Gallery, offline recovery, Photo Mode and existing cinematic quality extensions remain unchanged.
+10. The new shell is included in the existing offline core contract.
 
 ### Out of Scope
 
-- New image persistence, browser file-system permissions, cloud upload or a thumbnail database.
-- Editing, tagging or deleting downloaded PNG files.
-- A second journey/discovery store.
-- Frontier route history or Frontier progression persistence.
+- Building a new Frontier Dijkstra graph, distances or simulated flight model in this slice.
+- Rewriting the four 3D scenes or deleting their legacy direct pages.
+- New rotating camera modes, extra vista presets, scanner/checklist mechanics or destination count.
+- New renderer, permanent high DPR, post-processing framework, backend, account, cloud save or analytics.
 
-## AURELIA ARC｜曙光環域
+## Validation evidence required
 
-Original megastructure habitat: inhabited torus, structural spokes, artificial dawn/night illumination, central energy core, distant warm star, debris field, short approach → arrival → exploration sequence, drag-look/auto-orbit and bounded local PNG capture.
+- Repository/static validation for four equal landing destinations, no Featured pointer, shell route hierarchy, no storage/backend/route authority and offline-shell inclusion.
+- Production Chromium trusted-touch checks at **390×844** and **360×800**.
+- Browser evidence that NADIR and at least one second Frontier destination enter fixed `overview` mode with child auto-orbit disabled and `pointer-events:none` on the displayed scene.
+- Capture evidence that the active child still produces a larger backing-buffer PNG and restores normal DPR.
+- Exact-current-HEAD CI and review before the cycle is reported complete.
 
-## NADIR WELL｜玄淵觀測站
+## Risks / supplementary checks
 
-Original extreme-object destination with black central silhouette, layered accretion structures, cool lensing rings, bounded jets, segmented observation hardware and local high-resolution capture.
+Physical iPhone Safari remains useful for long-duration thermal/frame pacing, same-origin iframe WebGL behavior and Save Sheet feel. These are supplementary checks, not blockers when exact production Chromium and repository gates are green.
 
-## VESPER YARD｜暮環採集場
+## Completion signal
 
-Original industrial-atmosphere destination around a fictional teal gas giant: luminous storm bands, refinery ring, skimmers, extraction tethers, cargo traffic and dedicated cloud-top arrival composition.
-
-During final exploration, VESPER now provides three session-only **Industrial Capture Vistas** that reuse the existing scene and camera transform rather than adding render cost:
-
-- `雲頂主環` — the gas-giant cloud top, refinery ring and cargo field share one readable establishing frame.
-- `撈取切線` — a tilted limb view places the extraction tethers and skimmers across the luminous atmosphere.
-- `貨運夜弧` — an oblique night-side cargo composition uses the warm refinery arc against the teal cloud layers.
-
-Selecting a vista pauses auto-orbit and applies a bounded yaw / pitch / roll composition. A stationary canvas touch keeps the selected vista; only a deliberate drag beyond the existing 10 px interaction tolerance returns to free-look. High-quality capture now blocks further input while the selected vista converges to within `0.006` rad on yaw / pitch / roll, with a bounded `1.2 s` settle window and an exact-target fallback before the PNG frame if convergence is still incomplete. This prevents a rapid vista-select → capture action from saving a transitional angle. Capture then uses the existing temporary DPR boost and restores the normal DPR afterward. The guide is session-only and adds no renderer, Three.js object, storage, network or route authority.
-
-## EIDOLON GATE｜遺光門廊
-
-Original ancient deep-space gate / ruin destination. It completes the fourth preferred Frontier archetype without copying a named franchise or recognizable protected location.
-
-Visual identity:
-
-- two offset weathered gate rings plus a thin surviving amber glyph circuit;
-- intentionally damaged / collapsed pylon sectors rather than a pristine portal;
-- dark central veil and subtle violet lensing glow to imply unknown function without reproducing a known IP gate;
-- 54 bounded glyph lights, sparse relic shards and one distant surviving beacon;
-- dedicated ruin approach → near-field arrival → free-exploration composition;
-- drag-look / optional auto-orbit and local high-resolution capture.
-
-EIDOLON is presented as a featured expedition below the three compact destination cards. This keeps the mode entrance readable at 360 px while still making the new world directly discoverable from the landing experience.
-
-## Performance contract
-
-For each Frontier runtime:
-
-- one renderer / one main scene / one camera;
-- Three.js pinned to `0.185.1`;
-- `preserveDrawingBuffer:false`;
-- normal mobile DPR ≤ `1.25`; temporary capture DPR ≤ `1.60`;
-- no shadow maps, backend, analytics, account, network polling or new persistent store;
-- page visibility prevents effective frame updates;
-- capture explicitly raises backing resolution, waits rendered frames, renders immediately, exports PNG, then restores normal DPR;
-- production Chromium acceptance measures actual draw calls/triangles at 390×844 and 360×800.
-
-The Mode Gateway / Journey Gallery is DOM-only presentation. It adds no render loop and no polling; records are rebuilt only when the gateway opens or existing journey/discovery/atlas events fire.
-
-## Overall Acceptance Criteria
-
-1. Top-level landing continues to expose exactly four useful mode actions with ≥44 px touch targets.
-2. Continue/Real Space preserve the existing Real Space location/route authority.
-3. Gallery provides Journey Gallery + discovery archive + current-dock Capture Handoff without creating a second persistence authority.
-4. The three-card compact strip remains AURELIA, NADIR and VESPER; EIDOLON is a separate featured expedition with a ≥44 px touch target.
-5. All four Frontier worlds remain outside Real Space routing and retain their standalone approach / arrival / exploration behavior.
-6. Production Chromium at 390×844 and 360×800 proves viewport containment and trusted-touch interaction for affected gateway/gallery paths.
-7. Existing Frontier capture flows remain bounded, temporarily increase backing resolution and restore prior DPR with `preserveDrawingBuffer:false`.
-8. VESPER exposes exactly three ≥44 px Industrial Capture Vista actions; trusted touch can select each, stationary touch preserves it, deliberate drag returns to free-look, and an immediate guided capture must verify actual yaw / pitch / roll are within the selected preset tolerance before PNG export without increasing scene geometry.
-9. V4+ route/flight/Hermite, Cinematic High-tier, Photo Capture Boost, Focus Tray, offline and WebGL-recovery regressions stay green.
-10. All four Frontier pages remain in the existing v15 offline shell contract.
-
-## Out of Scope
-
-- Adding Frontier destinations to the Real Space Dijkstra graph.
-- A general Frontier route planner or persistence system.
-- More than these four Frontier worlds in this slice.
-- Combat, economy, quests, accounts, cloud save/upload or analytics.
-- Copying famous science-fiction locations, branding or recognizable protected assets.
-- Forced 4K, post-processing framework or permanent maximum DPR.
-
-## Supplementary device evidence
-
-Physical iPhone Safari touch feel, sustained frame pacing/thermal load, cross-GPU transparent blending and PNG save-sheet behavior remain useful supplementary evidence; they do not block unrelated autonomous evolution when exact production-browser and repository regression gates are green.
+The slice is complete when the landing hierarchy no longer has competing Frontier pointers, the four destinations enter one fixed-scenic shell, phone browser gates prove the fixed composition and unified controls, existing V4+ regression checks pass, and exact-head review has no actionable P0/P1 finding.
