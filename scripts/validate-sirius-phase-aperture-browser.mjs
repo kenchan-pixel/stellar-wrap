@@ -26,7 +26,7 @@ async function settleDrawCalls(cdp){await sleep(600);return measuredDrawCalls(cd
 async function exercise(cdp,width,height){const viewport=`${width}x${height}`;
   await evalJs(cdp,"WarpSim.jumpTo('SIRIUS');WarpSim.setQuality('standard');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpSiriusPhaseAperture.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='SIRIUS'&&WarpSim.state().exploring&&x.captured===true&&x.objects===0&&s.objects===0})()"),'safe SIRIUS Standard exploration');
-  await evalJs(cdp,"(()=>{const hud=document.querySelector('#perfHud');if(hud&&!hud.classList.contains('show'))document.querySelector('#diagnostics')?.click();return true})()");
+  await evalJs(cdp,"(()=>{const hud=document.querySelector('#perfHud');if(hud&&!hud.classList.contains('show'))document.querySelector('#diagnosticsToggle')?.click();return true})()");
   const standardFrameCalls=await settleDrawCalls(cdp);
   const standard=await evalJs(cdp,'WarpSiriusPhaseAperture.snapshot()');assert.equal(standard.active,false);assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);assert.equal(standard.triangles,0);assert.equal(standard.captured,true);const standardShot=await screenshot(cdp,`sirius-phase-aperture-${viewport}-standard.png`);
 
