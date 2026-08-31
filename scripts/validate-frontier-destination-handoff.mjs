@@ -12,15 +12,18 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 assert.ok(source.includes('FRONTIER FICTION · SCENIC DESTINATION'),'Frontier shell must present destinations rather than a fake route');
 assert.ok(source.includes('FRONTIER DESTINATIONS｜科幻目的地'),'destination selector must use destination language');
 assert.ok(source.includes('>科幻目的地</button>'),'main Frontier selector control must use destination language');
+assert.ok(source.includes('DESTINATION CONFIRM｜目的地確認'),'destination selection must use the shared confirmation language');
+assert.ok(source.includes('>前往景觀</button>'),'confirmation must commit explicitly without fake flight wording');
 assert.ok(source.includes('目前景觀'),'selector must identify exactly which scenic destination is current');
-assert.ok(source.includes('切換空域景觀'),'destination change must have a coherent scenic handoff');
+assert.ok(source.includes('切換空域景觀'),'confirmed destination change must have a coherent scenic handoff');
 assert.match(source,/TRANSITION_MS=TEST_MODE\?480:780/,'handoff must be bounded and deterministic');
 assert.match(source,/\.transition\{position:absolute;z-index:11/,'handoff must stay above the generic loading layer');
+assert.match(source,/selectionPending:selectionDest/,'runtime must expose staged selection state for acceptance');
 assert.match(source,/switching,pendingDestination:pendingDest,transitionVisible:/,'runtime must expose handoff state for acceptance');
 assert.match(source,/currentMarkers:grid\.querySelectorAll\('\[aria-current="page"\]'\)\.length/,'runtime must expose the single-current-marker invariant');
-assert.doesNotMatch(source,/Dijkstra|\bLY\b|routeDistance|warpSeconds|WarpSim\.(?:select|start|isRouteValid)/,'Frontier scenic handoff must not invent physical route authority');
+assert.doesNotMatch(source,/Dijkstra|routeDistance|warpSeconds|WarpSim\.(?:select|start|isRouteValid)/,'Frontier scenic handoff must not invent physical route authority');
 assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'Frontier scenic handoff must add no persistence or network authority');
-console.log('Frontier Destination Handoff static contract: 11/11 passed');
+console.log('Frontier Destination Handoff selection/confirm static contract passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const p=commandPath(c);if(p)return p}return''}
@@ -51,6 +54,13 @@ async function inspect(chrome,base,width,height){
     let selector=await evalJs(cdp,"(()=>{const current=[...document.querySelectorAll('#destGrid [aria-current=\"page\"]')];const buttons=[...document.querySelectorAll('#destGrid button')];const marks=current.map(x=>x.querySelector('.currentMark'));return{current:current.map(x=>x.dataset.dest),currentMark:marks.map(x=>x?.textContent||''),markerVisible:marks.every(x=>{if(!x)return false;const r=x.getBoundingClientRect(),s=getComputedStyle(x);return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0}),buttons:buttons.map(x=>{const r=x.getBoundingClientRect();return{id:x.dataset.dest,h:r.height,left:r.left,right:r.right}})}})()");
     assert.deepEqual(selector.current,['AURELIA']);assert.deepEqual(selector.currentMark,['目前景觀']);assert.equal(selector.markerVisible,true);assert.equal(selector.buttons.length,4);for(const box of selector.buttons){assert.ok(box.h>=44);assert.ok(box.left>=0&&box.right<=width+1)}
     await trustedTap(cdp,'[data-dest="NADIR"]');
+    await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().selectionPending==='NADIR'&&WarpFrontierScenic.state().selectionVisible&&!WarpFrontierScenic.state().switching&&WarpFrontierScenic.state().destination==='AURELIA'"),'NADIR staged without switching',1800);
+    const staged=await evalJs(cdp,"(()=>{const box=document.querySelector('#destinationCommit')?.getBoundingClientRect();return{name:document.querySelector('#destinationCommitName')?.textContent,detail:document.querySelector('#destinationCommitDetail')?.textContent,overflow:document.documentElement.scrollWidth>innerWidth+1,top:box?.top,bottom:box?.bottom}})()");
+    assert.ok(staged.name.includes('NADIR WELL'));assert.ok(staged.detail.includes('不建立虛構 LY 或航段'));assert.equal(staged.overflow,false);assert.ok(staged.top>=0&&staged.bottom<=height+1);assert.ok((await screenshot(cdp,`frontier-destination-confirm-${viewport}.png`))>8000);
+    await trustedTap(cdp,'#destinationCommitCancel');
+    await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().selectionPending===''&&!WarpFrontierScenic.state().selectionVisible&&WarpFrontierScenic.state().destination==='AURELIA'&&!WarpFrontierScenic.state().switching"),'cancel preserves AURELIA',1800);
+    await trustedTap(cdp,'[data-dest="NADIR"]');await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().selectionPending==='NADIR'&&WarpFrontierScenic.state().selectionVisible"),'NADIR restaged');
+    await trustedTap(cdp,'#destinationCommitConfirm');
     await waitUntil(()=>evalJs(cdp,'WarpFrontierScenic.state().switching===true&&WarpFrontierScenic.state().transitionVisible===true'),'bounded scenic handoff',1800);
     const handoff=await evalJs(cdp,"(()=>{const t=document.querySelector('#transition'),l=document.querySelector('#loading'),ts=getComputedStyle(t),ls=getComputedStyle(l);return{from:document.querySelector('#transitionFrom')?.textContent,to:document.querySelector('#transitionTo')?.textContent,aria:t?.getAttribute('aria-hidden'),captureDisabled:document.querySelector('#capture')?.disabled,transitionZ:Number(ts.zIndex),loadingZ:Number(ls.zIndex),topmost:Number(ts.zIndex)>Number(ls.zIndex)}})()");
     assert.ok(handoff.from.includes('AURELIA ARC'));assert.ok(handoff.to.includes('NADIR WELL'));assert.equal(handoff.aria,'false');assert.equal(handoff.captureDisabled,true);assert.equal(handoff.topmost,true);assert.ok(handoff.transitionZ>handoff.loadingZ);
@@ -63,11 +73,11 @@ async function inspect(chrome,base,width,height){
     selector=await evalJs(cdp,"(()=>{const current=[...document.querySelectorAll('#destGrid [aria-current=\"page\"]')];const mark=current[0]?.querySelector('.currentMark');const r=mark?.getBoundingClientRect();const s=mark?getComputedStyle(mark):null;return{current:current.map(x=>x.dataset.dest),markerText:mark?.textContent||'',markerVisible:!!mark&&s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0,markers:WarpFrontierScenic.state().currentMarkers,overflow:document.documentElement.scrollWidth>innerWidth+1}})()");
     assert.deepEqual(selector.current,['NADIR']);assert.equal(selector.markerText,'目前景觀');assert.equal(selector.markerVisible,true);assert.equal(selector.markers,1);assert.equal(selector.overflow,false);
     assert.ok((await screenshot(cdp,`frontier-nadir-selector-${viewport}.png`))>8000);
-    console.log(`Frontier Destination Handoff browser ${viewport}: AURELIA → bounded topmost handoff → NADIR, one visible current marker, fixed overview`);
+    console.log(`Frontier Destination Handoff browser ${viewport}: AURELIA selection→cancel→confirm → bounded handoff → NADIR, one visible current marker, fixed overview`);
   }catch(error){if(cdp)await screenshot(cdp,`frontier-handoff-failure-${viewport}.png`).catch(()=>{});throw error}
   finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 
 const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for Frontier destination handoff validation');console.log('Frontier Destination Handoff browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`,server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
-try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('Frontier Destination Handoff browser validation: both phone viewports passed')}finally{await stop(server)}
+try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('Frontier Destination Handoff browser validation: shared selection confirmation passed at both phone viewports')}finally{await stop(server)}
