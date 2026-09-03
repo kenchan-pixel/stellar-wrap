@@ -59,7 +59,7 @@ Destination Photo Mode continues to own capture. A direct Standard → Photo Cap
 
 - SOL Standard has zero focused-frame objects.
 - SOL High exposes exactly 3 objects, 16 masts, 20 lights, 30 brace segments and 352 measured mesh triangles.
-- Real renderer diagnostics show **+7 draw calls** from Standard to the combined shared SOL High + focused frame, then return to the original count after downgrade.
+- Real renderer diagnostics show **+7 draw calls** from Standard to the combined shared SOL High + focused frame. High → Low must clear both High layers and reduce renderer work; restoring Standard must return to the original Standard draw count. Low is intentionally allowed to use fewer base draws/DPR under the existing adaptive-quality authority.
 - Live focused-frame depth span is >6.0 and ≤6.8 local units.
 - Direct Standard → High Photo Capture includes both the shared SOL cinematic layer and the focused frame before `toBlob()`.
 - High → Low disposal, Low → High rebuild and SOL → another system → SOL revisit all pass without accumulation.
