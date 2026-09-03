@@ -40,7 +40,7 @@ check(/material\.map\?\.dispose/.test(source)&&/object\.geometry\?\.dispose/.tes
 check(/__stellarCygCinematicAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'CYG scene-construction hook remains restorable');
 check(/window\.WarpCygCinematicQuality=/.test(source),'CYG diagnostic API exposes autonomous validation state');
 check(doc.includes('13,208')&&doc.includes('6 draw')&&doc.includes('18')&&doc.includes('42'),'CYG SOT records the v2 bounded geometry / draw / structure budget');
-check(doc.includes('Standard／Low')&&doc.includes('depth cage'),'CYG SOT records zero lower-tier cost and the depth-cage outcome');
+check(doc.includes('Standard／Low')&&doc.toLowerCase().includes('depth cage'),'CYG SOT records zero lower-tier cost and the depth-cage outcome');
 
 const browser=spawnSync(process.execPath,['scripts/validate-cyg-cinematic-quality-browser.mjs'],{encoding:'utf8',timeout:180000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
