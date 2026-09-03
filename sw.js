@@ -31,6 +31,7 @@ const CORE=[
   './atlas-constellation.js',
   './cinematic-quality.js',
   './luna-earthrise-depth.js',
+  './tau-ring-depth.js',
   './cyg-cinematic-quality.js',
   './orion-prominence-quality.js',
   './sirius-phase-aperture.js',

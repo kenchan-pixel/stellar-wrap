@@ -17,7 +17,7 @@
 控制面板會加入「離線啟動」狀態：
 
 - **準備中：** 首次在線載入，Service Worker 正建立快取。
-- **已準備：** 本機已有核心程式與 Three.js 快取。
+- **已準備：** 本機已有完整現行 active shell 與 Three.js 快取。
 - **離線可用：** 瀏覽器目前離線，但所需快取已存在。
 - **未準備：** 頁面仍在運行但裝置尚未完成首次快取；需先保持連線完成準備。
 
@@ -25,25 +25,29 @@
 
 若網站資料已被完全清除，再於無網絡狀態直接開啟網址，瀏覽器可能只顯示自身的離線錯誤頁；因為程式本身尚未載入，這種情況不可能由應用內 UI 顯示「未準備」。這屬本候選的已知邊界，而不是支援的首次離線啟動。
 
-## 3. 快取範圍
+## 3. 快取範圍與唯一清單 authority
 
-Service Worker 只處理：
+離線 active shell 的**唯一實作清單**是 `sw.js` 的 `CORE` 陣列；文件不再複製一份容易過期的逐檔名單。每一個現行 `CORE` 資源連同固定 Three.js 都成功存在於目前 cache 後，UI 才可回報「已準備／離線可用」。
 
-- `/`／`index.html`
-- `travel-journal.js`
-- `exploration-survey.js`
-- `photo-mode.js`
-- `offline-bootstrap.js`
-- `https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js`
+目前 `CORE` 以功能類別涵蓋：
 
-不攔截、不建立任何 API、analytics、帳戶、圖片上傳或第三方追蹤快取。
+- active `index.html` 與同源啟動／responsive shell；
+- Real Space 旅行日誌、探索、Star Atlas、Arrival／Discovery handoff；
+- Landing／mode gateway、Gallery 及 Frontier Fiction 固定景觀入口；
+- Journey Atmosphere、route scenic preview、Explore Hub／Focus Tray；
+- 現行 cinematic quality 模組，包括各目的地 High／Photo Capture extension；
+- `offline-bootstrap.js` 本身。
+
+固定 Three.js `0.185.1` 仍由獨立 `THREE_URL` authority 管理。加入或移除 active runtime 模組時，必須修改 `sw.js` `CORE`；`scripts/validate-offline.mjs` 會直接解析這個真實 manifest，確認每一個同源項目實際存在，避免文件或 validator 再次落後於 runtime。
+
+Service Worker 不攔截、不建立任何 API、analytics、帳戶、圖片上傳或第三方追蹤快取。
 
 ## 4. 更新策略
 
 - 導航及同源核心程式：**network-first**。在線時優先取得最新 Vercel／靜態部署版本，成功後刷新本機快取；離線時才使用舊快取。
 - Three.js：版本已固定，因此使用 **cache-first**；未命中才向 jsDelivr 取得同一固定版本。
 - Service Worker 更新使用 `updateViaCache: none`，避免舊 HTTP cache 阻礙新的 worker。
-- 新 worker 啟用後清除舊 `stellar-wrap-shell-*` cache。
+- 新 worker 啟用後清除其他 `stellar-wrap-shell-*` cache；同一 cache generation 更新時，install 的 `cache.addAll(CORE)` 仍會重新寫入現行完整 shell。
 
 因此在線使用不應被舊快取長期鎖死，而離線模式會使用最近一次成功在線載入的版本。
 
@@ -66,10 +70,11 @@ npm run check
 聚焦 validator 必須確認：
 
 - Service Worker 及 bootstrap 可通過語法檢查；
-- 固定 Three.js URL 與核心檔案均在快取清單；
+- 固定 Three.js URL 維持批准版本；
+- validator 直接解析 `sw.js` `CORE`，每一個現行同源 path 都實際存在、無重複項；
 - navigation 使用 network-first；
 - Three.js 使用 cache-first；
-- ready 狀態要求本機 shell 及 Three.js 均已存在；
+- ready 狀態要求**每一個現行 `CORE`**及 Three.js 均已存在；
 - bootstrap 沒有新增 localStorage 使用；
 - Service Worker 沒有 interval／animation frame 工作。
 
@@ -87,4 +92,4 @@ npm run check
 - Offline module、Service Worker、focused validator 及 SOT 文件已在 Draft PR；
 - exact HEAD GitHub Actions 綠燈；
 - V4.0 stable／archive hash 不變；
-- owner 完成 iPhone Safari online→offline→online 實機驗收後，才可把此候選標記為已通過驗證。
+- online→offline→online 的真 Browser／實機測試可作補充證據；缺少實體手機不阻塞與裝置專屬行為無關的自主演進。
