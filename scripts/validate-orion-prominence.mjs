@@ -11,7 +11,8 @@ function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);
 
 new vm.Script(source.replace(/^import .*?;\s*/,''));
 check(source.includes("three@0.185.1/build/three.module.js"),'ORION prominence layer reuses pinned Three.js');
-check(/import\('\.\/cinematic-quality\.js'\)\.then\(\(\)=>import\('\.\/cyg-cinematic-quality\.js'\)\)\.then\(\(\)=>import\('\.\/orion-prominence-quality\.js'\)\)/.test(focus),'ORION prominence loads after the existing cinematic layers');
+const sharedLoader="import('./cinematic-quality.js')",cygLoader="import('./cyg-cinematic-quality.js')",orionLoader="import('./orion-prominence-quality.js')";
+check(focus.includes(sharedLoader)&&focus.includes(cygLoader)&&focus.includes(orionLoader)&&focus.indexOf(sharedLoader)<focus.indexOf(cygLoader)&&focus.indexOf(cygLoader)<focus.indexOf(orionLoader),'ORION prominence loads after the shared and CYG cinematic layers even when other High-tier extensions are chained between them');
 check(sw.includes("'./orion-prominence-quality.js'"),'ORION prominence extension is included in the offline shell');
 check(/starCenter:new THREE\.Vector3\(28,8,-137\),starRadius:30/.test(source),'ORION prominence anchor matches the existing red-supergiant scene');
 check(/triangles:3072,drawCalls:2/.test(source),'ORION prominence budget is explicitly bounded to 3,072 triangles / two draw calls');
