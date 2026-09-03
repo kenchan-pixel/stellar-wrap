@@ -2,6 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 
 const NAME='stellar-vega-gate-depth';
 const VISUAL_PASS='parallax-aperture-v1';
+const ARCHITECTURE_PASS='phase-pylon-collar-v2';
 const SAMPLE_MS=250;
 const NODE_COUNT=24;
 const PROFILE={
@@ -75,7 +76,7 @@ function arcMaterial(nearSide){
 }
 function phaseNodeLattice(){
   const geometry=new THREE.OctahedronGeometry(.24,0);
-  const material=new THREE.MeshBasicMaterial({color:'#dff9ff',transparent:true,opacity:.86,depthWrite:false,blending:THREE.AdditiveBlending});
+  const material=new THREE.MeshBasicMaterial({color:'#d6f6ff',transparent:true,opacity:.74,depthWrite:false,blending:THREE.AdditiveBlending});
   material.forceSinglePass=true;
   const nodes=new THREE.InstancedMesh(geometry,material,NODE_COUNT);
   nodes.name=`${NAME}-phase-nodes`;nodes.renderOrder=7;
@@ -83,9 +84,11 @@ function phaseNodeLattice(){
   for(let i=0;i<NODE_COUNT;i++){
     const angle=i/NODE_COUNT*Math.PI*2+.08,lane=i%2===0?1:-1,radius=lane>0?27.6:21.2;
     const z=lane*2.35+Math.sin(angle*3.0)*.28;
+    const pylonLength=i%6===0?9.2:i%3===0?7.8:6.6;
+    const thickness=i%4===0?1.8:1.35;
     dummy.position.set(Math.cos(angle)*radius,Math.sin(angle)*radius,z);
-    dummy.rotation.set(angle*.05,-angle*.04,angle);
-    dummy.scale.setScalar(i%6===0?1.45:i%3===0?1.16:.9);
+    dummy.rotation.set(lane*.08,-lane*.05,angle+(lane<0?Math.PI/2:0));
+    dummy.scale.set(pylonLength,thickness,lane>0?1.6:1.25);
     dummy.updateMatrix();nodes.setMatrixAt(i,dummy.matrix);
     minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
   }
@@ -114,7 +117,7 @@ function sync(){
 }
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===4;
-  return{visualPass:VISUAL_PASS,target:'VEGA',quality:state.qualityMode||null,active,captured:!!gate,captureCount,objects:objects.length,nodes:active?NODE_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,nodeDepthSpan:active?Number(nodeDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan};
+  return{visualPass:VISUAL_PASS,architecture:ARCHITECTURE_PASS,target:'VEGA',quality:state.qualityMode||null,active,captured:!!gate,captureCount,objects:objects.length,nodes:active?NODE_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,nodeDepthSpan:active?Number(nodeDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');const qualityObserver=canvas?new MutationObserver(sync):null;

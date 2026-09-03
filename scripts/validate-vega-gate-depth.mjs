@@ -21,7 +21,10 @@ check(/new THREE\.CircleGeometry\(18,64\)/.test(source)&&/aperture-membrane/.tes
 check(/new THREE\.TorusGeometry\(25\.4,\.24,6,96,Math\.PI\*1\.08\)/.test(source)&&/near-phase-rail/.test(source)&&/far-phase-rail/.test(source),'near/far phase rails use bounded partial torus geometry');
 check(/nearArc\.position\.z=\.9/.test(source)&&/farArc\.position\.z=-\.8/.test(source),'phase rails are physically separated along local gate depth');
 check(/const NODE_COUNT=24/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,NODE_COUNT\)/.test(source)&&/new THREE\.OctahedronGeometry\(\.24,0\)/.test(source),'24 low-poly phase nodes share one instanced draw');
-check(/lane=i%2===0\?1:-1/.test(source)&&/z=lane\*2\.35\+Math\.sin\(angle\*3\.0\)\*\.28/.test(source),'phase nodes occupy staggered near/far lanes');
+check(/const ARCHITECTURE_PASS='phase-pylon-collar-v2'/.test(source),'VEGA v2 identifies the phase-pylon architectural treatment');
+check(/const pylonLength=i%6===0\?9\.2:i%3===0\?7\.8:6\.6/.test(source)&&/dummy\.scale\.set\(pylonLength,thickness,lane>0\?1\.6:1\.25\)/.test(source),'24 existing nodes are anisotropically stretched into readable bounded pylons without adding geometry');
+check(/angle\+\(lane<0\?Math\.PI\/2:0\)/.test(source),'near and far pylon lanes use complementary radial/tangential silhouettes');
+check(/lane=i%2===0\?1:-1/.test(source)&&/z=lane\*2\.35\+Math\.sin\(angle\*3\.0\)\*\.28/.test(source),'phase pylons retain staggered near/far depth lanes');
 check(/material\.forceSinglePass=true/.test(source),'transparent gate materials explicitly remain single-pass');
 check(/object\.isInstancedMesh\?object\.count:1/.test(source),'runtime triangle diagnostics account for instancing');
 check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='VEGA'/.test(source),'VEGA extension is safe-final-exploration and High-only');
@@ -33,12 +36,12 @@ check(!/localStorage|sessionStorage|indexedDB/.test(source),'VEGA extension adds
 check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'VEGA extension adds no runtime network or analytics path');
 check(/object\.geometry\?\.dispose/.test(source)&&/material\?\.dispose/.test(source),'owned geometry and materials are explicitly released');
 check(/__stellarVegaGateDepthAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'scene-construction hook is explicitly restorable');
-check(/window\.WarpVegaGateDepth=/.test(source)&&/nodeDepthSpan/.test(source),'diagnostic API exposes live bounded gate-depth state');
+check(/window\.WarpVegaGateDepth=/.test(source)&&/nodeDepthSpan/.test(source)&&/architecture:ARCHITECTURE_PASS/.test(source),'diagnostic API exposes live bounded gate depth and v2 architectural identity');
 check(/#perfHud/.test(browserSource)&&/highFrameCalls-standardFrameCalls,8/.test(browserSource),'browser gate measures shared + VEGA incremental renderer draws');
 check(/WarpPhotoMode\.capture/.test(browserSource)&&/__vegaGateCaptureProbe/.test(browserSource),'browser gate verifies one-shot Photo Capture includes VEGA gate depth');
 check(/390,844/.test(browserSource)&&/360,800/.test(browserSource)&&/vega-gate-parallax-/.test(browserSource),'both required phone viewports emit visual evidence');
 check(doc.includes('2,560')&&doc.includes('4 draw calls')&&doc.includes('24')&&doc.includes('390×844')&&doc.includes('360×800'),'SOT records bounded performance and both phone visual gates');
-check(doc.includes('Photo Capture')&&doc.includes('Standard／Low')&&doc.includes('視差'),'SOT records capture synchronization, lower-tier zero cost and parallax outcome');
+check(doc.includes('相位柱環 v2')&&doc.includes('零新增 draw call')&&doc.includes('Photo Capture'),'SOT records the pylon-collar outcome, unchanged renderer budget and capture synchronization');
 
 const browser=spawnSync(process.execPath,['scripts/validate-vega-gate-depth-browser.mjs'],{encoding:'utf8',timeout:150000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
