@@ -223,6 +223,7 @@ window.WarpTravelJournal={
   restorePending(){return locationRestorePending},
   restoreLocation(){return restoreDockedLocation()}
 };
+import('./mode-gateway.js').catch(()=>{});
 import('./responsive-ui.js').catch(()=>{});
 import('./exploration-survey.js').catch(()=>{});
 import('./star-atlas.js').then(()=>render()).catch(()=>{});

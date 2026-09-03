@@ -36,8 +36,17 @@ const browserHarness=fs.readFileSync('scripts/validate-exploration-focus-tray-br
 has(browserHarness,"['scripts/serve.mjs']",'real-browser harness serves the actual production page');
 has(browserHarness,'getBoundingClientRect()','real-browser harness measures rendered geometry');
 has(browserHarness,'getComputedStyle','real-browser harness reads computed production CSS');
-has(browserHarness,"'Input.dispatchMouseEvent'",'real-browser harness drives actual pointer input through CDP');
+has(browserHarness,'document.elementFromPoint','real-browser harness proves each mobile control is the actual hit target before activation');
+has(browserHarness,"Input.dispatchTouchEvent",'real-browser harness dispatches browser-level touch input instead of programmatic DOM clicks');
+has(browserHarness,'window.__stellarTouchTrace','real-browser harness records browser event delivery for every mobile activation');
+has(browserHarness,'event.isTrusted','real-browser harness requires trusted browser touch/click evidence');
+has(browserHarness,'stable touch target','real-browser harness waits for a stable hit target before one touch attempt');
+has(browserHarness,'interactionDiagnostic','real-browser harness records hit target, pane and expanded-state diagnostics on a failed interaction');
+has(browserHarness,'touchTrace:(window.__stellarTouchTrace||[]).slice(-16)','real-browser failure evidence includes recent trusted touch delivery state');
+has(browserHarness,'failure-${viewport}.json','real-browser failure evidence persists a machine-readable interaction diagnostic');
 has(browserHarness,'[[390,844],[360,800]]','real-browser harness covers both phone acceptance viewports');
+check(!/\.click\s*\(/.test(browserHarness),'focus-tray acceptance does not bypass mobile input with programmatic DOM click');
+check(!/for\s*\(let attempt=.*spawnSync|retrying the same real-browser/.test(browserHarness),'real-browser acceptance remains single-pass without retry masking');
 
 for(const [width,height] of [[390,844],[360,800]]){
   const runtime=spawnSync(process.execPath,['scripts/validate-exploration-focus-tray-runtime.mjs'],{
@@ -54,7 +63,7 @@ const browser=spawnSync(process.execPath,['scripts/validate-exploration-focus-tr
 });
 if(browser.stdout)process.stdout.write(browser.stdout);
 if(browser.stderr)process.stderr.write(browser.stderr);
-check(browser.status===0,'real production-page Focus Tray browser layout passes at both phone viewports');
+check(browser.status===0,'single real production-page Focus Tray trusted-touch/hit-target/layout gate passes at both phone viewports without retry masking');
 
 if(process.exitCode)process.exit(process.exitCode);
-console.log(`Exploration Focus Tray: ${pass} / ${pass} checks passed plus two production-module state viewports and two real-browser layout viewports`);
+console.log(`Exploration Focus Tray: ${pass} / ${pass} checks passed plus two production-module state viewports and one deterministic trusted-touch browser pass covering both phone viewports`);

@@ -1,0 +1,47 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {spawnSync} from 'node:child_process';
+
+const source=fs.readFileSync(new URL('../tau-ring-depth.js',import.meta.url),'utf8');
+const browserSource=fs.readFileSync(new URL('./validate-tau-ring-depth-browser.mjs',import.meta.url),'utf8');
+const focus=fs.readFileSync(new URL('../exploration-focus-tray.js',import.meta.url),'utf8');
+const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const doc=fs.readFileSync(new URL('../docs/TAU_RING_SHADOW_DEPTH.md',import.meta.url),'utf8');
+let passed=0;
+function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);passed++;console.log(`PASS TAU RING DEPTH ${passed}: ${label}`)}
+
+new vm.Script(source.replace(/^import .*?;\s*/,''));
+check(source.includes("three@0.185.1/build/three.module.js"),'TAU depth layer reuses pinned Three.js');
+const sharedLoader="import('./cinematic-quality.js')",tauLoader="import('./tau-ring-depth.js')";
+check(focus.includes(sharedLoader)&&focus.includes(tauLoader)&&focus.indexOf(sharedLoader)<focus.indexOf(tauLoader),'TAU ring depth loads after the shared cinematic quality layer');
+check(sw.includes("'./tau-ring-depth.js'"),'TAU ring depth is included in the prepared offline shell');
+check(/center:new THREE\.Vector3\(15,-5,-86\),radius:23/.test(source),'TAU anchor matches the existing gas-giant scene authority');
+check(/triangles:2912,drawCalls:4,shepherds:SHEPHERD_COUNT,depthSpan:5\.2/.test(source),'TAU ring-depth pass declares a bounded 2,912-triangle / four-draw budget');
+check(/new THREE\.SphereGeometry\(1,48,24\)/.test(source)&&/planet-ring-shadow/.test(source)&&/float band=1\.0-smoothstep/.test(source),'planet carries a bounded ring-plane shadow shell rather than a screen overlay');
+check(/new THREE\.RingGeometry\(29\.8,55\.6,144,1,Math\.PI\*\.04,Math\.PI\*\.98\)/.test(source),'near-side forward-scatter ring is a bounded partial 3D plane');
+check(/new THREE\.RingGeometry\(30\.2,55\.2,144,1,Math\.PI\*1\.02,Math\.PI\*\.98\)/.test(source),'far-side back-scatter ring is independently depth-separated');
+check(/material\.forceSinglePass=true/.test(source),'transparent ring planes explicitly retain one renderer pass each');
+check(/const SHEPHERD_COUNT=16/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,SHEPHERD_COUNT\)/.test(source)&&/new THREE\.OctahedronGeometry\(\.28,0\)/.test(source),'16 shepherd moonlets share one low-poly instanced draw');
+check(/lane=i%2===0\?1:-1/.test(source)&&/z=lane\*2\.1\+Math\.sin\(angle\*3\)\*\.32/.test(source),'shepherd moonlets occupy two staggered near/far ring-normal lanes');
+check(/planeOffset\(\.82\)/.test(source)&&/planeOffset\(-\.72\)/.test(source),'near and far scatter surfaces are separated along the rotated ring normal');
+check(/object\.isInstancedMesh\?object\.count:1/.test(source),'runtime triangle measurement accounts for instanced shepherd geometry');
+check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='TAU'/.test(source),'TAU ring depth is safe-final-exploration and High-only');
+check(/if\(!high&&objects\.length\)disposeOwn\(\)/.test(source)&&/if\(high&&tauRoot&&!objects\.length\)build\(\)/.test(source),'downgrade/departure disposes owned objects and High rebuilds on demand');
+check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'state synchronization is bounded to 4 Hz outside the renderer loop');
+check(/new MutationObserver\(sync\)/.test(source)&&/attributeFilter:\['width','height'\]/.test(source),'canvas backing-size changes immediately synchronize Photo Capture Boost');
+check(!/requestAnimationFrame\s*\(/.test(source),'TAU ring depth adds no independent render loop');
+check(!/localStorage|sessionStorage|indexedDB/.test(source),'TAU ring depth adds no persistence authority');
+check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'TAU ring depth adds no runtime network or analytics path');
+check(/object\.geometry\?\.dispose/.test(source)&&/material\?\.dispose/.test(source),'owned geometry and materials are explicitly released');
+check(/__stellarTauRingDepthAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'scene-construction hook is explicitly restorable');
+check(/window\.WarpTauRingDepth=/.test(source)&&/shepherdDepthSpan/.test(source),'diagnostic API exposes live bounded ring-depth state');
+check(/#perfHud/.test(browserSource)&&/highFrameCalls-standardFrameCalls,8/.test(browserSource),'production-browser gate measures the actual combined shared + TAU DRAW delta');
+check(/WarpPhotoMode\.capture/.test(browserSource)&&/__tauRingCaptureProbe/.test(browserSource),'production-browser gate verifies one-shot Photo Capture includes the High TAU ring-depth layer');
+check(/390,844/.test(browserSource)&&/360,800/.test(browserSource)&&/tau-ring-shadow-depth-/.test(browserSource),'both required phone viewports emit visual evidence');
+check(doc.includes('2,912')&&doc.includes('4 draw calls')&&doc.includes('16')&&doc.includes('390×844')&&doc.includes('360×800'),'SOT records bounded performance and both phone visual gates');
+check(doc.includes('Photo Capture')&&doc.includes('Standard／Low')&&doc.includes('環影'),'SOT records capture synchronization, lower-tier zero cost and user-visible ring-shadow outcome');
+
+const browser=spawnSync(process.execPath,['scripts/validate-tau-ring-depth-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
+if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
+check(browser.status===0,'real production WebGL TAU ring depth passes capture, measured renderer budget, lifecycle and both phone viewport gates');
+console.log(`TAU Ring Shadow Parallax validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);

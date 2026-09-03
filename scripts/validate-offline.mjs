@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -12,6 +12,7 @@ function ok(condition,message){if(condition){passes++;console.log(`✓ ${message
 const bootstrap=read('offline-bootstrap.js');
 const sw=read('sw.js');
 const journal=read('travel-journal.js');
+const doc=read('docs/OFFLINE.md');
 const pkg=JSON.parse(read('package.json'));
 
 for(const file of ['offline-bootstrap.js','sw.js']){
@@ -29,13 +30,25 @@ ok(bootstrap.includes('cacheReady&&navigator.onLine')&&bootstrap.includes('cache
 ok(!bootstrap.includes('localStorage'),'offline bootstrap adds no persistent user-data store');
 
 ok(sw.includes("const CACHE_PREFIX='stellar-wrap-shell-'"),'service worker cache is versioned');
-ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v15`"),'offline shell generation advances for exploration constellation');
+ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v15`"),'offline shell retains the current exploration/cinematic generation');
 ok(sw.includes("three@0.185.1/build/three.module.js"),'offline cache pins the approved Three.js version');
-for(const path of ['./index.html','./travel-journal.js','./responsive-ui.js','./journey-atmosphere.js','./exploration-survey.js','./star-atlas.js','./vega-survey.js','./cyg-beacon-scan.js','./orion-spectrograph.js','./tau-ring-profiler.js','./sirius-relay-calibration.js','./prox-starport-alignment.js','./photo-mode.js','./arrival-debrief.js','./discovery-debrief.js','./navigation-discovery-status.js','./explore-hub.js','./exploration-focus-tray.js','./atlas-constellation.js','./landmark-guide.js','./offline-bootstrap.js'])ok(sw.includes(`'${path}'`),`offline core includes ${path}`);
+
+const coreMatch=sw.match(/const CORE=\[(.*?)\];/s);
+ok(!!coreMatch,'service worker exposes one explicit CORE active-shell manifest');
+const corePaths=coreMatch?[...coreMatch[1].matchAll(/'(\.\/[^']*)'/g)].map(match=>match[1]):[];
+ok(corePaths.includes('./')&&corePaths.includes('./index.html'),'CORE manifest includes navigation root and active index');
+ok(corePaths.includes('./tau-ring-depth.js'),'current TAU cinematic extension participates in offline readiness');
+ok(new Set(corePaths).size===corePaths.length,'CORE manifest contains no duplicate entries');
+for(const path of corePaths.filter(path=>path!=='./')){
+  ok(existsSync(resolve(root,path.slice(2))),`offline CORE path exists: ${path}`);
+}
+ok(doc.includes('`sw.js` 的 `CORE`')&&doc.includes('每一個現行 `CORE`'),'offline SOT delegates the active-shell inventory to the actual service-worker CORE manifest instead of a stale duplicate list');
+ok(!doc.includes('Service Worker 只處理：'),'offline SOT no longer claims an outdated exhaustive six-file shell');
+
 ok(sw.includes("event.request.mode==='navigate'" )&&sw.includes('networkFirst(event.request)'),'navigation uses network-first with cached fallback');
 ok(sw.includes('if(isThree)')&&sw.includes('cacheFirst(event.request)'),'fixed Three.js dependency uses cache-first offline fallback');
 ok(sw.includes("event.data?.type!=='OFFLINE_STATUS'"),'service worker exposes explicit cache-readiness status');
-ok(sw.includes('local.every(Boolean)&&!!three'),'offline-ready state requires both local shell and Three.js');
+ok(sw.includes('local.every(Boolean)&&!!three'),'offline-ready state requires every current CORE resource plus Three.js');
 ok(!/setInterval|requestAnimationFrame/.test(sw),'service worker adds no render-loop or polling work');
 ok(pkg.scripts?.check?.includes('node scripts/validate-offline.mjs'),'npm run check includes focused offline validation');
 

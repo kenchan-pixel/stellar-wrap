@@ -49,20 +49,12 @@ async function stopChild(child){
 async function removeTree(path){
   const retryable=new Set(['EBUSY','ENOTEMPTY','EPERM']);let lastError=null;
   for(let attempt=0;attempt<8;attempt++){
-    try{
-      rmSync(path,{recursive:true,force:true,maxRetries:2,retryDelay:80});
-      return;
-    }catch(error){
-      lastError=error;
-      if(!retryable.has(error?.code))throw error;
-      await sleep(100*(attempt+1));
-    }
+    try{rmSync(path,{recursive:true,force:true,maxRetries:2,retryDelay:80});return}
+    catch(error){lastError=error;if(!retryable.has(error?.code))throw error;await sleep(100*(attempt+1))}
   }
   throw lastError;
 }
-async function waitHttp(url){
-  return waitUntil(async()=>{const response=await fetch(url,{cache:'no-store'});return response.ok},`local server ${url}`,8000);
-}
+async function waitHttp(url){return waitUntil(async()=>{const response=await fetch(url,{cache:'no-store'});return response.ok},`local server ${url}`,8000)}
 
 class CdpClient{
   constructor(url){this.url=url;this.nextId=0;this.pending=new Map();this.eventWaiters=new Map();this.ws=null}
@@ -78,10 +70,7 @@ class CdpClient{
       const message=JSON.parse(String(event.data));
       if(!message.id){
         const waiters=this.eventWaiters.get(message.method)||[];
-        if(waiters.length){
-          this.eventWaiters.delete(message.method);
-          for(const waiter of waiters){clearTimeout(waiter.timer);waiter.resolve(message.params||{})}
-        }
+        if(waiters.length){this.eventWaiters.delete(message.method);for(const waiter of waiters){clearTimeout(waiter.timer);waiter.resolve(message.params||{})}}
         return;
       }
       const pending=this.pending.get(message.id);if(!pending)return;
@@ -121,22 +110,40 @@ async function evaluate(cdp,expression,label='Runtime.evaluate'){
     const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:false});
     if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text||'Runtime.evaluate failed');
     return result.result?.value;
-  }catch(error){
-    throw new Error(`${label}: ${error.message}`);
-  }
+  }catch(error){throw new Error(`${label}: ${error.message}`)}
 }
 async function waitExpression(cdp,expression,label,timeoutMs=12000){return waitUntil(()=>evaluate(cdp,expression,label),label,timeoutMs)}
 async function loadProductionScript(cdp,src,globalName){
   await evaluate(cdp,`(()=>{const id='stellarHarness-${globalName}';if(document.getElementById(id))return true;const script=document.createElement('script');script.id=id;script.src=${JSON.stringify(src)};script.async=false;document.head.append(script);return true})()`,`inject ${src}`);
   await waitExpression(cdp,`!!window[${JSON.stringify(globalName)}]`,`${globalName} production script`);
 }
-async function clickSelector(cdp,selector){
-  const point=await waitUntil(async()=>{
-    const state=await evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none'&&(hit===el||el.contains(hit)),x,y,hit:hit?.id||hit?.getAttribute?.('data-hub-action')||hit?.tagName||''}})()`,`hit-test ${selector}`);
-    return state?.ok?state:null;
-  },`hit-testable ${selector}`,3000);
-  await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1});
-  await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1});
+async function controlState(cdp,selector){
+  return evaluate(cdp,`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y),owner=hit?.closest?.('#exploreRailToggle,[data-hub-action]')||null,key=el.id||el.getAttribute?.('data-hub-action')||'';return{ok:r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden'&&s.pointerEvents!=='none'&&!el.disabled&&(hit===el||el.contains(hit))&&owner===el,x,y,key,hit:owner?.id||owner?.getAttribute?.('data-hub-action')||hit?.tagName||'',rect:{left:r.left,top:r.top,width:r.width,height:r.height}}})()`,`hit-test ${selector}`);
+}
+async function stableTouchPoint(cdp,selector){
+  return waitUntil(async()=>{
+    const first=await controlState(cdp,selector);if(!first?.ok)return null;
+    await sleep(100);
+    const second=await controlState(cdp,selector);if(!second?.ok)return null;
+    const stable=Math.abs(first.x-second.x)<1&&Math.abs(first.y-second.y)<1&&first.key===second.key&&first.hit===second.hit;
+    return stable?second:null;
+  },`stable touch target ${selector}`,4000);
+}
+async function installTouchTrace(cdp){
+  await evaluate(cdp,`(()=>{if(window.__stellarTouchTrace)return true;window.__stellarTouchTrace=[];const keyFor=node=>{const owner=node?.closest?.('#exploreRailToggle,[data-hub-action]');return owner?(owner.id||owner.getAttribute('data-hub-action')||''):''};for(const type of ['touchstart','touchend','pointerdown','pointerup','click'])document.addEventListener(type,event=>{window.__stellarTouchTrace.push({type,trusted:event.isTrusted,key:keyFor(event.target),pointerType:event.pointerType||'',time:performance.now()});if(window.__stellarTouchTrace.length>80)window.__stellarTouchTrace.shift()},{capture:true,passive:true});return true})()`,'install trusted touch trace');
+}
+async function touchSelector(cdp,selector){
+  const point=await stableTouchPoint(cdp,selector);
+  const before=await evaluate(cdp,'window.__stellarTouchTrace?.length||0','touch trace start');
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:point.x,y:point.y,radiusX:2,radiusY:2,force:1,id:1}]},5000);
+  await sleep(55);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]},5000);
+  await waitUntil(async()=>{
+    const trace=await evaluate(cdp,`(window.__stellarTouchTrace||[]).slice(${Number(before)})`,'trusted touch trace');
+    const trustedTouch=trace.some(event=>event.trusted&&event.type==='touchstart'&&event.key===point.key);
+    const trustedClick=trace.some(event=>event.trusted&&event.type==='click'&&event.key===point.key);
+    return trustedTouch&&trustedClick?trace:null;
+  },`trusted touch activation ${selector}`,3500);
 }
 async function waitCardSettled(cdp,label){
   return waitExpression(cdp,`(()=>{const card=document.querySelector('#exploreCard');if(!card?.classList.contains('hubOpen'))return false;const r=card.getBoundingClientRect(),s=getComputedStyle(card),left=Number.parseFloat(s.left);return s.opacity==='1'&&s.pointerEvents!=='none'&&s.transform==='none'&&Number.isFinite(left)&&Math.abs(r.left-left)<1.5})()`,label,3500);
@@ -145,6 +152,9 @@ async function captureScreenshot(cdp,name){
   mkdirSync(EVIDENCE_DIR,{recursive:true});
   const shot=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false},10000);
   writeFileSync(join(EVIDENCE_DIR,name),Buffer.from(shot.data,'base64'));
+}
+async function interactionDiagnostic(cdp){
+  return evaluate(cdp,`(()=>{const describe=el=>{if(!el)return null;const r=el.getBoundingClientRect(),s=getComputedStyle(el),x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y),owner=hit?.closest?.('#exploreRailToggle,[data-hub-action]')||null;return{id:el.id||'',action:el.getAttribute?.('data-hub-action')||'',rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},display:s.display,visibility:s.visibility,pointerEvents:s.pointerEvents,disabled:!!el.disabled,ariaExpanded:el.getAttribute?.('aria-expanded'),hit:{id:owner?.id||hit?.id||'',action:owner?.getAttribute?.('data-hub-action')||'',tag:hit?.tagName||''}}};const card=document.querySelector('#exploreCard');return{rail:describe(document.querySelector('#exploreRailToggle')),explore:describe(document.querySelector('[data-hub-action="explore"]')),overview:describe(document.querySelector('[data-hub-action="overview"]')),discovery:describe(document.querySelector('[data-hub-action="discovery"]')),touchTrace:(window.__stellarTouchTrace||[]).slice(-16),card:{pane:card?.dataset?.hubPane||'',open:!!card?.classList?.contains('hubOpen'),classes:card?.className||''},hub:{mobile:!!document.querySelector('#app')?.classList.contains('exploreHubMobile'),focusActive:!!window.WarpExplorationFocusTray?.active?.()}}})()`,'Focus Tray interaction diagnostic');
 }
 async function snapshot(cdp){
   return evaluate(cdp,`(()=>{const card=document.querySelector('#exploreCard'),r=card.getBoundingClientRect(),s=getComputedStyle(card);return{viewport:{width:innerWidth,height:innerHeight},pane:card.dataset.hubPane||'',open:card.classList.contains('hubOpen'),active:!!window.WarpExplorationFocusTray?.active?.(),rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height},computed:{maxHeight:s.maxHeight,left:s.left,right:s.right,bottom:s.bottom,overflowY:s.overflowY,transform:s.transform}}})()`,'Focus Tray geometry snapshot');
@@ -181,19 +191,13 @@ async function inspectViewport(chrome,baseUrl,width,height){
     browser.stderr?.on('data',chunk=>{chromeError=(chromeError+String(chunk)).slice(-4000)});
     const target=await waitUntil(async()=>{
       if(browser.exitCode!==null)throw new Error(`Chrome exited ${browser.exitCode}: ${chromeError.trim()||'no stderr'}`);
-      try{
-        const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`),targets=await response.json();
-        return targets.find(item=>item.type==='page'&&item.webSocketDebuggerUrl)||null;
-      }catch{return null}
+      try{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`),targets=await response.json();return targets.find(item=>item.type==='page'&&item.webSocketDebuggerUrl)||null}catch{return null}
     },`Chrome page target ${viewport}`,12000);
     cdp=new CdpClient(target.webSocketDebuggerUrl);await cdp.connect();
     await cdp.send('Page.enable');await cdp.send('Runtime.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true,screenWidth:width,screenHeight:height});
     await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
 
-    // Render the real production document/CSS without starting the simulator's WebGL runtime. The two exact
-    // production UI scripts under test are then loaded through the local server as browser scripts, avoiding
-    // a giant Runtime.evaluate payload and keeping the layout gate deterministic on software CI runners.
     await cdp.send('Emulation.setScriptExecutionDisabled',{value:true});
     const loaded=cdp.waitEvent('Page.loadEventFired',10000);
     await cdp.send('Page.navigate',{url:baseUrl});
@@ -202,47 +206,51 @@ async function inspectViewport(chrome,baseUrl,width,height){
     await waitExpression(cdp,"document.readyState==='complete'&&!!document.querySelector('#app')&&!!document.querySelector('#exploreCard')",'production page DOM');
     stage('production document and CSS loaded');
 
-    // Provide only the existing read-only state authority needed by Explore Hub, then load the exact production
-    // modules over HTTP. No test-only branch exists inside product source and no layout value is mocked.
     await evaluate(cdp,`(()=>{window.WarpSim={state:()=>({current:'LUNA',selected:null,route:[],phase:'observe',flying:false,exploring:true,contextLost:false}),select:()=>{},launch:()=>{},abort:()=>{}};window.WarpStarAtlas={snapshot:()=>({discoveries:{}})};document.querySelector('#loading')?.remove();return true})()`,'install bounded UI state authority');
     await loadProductionScript(cdp,`${baseUrl}explore-hub.js`,'WarpExploreHub');
     await loadProductionScript(cdp,`${baseUrl}exploration-focus-tray.js`,'WarpExplorationFocusTray');
     stage('production Explore Hub and Focus Tray scripts loaded');
 
-    // Enter final exploration only after observers/listeners are mounted, matching the real lifecycle.
     await evaluate(cdp,`(()=>{const app=document.querySelector('#app'),card=document.querySelector('#exploreCard');app.classList.add('ready','exploring');card.classList.add('show');card.classList.remove('transit','collapsed');return true})()`,'enter final exploration');
     await waitExpression(cdp,"!!window.WarpExploreHub&&!!window.WarpExplorationFocusTray&&document.querySelector('#app')?.classList.contains('exploreHubMobile')&&!!document.querySelector('#exploreRailToggle')",'production Explore Hub browser bootstrap');
+    await installTouchTrace(cdp);
 
-    await clickSelector(cdp,'#exploreRailToggle');
+    await touchSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'",'expanded Explore chooser');
-    await clickSelector(cdp,'[data-hub-action="explore"]');
+    await touchSelector(cdp,'[data-hub-action="explore"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='explore'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Focus Tray open');
     await waitCardSettled(cdp,'Focus Tray visual transition settled');
     const tray=await snapshot(cdp),metrics=assertTray(tray,width,height);
     await captureScreenshot(cdp,`focus-tray-${viewport}.png`);
     stage(`Focus Tray geometry accepted (${tray.rect.width.toFixed(1)}×${tray.rect.height.toFixed(1)}px)`);
 
-    await clickSelector(cdp,'#exploreRailToggle');
+    await touchSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'&&!document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'chooser reopens after tray');
-    await clickSelector(cdp,'[data-hub-action="overview"]');
+    await touchSelector(cdp,'[data-hub-action="overview"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='overview'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Overview drawer open');
     await waitCardSettled(cdp,'Overview drawer visual transition settled');
     assertDrawer(await snapshot(cdp),'overview',tray,metrics);
 
-    await clickSelector(cdp,'#exploreRailToggle');
+    await touchSelector(cdp,'#exploreRailToggle');
     await waitExpression(cdp,"document.querySelector('#exploreRailToggle')?.getAttribute('aria-expanded')==='true'&&!document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'chooser reopens after Overview');
-    await clickSelector(cdp,'[data-hub-action="discovery"]');
+    await touchSelector(cdp,'[data-hub-action="discovery"]');
     await waitExpression(cdp,"document.querySelector('#exploreCard')?.dataset.hubPane==='discovery'&&document.querySelector('#exploreCard')?.classList.contains('hubOpen')",'Discovery drawer open');
     await waitCardSettled(cdp,'Discovery drawer visual transition settled');
     assertDrawer(await snapshot(cdp),'discovery',tray,metrics);
-    console.log(`Exploration Focus Tray real browser ${viewport}: passed`);
+    console.log(`Exploration Focus Tray real browser ${viewport}: passed with trusted production touch input and hit-target evidence`);
   }catch(error){
-    if(cdp)await captureScreenshot(cdp,`failure-${viewport}.png`).catch(()=>{});
+    if(cdp){
+      mkdirSync(EVIDENCE_DIR,{recursive:true});
+      const diagnostic=await interactionDiagnostic(cdp).catch(()=>null);
+      if(diagnostic){
+        writeFileSync(join(EVIDENCE_DIR,`failure-${viewport}.json`),JSON.stringify({error:error.message,diagnostic},null,2));
+        console.error(`[Focus Tray browser ${viewport}] interaction failure diagnostic: ${JSON.stringify(diagnostic)}`);
+      }
+      await captureScreenshot(cdp,`failure-${viewport}.png`).catch(()=>{});
+    }
     throw error;
   }finally{
-    cdp?.close();
-    await stopChild(browser);
-    await removeTree(profile);
+    cdp?.close();await stopChild(browser);await removeTree(profile);
   }
 }
 

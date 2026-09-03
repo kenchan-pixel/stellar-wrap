@@ -2,7 +2,7 @@
 
 ## Goal
 
-令目的地攝影真正使用較高 WebGL backing resolution，讓到站景觀更值得保存，同時不把整段手機航程永久推到最高 GPU 負載。
+令目的地攝影真正使用較高 WebGL backing resolution，並提供實用但不污染成品的構圖輔助，讓到站景觀更值得保存，同時不把整段手機航程永久推到最高 GPU 負載。
 
 ## Vertical Slice｜Photo Capture Boost v1
 
@@ -29,6 +29,128 @@
 - 不加入 4K 強制輸出、離屏第二 renderer、超採樣後處理或大型 post-processing dependency。
 - 不改任何目的地 3D 幾何、材質、航線、曲速時間或相機行為。
 
+## Vertical Slice｜Photo Composition Guides v1
+
+### Goal / intended player outcome
+
+進入目的地攝影模式後，使用者毋須靠估就可快速整理畫面重心；格線只在構圖時可見，實際 PNG 保持乾淨。
+
+### Scope
+
+- 在既有 Photo Mode 加入三種 session-only 構圖狀態：`三分線 → 中心線 → 關`，預設三分線。
+- 三分線使用兩條垂直及兩條水平線；中心模式使用十字線及中心圓標。
+- 使用既有 Photo Mode toolbar 加入 44 px 觸控高度的「格線」按鈕；390 px 以下 toolbar 可換行，不壓縮核心「返回／高畫質留影」操作。
+- 格線是單一 pointer-transparent DOM overlay；不攔截 WebGL canvas 拖動／觸控。
+- `photoCapturing` 狀態必須隱藏格線與 toolbar，再由既有 WebGL canvas 產生 PNG；完成後恢復使用者當次構圖模式。
+- 不加入新 storage key；模式只存在目前頁面 session。
+
+### Acceptance Criteria
+
+1. 安全目的地探索進入 Photo Mode 時，預設三分格線可見。
+2. 真 Browser 可信觸控可依序切換三分線、中心線、關閉，再回到三分線。
+3. 格線覆蓋手機 viewport、`pointer-events:none`，中央 hit target 仍為現有 `#space` WebGL canvas。
+4. 390×844 及 360×800 toolbar 均完全留在 viewport，格線按鈕實際高度不少於 44 px，無頁面橫向溢出。
+5. Capture Boost 進入 `photoCapturing` 時格線 opacity 為 0；PNG backing dimensions 仍等於 High tier canvas，完成後原畫質及格線模式恢復。
+6. 不改 renderer、camera、航線、飛行時間、destination geometry、quality DPR 上限或 capture authority。
+7. 不新增 network、backend、analytics、persistence、Three.js object 或 render-loop 工作。
+
+### Out of Scope
+
+- 黃金比例、對角線、水平儀或自動主體識別。
+- 把格線烙印到 PNG、相片濾鏡、色彩後製或相片編輯器。
+- 儲存個人格線偏好或跨裝置同步。
+- Frontier Fiction 專屬構圖 preset；既有 AURELIA／NADIR guided vistas 保持獨立。
+
+### Performance / risk
+
+構圖格線只在靜態 Photo Mode 以少量 DOM/CSS 線條顯示，不進入 60 Hz renderer loop、無 GPU geometry、無額外 polling。Safari 字體與 1 px 線條抗鋸齒可能與 Chromium 略有差異；實體手機檢查屬補充證據，不是完成 gate。
+
+### Completion signal
+
+使用者在手機目的地 Photo Mode 可即時使用三分／中心構圖輔助，觸控及畫面不被阻擋，而高畫質 PNG 不包含任何格線並正常恢復原有畫質。
+
+## Vertical Slice｜Photo Frame Formats v1
+
+### Goal / intended player outcome
+
+讓目的地高畫質留影可以直接輸出適合手機觀看及分享的構圖，不必事後再用其他 App 裁切；同時保留原始畫幅選項，不犧牲既有 capture 行為。
+
+### Scope
+
+- Photo Mode 新增 session-only `畫幅：原幅 → 9:16 → 1:1` 44 px 觸控切換。
+- `9:16` 與 `1:1` 在構圖時顯示中央裁切框，框外輕微壓暗；overlay 完全 `pointer-events:none`，不阻擋既有 WebGL 拖動。
+- 留影仍先短暫切換至既有 High renderer tier並等待兩個實際渲染幀；先從高 DPR WebGL canvas 取得原始 PNG，再只做中央像素裁切。
+- 裁切輸出直接使用原始高畫質像素，**不放大、不重採樣到虛構 4K**；若來源比目標畫幅窄，裁高度；若來源較寬，裁寬度。
+- `9:16` 及 `1:1` 檔名分別帶 `-9x16`／`-square`，方便本機相片記錄辨識。
+- Capture 中隱藏格線、裁切框及工具列；完成後恢復原畫質、格線及所選畫幅。
+- 不新增相機 authority、第二 WebGL renderer、Three.js 幾何、storage key、network request、backend 或新的 polling/render-loop 工作。
+
+### Acceptance Criteria
+
+1. 進入 Photo Mode 預設仍為原始畫幅，既有留影輸出行為不變。
+2. 390×844 及 360×800 真 Chromium 可信觸控可依序切換原幅、9:16、1:1，再返回原幅；兩個裁切框均完全留在 viewport 內，工具列無橫向溢出。
+3. 9:16 預覽框實際寬高比約為 `9 / 16`；1:1 寬高相等。
+4. 高畫質 9:16 留影輸出 width／height 必須等於由 High backing buffer 計算的中央 crop rectangle，兩個維度都不得大於來源 backing buffer。
+5. Crop preview 與 composition guide 在 `photoCapturing` 期間都不可出現在成品；完成後兩者恢復。
+6. 原本畫質模式在裁切 PNG 產生成功、失敗或中止後均可靠恢復；capture 期間 frame／guide／exit／capture 按鈕全部 disabled，避免競態。
+7. 原幅、9:16、1:1 只存在目前頁面 session，不新增 persistence／analytics／network／backend。
+
+### Out of Scope
+
+- 任意自由裁切、拖動 crop window、旋轉、濾鏡、曝光／色彩編輯。
+- 4:5／16:9／超寬畫幅；先驗證原幅、手機直向 9:16 及方形三種最常用結果。
+- 相片 Gallery 的永久收藏／同步；Gallery 仍只使用既有本機記錄能力。
+- 為了畫幅而改變飛行相機、目的地相機或 3D 場景位置。
+
+### Performance / risk
+
+新增成本只在使用者按留影後發生一次：已驗證的高畫質 WebGL PNG 先解碼為 bitmap，再在一個短生命週期 2D canvas 做中央裁切後輸出最終 PNG。日常探索與航程無額外 GPU geometry、draw call 或 60 Hz 工作。最大的補充風險是 iPhone Safari 在高畫質 PNG 解碼＋2D 裁切瞬間的記憶體峰值；實體裝置熱力／記憶體檢查仍屬補充證據，不作自主演進阻塞條件。
+
+### Completion signal
+
+使用者在任何 Real Space 最終目的地可於同一 Photo Mode 直接預覽及輸出原幅、9:16 或 1:1 高畫質 PNG；真手機尺寸 Chromium 證明畫幅、裁切像素、工具列安全區及原畫質恢復全部正確。
+
+## Vertical Slice｜Live Photo Preview Boost v1
+
+### Goal / intended player outcome
+
+讓使用者在真正按下留影之前，就可以用攝影模式直接看到既有 High tier 的高解像畫面與目的地 cinematic detail，避免「低畫質構圖、高畫質輸出」造成構圖時看不到最終細節。提升只限靜態攝影狀態，由使用者主動開啟，離開攝影模式即自動恢復。
+
+### Scope
+
+- 在既有 Photo Mode toolbar 加入 44 px `預覽：原 → 高` session-only 切換，不保存偏好。
+- 開啟高畫質預覽時，暫時重用既有 `WarpSim.setQuality('high')`；不提高 High tier DPR 上限、不新增第二 renderer。
+- 因現有 cinematic-quality layer 本身只在安全 High 探索啟用，高畫質預覽會同時顯示已批准的目的地 High-tier 大氣、表面、環／站體等 bounded 3D detail，而不是只在 CSS 上放大畫面。
+- 關閉高畫質預覽或離開 Photo Mode 時，恢復進入高畫質預覽前的原畫質；若原本已是 High，保持 High。
+- 高畫質預覽開啟期間按「高畫質留影」，capture 直接使用已在 High 的 renderer；完成後仍保持預覽 High，直到使用者關閉預覽或離開 Photo Mode。
+- capture 期間預覽按鈕與其他控制一樣 disabled，避免 quality authority 競態。
+- 不新增儲存、網絡、後端、相機 authority、Three.js 物件或新的 polling／render-loop 工作。
+
+### Acceptance Criteria
+
+1. 預設仍使用進入 Photo Mode 前的原畫質，不永久提高一般探索或航程負載。
+2. 從 Low 進入 Photo Mode 後，以真 trusted touch 開啟高畫質預覽，`qualityMode` 必須變成 High，WebGL backing buffer 實際提高而 CSS viewport 尺寸不變。
+3. 在具 cinematic-quality profile 的 LUNA 驗證：預覽 High 後既有 cinematic layer 必須實際 active 且建立既有 bounded 4 個物件；關閉預覽或退出後物件回到 0，證明不是單純改按鈕或只放大 DPR。
+4. 390×844 與 360×800 真 Chromium 均需證明預覽按鈕 ≥44 px、toolbar 無橫向溢出、High → 原畫質恢復及再次進入 Photo Mode 預覽狀態為關閉。
+5. 預覽 High 期間 capture 不得把模式錯誤降回原畫質；只有關閉預覽／離開 Photo Mode 才恢復進入預覽前的 quality。
+6. 航行開始、WebGL context lost 或其他安全狀態令 Photo Mode 退出時，同樣必須恢復原畫質。
+7. 不改 High tier 1.60 mobile／1.90 desktop DPR 上限、flight timing、route、camera、destination geometry 或既有 capture crop contract。
+8. 不新增 storage key、analytics、network、backend、dependency、renderer 或 60 Hz 額外工作。
+
+### Out of Scope
+
+- 自動偵測 GPU 後永久鎖 High、背景持續 High、4K 強制 preview。
+- 新增曝光、濾鏡、HDR 合成、後製或自由裁切工具。
+- 提高既有 cinematic-quality geometry budget；本切片只讓攝影構圖階段可主動看到現有 High-tier detail。
+
+### Performance / risk
+
+高畫質預覽會在使用者主動開啟期間承擔既有 High tier 的 DPR 與目的地 cinematic detail 成本，因此必須嚴格局限在 Photo Mode，並以明確切換／退出恢復作成本邊界。這不是一般航程的永久畫質升級。實體 iPhone Safari 的短時間溫升與記憶體峰值仍屬補充證據；自動完成 gate 以真 Chromium backing buffer、cinematic layer lifecycle、手機 layout 與完整 repo validation 為準。
+
+### Completion signal
+
+使用者可在手機 Photo Mode 主動切換高畫質預覽，直接以真正 High renderer／cinematic detail 構圖，再留影；退出後一般探索畫質與 GPU 物件配置可靠恢復，沒有把 High 成本帶回航程。
+
 ## 下一個畫質切片候選
 
-在本 Capture Boost 穩定後，再獨立提升 High tier 的**實際 3D visual ceiling**：優先程序化星體材質解析度、表面／大氣細節、遠景層次與抵達構圖；每項需以手機 fill-rate、draw call、記憶體及真 Browser 畫面證據限制成本，而不是只提高 DPR。
+在完成靜態攝影畫質工作後，下一步回到**實際 3D visual ceiling**：優先程序化星體表面、大氣／halo、遠景層次與具有 destination identity 的 arrival spectacle；每項需以手機 fill-rate、draw call、記憶體及真 Browser 畫面證據限制成本，而不是永久提高 DPR。

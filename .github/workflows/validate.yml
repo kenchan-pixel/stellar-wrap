@@ -15,7 +15,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -28,11 +28,15 @@ jobs:
       - name: Validate source, stable baseline and route graph
         run: npm run check
 
-      - name: Upload Focus Tray browser evidence
+      - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: focus-tray-browser-evidence
-          path: artifacts/focus-tray-browser/
+          name: browser-evidence
+          path: |
+            artifacts/focus-tray-browser/
+            artifacts/photo-mode-browser/
+            artifacts/mode-gateway-browser/
+            artifacts/frontier-destination-handoff/
           if-no-files-found: ignore
           retention-days: 7

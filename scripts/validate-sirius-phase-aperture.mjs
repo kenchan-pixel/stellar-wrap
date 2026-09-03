@@ -1,0 +1,55 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {spawnSync} from 'node:child_process';
+
+const source=fs.readFileSync(new URL('../sirius-phase-aperture.js',import.meta.url),'utf8');
+const browserSource=fs.readFileSync(new URL('./validate-sirius-phase-aperture-browser.mjs',import.meta.url),'utf8');
+const focus=fs.readFileSync(new URL('../exploration-focus-tray.js',import.meta.url),'utf8');
+const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const doc=fs.readFileSync(new URL('../docs/SIRIUS_PHASE_APERTURE.md',import.meta.url),'utf8');
+let passed=0;
+function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);passed++;console.log(`PASS SIRIUS APERTURE ${passed}: ${label}`)}
+
+new vm.Script(source.replace(/^import .*?;\s*/,''));
+check(source.includes("three@0.185.1/build/three.module.js"),'SIRIUS aperture reuses pinned Three.js');
+check(/import\('\.\/orion-prominence-quality\.js'\)\)\.then\(\(\)=>import\('\.\/sirius-phase-aperture\.js'\)\)/.test(focus),'SIRIUS aperture loads after existing cinematic extensions');
+check(sw.includes("'./sirius-phase-aperture.js'"),'SIRIUS aperture is included in the prepared offline shell');
+check(/relayCenter:new THREE\.Vector3\(0,-4,-82\),relayRadius:17\.5/.test(source),'SIRIUS aperture anchor matches the existing outer relay ring');
+check(/triangles:4064,drawCalls:4,nodes:16,depthSpan:10\.8/.test(source),'SIRIUS v2 depth weave keeps 4,064 triangles / four draw calls / 16 nodes with a bounded depth target');
+check(/shader\.forceSinglePass=true/.test(source)&&/beaconMaterial\.forceSinglePass=true/.test(source),'transparent aperture and beacon materials explicitly retain one renderer pass');
+check(/singlePass:active&&objects\.every/.test(source),'SIRIUS diagnostics expose live single-pass material state');
+check(/VISUAL_PASS='phase-aperture-v2'/.test(source)&&/visualPass:VISUAL_PASS/.test(source),'SIRIUS diagnostics retain the compatible v2 phase-aperture visual-pass identity');
+check(/new THREE\.TorusGeometry\(17\.7,\.18,8,96,Math\.PI\*1\.04\)/.test(source),'upper relay aperture retains bounded partial torus geometry');
+check(/new THREE\.TorusGeometry\(14\.9,\.16,8,96,Math\.PI\*1\.12\)/.test(source),'lower relay aperture retains bounded partial torus geometry');
+check(/new THREE\.TorusGeometry\(10\.2,\.12,6,72\)/.test(source),'v2 retains the bounded inner phase iris instead of post-processing');
+check(/new THREE\.InstancedMesh\(geometry,beaconMaterial,PROFILE\.nodes\)/.test(source)&&/new THREE\.OctahedronGeometry\(\.22,0\)/.test(source),'phase-beacon lattice uses one instanced draw for 16 low-poly nodes');
+check(/const lane=i%2===0\?1:-1/.test(source)&&/radiusX=lane>0\?13\.2:10\.9,radiusY=lane>0\?8\.4:6\.8/.test(source)&&/const z=lane\*4\.1\+Math\.sin\(angle\*2\)\*1\.3/.test(source),'beacon nodes form two staggered near/far orbital rails instead of a flat ellipse');
+check(/beaconDepthRange=\{min:minZ,max:maxZ,span:maxZ-minZ\}/.test(source)&&/beaconDepthSpan:active\?Number\(beaconDepthRange\.span\.toFixed\(2\)\):0/.test(source),'diagnostics expose the measured beacon depth span for the capture-quality gate');
+check(/upper\.position\.set\(0,\.45,-3\.2\)/.test(source)&&/lower\.position\.set\(0,-\.35,3\)/.test(source)&&/iris\.position\.set\(\.35,\.1,\.8\)/.test(source),'three aperture surfaces occupy explicit near/mid/far depth layers');
+check(/upper\.rotation\.set\(\.5,\.3,-\.62\)/.test(source)&&/lower\.rotation\.set\(-\.54,\.72,\.4\)/.test(source)&&/iris\.rotation\.set\(-\.22,-\.42,\.98\)/.test(source),'depth-separated aperture layers keep three distinct crossing planes');
+check(/layerDepths=active\?objects\.slice\(0,3\)/.test(source)&&/budgetDepthSpan:PROFILE\.depthSpan/.test(source),'diagnostic snapshot exposes layer depth positions and bounded depth budget');
+check(/object\.isInstancedMesh\?object\.count:1/.test(source),'triangle diagnostics account for instanced beacon geometry rather than under-reporting it');
+check(/float rails=smoothstep/.test(source)&&/float nodes=pow/.test(source)&&/float edge=smoothstep/.test(source),'relay shader retains segmented rails, sync nodes and tapered arc ends');
+check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='SIRIUS'/.test(source),'SIRIUS aperture is safe-final-exploration and High-only');
+check(/if\(!high&&objects\.length\)disposeOwn\(\)/.test(source)&&/if\(high&&relay&&!objects\.length\)build\(\)/.test(source),'SIRIUS aperture disposes on downgrade/departure and rebuilds on demand');
+check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'SIRIUS aperture synchronization retains a bounded 4 Hz fallback outside the renderer loop');
+check(/new MutationObserver\(sync\)/.test(source)&&/attributeFilter:\['width','height'\]/.test(source),'SIRIUS aperture reacts immediately to renderer backing-size quality changes so one-shot Photo Capture includes High detail');
+check(/qualityObserver\?\.disconnect\(\)/.test(source),'SIRIUS quality observer is disconnected on teardown');
+check(!/requestAnimationFrame\s*\(/.test(source),'SIRIUS aperture adds no independent render loop');
+check(!/localStorage|sessionStorage|indexedDB/.test(source),'SIRIUS aperture adds no persistence authority');
+check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'SIRIUS aperture adds no runtime network or analytics path');
+check(/object\.geometry\?\.dispose/.test(source)&&/material\?\.dispose/.test(source),'SIRIUS aperture explicitly releases owned geometry and materials');
+check(/__stellarSiriusPhaseApertureAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'SIRIUS construction hook is explicitly restorable on teardown');
+check(/window\.WarpSiriusPhaseAperture=/.test(source),'SIRIUS aperture exposes a bounded diagnostic API');
+check(/#perfHud/.test(browserSource)&&/highFrameCalls-standardFrameCalls,8/.test(browserSource)&&/lowFrameCalls,standardFrameCalls/.test(browserSource),'production-browser gate measures actual renderer DRAW delta and lower-tier restoration instead of trusting profile constants');
+check(/function assertDepthContract/.test(browserSource)&&/layerDepths/.test(browserSource)&&/beaconDepthSpan/.test(browserSource)&&/budgetDepthSpan/.test(browserSource),'production-browser gate asserts live Spatial Depth Weave diagnostics during High, capture, rebuild and revisit');
+check(doc.includes('4,064')&&doc.includes('4 draw calls')&&doc.includes('16')&&doc.includes('Standard／Low'),'SIRIUS v2 SOT records bounded High cost, instanced node count and zero lower-tier cost');
+check(doc.includes('Spatial Depth Weave')&&doc.includes('10.8')&&doc.includes('near／mid／far'),'SIRIUS SOT records the bounded spatial-depth weave and capture-quality intent');
+check(doc.includes('Photo Capture')&&doc.includes('backing attributes'),'SIRIUS SOT records direct-capture synchronization and its event-driven backing-canvas trigger');
+check(doc.includes('forceSinglePass')&&doc.includes('renderer diagnostic'),'SIRIUS SOT records the single-pass draw contract and actual renderer measurement gate');
+check(doc.includes('live depth diagnostics'),'SIRIUS SOT records production-browser verification of the runtime depth contract');
+
+const browser=spawnSync(process.execPath,['scripts/validate-sirius-phase-aperture-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
+if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
+check(browser.status===0,'real production WebGL SIRIUS v2 aperture passes live-depth, direct-capture, measured-renderer-budget, disposal, rebuild, revisit and both phone viewport gates');
+console.log(`SIRIUS Phase Aperture v2 Spatial Depth Weave validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);

@@ -114,3 +114,13 @@
 - 本版納入 WebGL context recovery、旅行日誌與距離連續性、LUNA 三點觀測、目的地攝影模式、離線重新啟動／啟動恢復、靜態導航 fallback 及 Arrival Debrief。
 - V4.0 `releases/v4.0-stable.html` 仍為不可覆寫的回歸快照，不因 V4.1.0 發佈而修改。
 - 這項決定只確認 V4.1.0 已出貨行為成為目前產品基線；不等同批准更廣泛或尚未實作的 V5 roadmap。
+
+## D-015｜Frontier Fiction 改用固定景觀並收斂至一致介面
+
+- **狀態：用戶已批准決定**
+- Frontier Fiction 不再以「可自由旋轉的 3D 模型展示」作主要到站體驗；每個目的地應採用策展好的單一英雄景觀／固定構圖，與 Real Space 的觀景語言靠攏。
+- Landing Page、目的地選擇、到站控制及留影入口應使用一致的產品層級與操作語言，避免每個科幻目的地自成一套介面。
+- 科幻目的地入口不得再以三張小卡加一張 Featured、或隱性把 Frontier 主入口當作某一指定目的地；四站應以同一層級呈現，降低 pointer／焦點混亂。
+- 現有 AURELIA／NADIR／VESPER／EIDOLON 3D 場景可繼續作渲染底層，但玩家入口應鎖定經批准的固定構圖；自由拖動、auto-orbit、構圖 preset 不再是主要產品控制。
+- 這項改變只適用於 Frontier Fiction。Real Space V4.1 已批准的自由到站探索、相機拖動、航線權威及八站內容不可因此倒退。
+- Frontier 航線後續應重用 Real Space 的「選站 → 航程 → 抵達 → 景觀」心智模型，但在建立真實 Frontier route authority 前，不得以 UI 假裝已存在 Dijkstra／距離／物理航線資料。
