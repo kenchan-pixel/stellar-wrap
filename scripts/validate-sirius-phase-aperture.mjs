@@ -40,7 +40,7 @@ check(/__stellarSiriusPhaseApertureAddHook/.test(source)&&/THREE\.Object3D\.prot
 check(/window\.WarpSiriusPhaseAperture=/.test(source),'SIRIUS aperture exposes a bounded diagnostic API');
 check(/#perfHud/.test(browserSource)&&/highFrameCalls-standardFrameCalls,8/.test(browserSource)&&/lowFrameCalls,standardFrameCalls/.test(browserSource),'production-browser gate measures actual renderer DRAW delta and lower-tier restoration instead of trusting profile constants');
 check(doc.includes('4,064')&&doc.includes('4 draw calls')&&doc.includes('16')&&doc.includes('Standard／Low'),'SIRIUS v2 SOT records bounded High cost, instanced node count and zero lower-tier cost');
-check(doc.includes('Photo Capture')&&doc.includes('backing-canvas'),'SIRIUS SOT records direct-capture synchronization and its event-driven backing-canvas trigger');
+check(doc.includes('Photo Capture')&&doc.includes('backing attributes'),'SIRIUS SOT records direct-capture synchronization and its event-driven backing-canvas trigger');
 check(doc.includes('forceSinglePass')&&doc.includes('renderer diagnostic'),'SIRIUS SOT records the single-pass draw contract and actual renderer measurement gate');
 
 const browser=spawnSync(process.execPath,['scripts/validate-sirius-phase-aperture-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
