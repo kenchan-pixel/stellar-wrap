@@ -30,6 +30,7 @@ const CORE=[
   './exploration-focus-tray.js',
   './atlas-constellation.js',
   './cinematic-quality.js',
+  './sol-orbital-frame.js',
   './luna-earthrise-depth.js',
   './tau-ring-depth.js',
   './vega-gate-depth.js',
