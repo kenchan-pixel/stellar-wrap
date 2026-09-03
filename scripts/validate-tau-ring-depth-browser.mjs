@@ -50,8 +50,11 @@ async function exercise(cdp,width,height){
   assert.equal(Math.round(viewportState.cssWidth),width);assert.equal(Math.round(viewportState.cssHeight),height);assert.equal(viewportState.phase,'explore');assert.ok(viewportState.bodyWidth<=width+1,'TAU ring depth must not create horizontal viewport overflow');
 
   await evalJs(cdp,"WarpSim.setQuality('low');true");
-  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot();return x.active===false&&x.objects===0&&x.drawCalls===0&&x.triangles===0&&x.shepherds===0&&x.shepherdDepthSpan===0})()"),'TAU ring depth High to Low disposal');
-  const lowFrameCalls=await waitDrawCalls(cdp,standardFrameCalls);assert.equal(lowFrameCalls,standardFrameCalls,'actual renderer DRAW count returns to lower-tier baseline after shared + TAU High disposal');
+  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().qualityMode==='low'&&x.active===false&&x.objects===0&&x.drawCalls===0&&x.triangles===0&&x.shepherds===0&&x.shepherdDepthSpan===0&&s.objects===0})()"),'TAU ring depth and shared cinematic High to Low disposal');
+  const lowFrameCalls=await waitDrawCalls(cdp);assert.ok(lowFrameCalls<=standardFrameCalls,`adaptive Low renderer DRAW ${lowFrameCalls} must not exceed Standard baseline ${standardFrameCalls} after shared + TAU High disposal`);
+  await evalJs(cdp,"WarpSim.setQuality('standard');true");
+  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().qualityMode==='standard'&&x.objects===0&&s.objects===0})()"),'TAU Standard baseline restore after Low');
+  const restoredStandardCalls=await waitDrawCalls(cdp,standardFrameCalls);assert.equal(restoredStandardCalls,standardFrameCalls,'returning from adaptive Low to Standard must restore the original renderer DRAW baseline');
   await evalJs(cdp,"WarpSim.setQuality('high');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot();return x.active===true&&x.objects===4&&x.triangles===2912&&x.shepherds===16&&x.shepherdDepthSpan>=4.2})()"),'TAU ring depth High rebuild after Low');
   const rebuilt=await evalJs(cdp,'WarpTauRingDepth.snapshot()');assertDepth(rebuilt,'High rebuild after Low');
@@ -59,7 +62,7 @@ async function exercise(cdp,width,height){
   await evalJs(cdp,"WarpSim.jumpTo('TAU');WarpSim.setQuality('high');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot();return x.active===true&&x.objects===4&&x.triangles===2912&&x.shepherds===16&&x.shepherdDepthSpan>=4.2})()"),'TAU ring depth revisit rebuild',8000);
   const revisit=await evalJs(cdp,'WarpTauRingDepth.snapshot()');assert.ok(revisit.captureCount>=2,'TAU revisit must recapture rebuilt core planet anchor');assertDepth(revisit,'TAU revisit');
-  console.log(`TAU Ring Shadow Parallax real browser ${viewport}: actual renderer DRAW ${standardFrameCalls}→${highFrameCalls} (+${highFrameCalls-standardFrameCalls})→${lowFrameCalls}; extension 4 objects / 16 instanced shepherds / 2,912 tris / 4 measured incremental draws; live ring depth ${high.shepherdDepthSpan}/${high.budgetDepthSpan}; direct capture ${captureProbe.width}×${captureProbe.height}; disposal + rebuild + revisit passed; High screenshot ${highShot.bytes} bytes sha256 ${highShot.hash.slice(0,16)}…`);
+  console.log(`TAU Ring Shadow Parallax real browser ${viewport}: actual renderer DRAW Standard ${standardFrameCalls}→High ${highFrameCalls} (+${highFrameCalls-standardFrameCalls})→Low ${lowFrameCalls}→Standard ${restoredStandardCalls}; extension 4 objects / 16 instanced shepherds / 2,912 tris / 4 measured incremental draws; live ring depth ${high.shepherdDepthSpan}/${high.budgetDepthSpan}; direct capture ${captureProbe.width}×${captureProbe.height}; disposal + adaptive Low + Standard restore + rebuild + revisit passed; High screenshot ${highShot.bytes} bytes sha256 ${highShot.hash.slice(0,16)}…`);
 }
 
 async function inspect(chrome,base,width,height){
@@ -78,4 +81,4 @@ async function inspect(chrome,base,width,height){
 
 const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for TAU ring-depth browser validation');console.log('TAU ring-depth browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`;const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
-try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('TAU Ring Shadow Parallax browser validation: Photo Capture + measured renderer draw budget + lifecycle passed at 390×844 and 360×800')}finally{await stop(server)}
+try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('TAU Ring Shadow Parallax browser validation: Photo Capture + measured renderer draw budget + adaptive Low/Standard restoration + lifecycle passed at 390×844 and 360×800')}finally{await stop(server)}
