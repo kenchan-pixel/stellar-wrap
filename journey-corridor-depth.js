@@ -32,7 +32,7 @@ function ensureStyle(){
   opacity:.58;transform-origin:50% 0
 }
 #journeyCorridorDepth .corridorDepthRailLeft{left:calc(50% + var(--depth-shift));transform:rotate(calc(-18deg + var(--depth-tilt))) skewX(var(--depth-skew))}
-#journeyCorridorDepth .corridorDepthRailRight{right:calc(50% - var(--depth-shift));transform:rotate(calc(18deg + var(--depth-tilt))) skewX(calc(var(--depth-skew) * -1))}
+#journeyCorridorDepth .corridorDepthRailRight{right:calc(50% - var(--depth-shift));transform:rotate(calc(18deg + var(--depth-tilt))) skewX(var(--depth-skew))}
 #journeyCorridorDepth .corridorDepthRungs{
   left:6%;right:6%;top:46%;bottom:-3%;
   clip-path:polygon(47% 0,53% 0,100% 100%,0 100%);
