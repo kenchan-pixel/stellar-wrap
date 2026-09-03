@@ -84,7 +84,8 @@ function ringScatterMaterial(nearSide){
 function planeOffset(distance){return new THREE.Vector3(0,0,distance).applyEuler(RING_ROTATION)}
 function shepherdLattice(){
   const geometry=new THREE.OctahedronGeometry(.28,0);
-  const material=new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.9,depthWrite:false});
+  const material=new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.82,depthWrite:false,blending:THREE.AdditiveBlending});
+  material.forceSinglePass=true;
   const shepherds=new THREE.InstancedMesh(geometry,material,SHEPHERD_COUNT);
   shepherds.name=`${NAME}-shepherd-moonlets`;shepherds.rotation.copy(RING_ROTATION);shepherds.renderOrder=6;
   const dummy=new THREE.Object3D();let minZ=Infinity,maxZ=-Infinity,minScale=Infinity,maxScale=-Infinity;
