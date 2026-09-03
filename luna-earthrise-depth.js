@@ -1,17 +1,20 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 
 const NAME='stellar-luna-earthrise-depth';
-const VISUAL_PASS='earthrise-parallax-v1';
+const VISUAL_PASS='earthrise-parallax-v2';
 const SAMPLE_MS=250;
 const BEACON_COUNT=18;
+const GANTRY_BEAM_COUNT=12;
+const GANTRY_FRONT_Z=5.2;
 const PROFILE={
   moonCenter:new THREE.Vector3(13,-7,-70),moonRadius:21,
   earthCenter:new THREE.Vector3(-35,17,-146),earthRadius:12,
   ringCenter:new THREE.Vector3(13,-7,-70),ringRadius:26,
-  triangles:2704,drawCalls:4,beacons:BEACON_COUNT,depthSpan:3.8
+  triangles:2704,drawCalls:4,beacons:BEACON_COUNT,gantryBeams:GANTRY_BEAM_COUNT,depthSpan:3.8,foregroundDepthLead:7.4
 };
 const approx=(a,b,t=.24)=>Math.abs(a-b)<=t;
-let moonRoot=null,earthRoot=null,ring=null,objects=[],captureCount=0,lastState=null,beaconDepthRange={min:0,max:0,span:0};
+let moonRoot=null,earthRoot=null,ring=null,objects=[],captureCount=0,lastState=null;
+let beaconDepthRange={min:0,max:0,span:0},foregroundDepthLead=0;
 const previousAdd=THREE.Object3D.prototype.add;
 
 function planetCandidate(object,center,radius){
@@ -36,7 +39,7 @@ function disposeOwn(){
     const materials=Array.isArray(object.material)?object.material:[object.material];
     for(const material of materials)material?.dispose?.();
   }
-  objects=[];beaconDepthRange={min:0,max:0,span:0};
+  objects=[];beaconDepthRange={min:0,max:0,span:0};foregroundDepthLead=0;
 }
 function capture(object){
   if(planetCandidate(object,PROFILE.moonCenter,PROFILE.moonRadius)&&object!==moonRoot){disposeOwn();moonRoot=object;captureCount++}
@@ -107,6 +110,16 @@ function railGeometry(){
       positions.push(Math.cos(a)*radius,Math.sin(a)*radius,z+Math.sin(a*2)*.28,Math.cos(b)*radius,Math.sin(b)*radius,z+Math.sin(b*2)*.28);
     }
   }
+  const beams=[
+    [-9.2,-25.45,4.05,9.2,-25.45,4.05],[-8.2,-25.45,GANTRY_FRONT_Z,8.2,-25.45,GANTRY_FRONT_Z],
+    [-8.2,-25.45,3.5,-8.2,-25.45,GANTRY_FRONT_Z],[-2.7,-25.45,3.5,-2.7,-25.45,GANTRY_FRONT_Z],
+    [2.7,-25.45,3.5,2.7,-25.45,GANTRY_FRONT_Z],[8.2,-25.45,3.5,8.2,-25.45,GANTRY_FRONT_Z],
+    [-8.2,-25.45,4.05,-5.45,-25.45,GANTRY_FRONT_Z],[-5.45,-25.45,GANTRY_FRONT_Z,-2.7,-25.45,4.05],
+    [-2.7,-25.45,4.05,0,-25.45,GANTRY_FRONT_Z],[0,-25.45,GANTRY_FRONT_Z,2.7,-25.45,4.05],
+    [2.7,-25.45,4.05,5.45,-25.45,GANTRY_FRONT_Z],[5.45,-25.45,GANTRY_FRONT_Z,8.2,-25.45,4.05]
+  ];
+  for(const beam of beams)positions.push(...beam);
+  foregroundDepthLead=Math.max(0,GANTRY_FRONT_Z-beaconDepthRange.min);
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));return geometry;
 }
 function build(){
@@ -116,8 +129,8 @@ function build(){
   const earthrise=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),earthriseMaterial());
   earthrise.name=`${NAME}-earthrise-crescent`;earthrise.scale.setScalar(PROFILE.earthRadius*1.13);earthrise.renderOrder=2;
   const beacons=beaconLattice();beacons.renderOrder=4;
-  const rails=new THREE.LineSegments(railGeometry(),new THREE.LineBasicMaterial({color:'#8ddcff',transparent:true,opacity:.28,depthWrite:false,blending:THREE.AdditiveBlending}));
-  rails.name=`${NAME}-dual-orbital-rails`;rails.renderOrder=3;
+  const rails=new THREE.LineSegments(railGeometry(),new THREE.LineBasicMaterial({color:'#a8e5ff',transparent:true,opacity:.36,depthWrite:false,blending:THREE.AdditiveBlending}));
+  rails.name=`${NAME}-dual-orbital-rails-and-foreground-gantry`;rails.renderOrder=5;
   moonRoot.add(horizon);earthRoot.add(earthrise);ring.add(beacons,rails);objects=[horizon,earthrise,beacons,rails];
 }
 function shouldRun(state){return !!state&&state.exploring&&!state.flying&&!state.contextLost&&state.qualityMode==='high'&&state.current==='LUNA'}
@@ -127,7 +140,7 @@ function sync(){
 }
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===4;
-  return{visualPass:VISUAL_PASS,target:'LUNA',quality:state.qualityMode||null,active,captured:!!(moonRoot&&earthRoot&&ring),captureCount,objects:objects.length,beacons:active?BEACON_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beaconDepthSpan:active?Number(beaconDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan};
+  return{visualPass:VISUAL_PASS,target:'LUNA',quality:state.qualityMode||null,active,captured:!!(moonRoot&&earthRoot&&ring),captureCount,objects:objects.length,beacons:active?BEACON_COUNT:0,gantryBeams:active?GANTRY_BEAM_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beaconDepthSpan:active?Number(beaconDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,foregroundDepthLead:active?Number(foregroundDepthLead.toFixed(2)):0,budgetForegroundDepthLead:PROFILE.foregroundDepthLead};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');const qualityObserver=canvas?new MutationObserver(sync):null;
