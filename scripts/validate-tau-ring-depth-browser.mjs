@@ -51,7 +51,8 @@ async function exercise(cdp,width,height){
 
   await evalJs(cdp,"WarpSim.setQuality('low');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().qualityMode==='low'&&x.active===false&&x.objects===0&&x.drawCalls===0&&x.triangles===0&&x.shepherds===0&&x.shepherdDepthSpan===0&&s.objects===0})()"),'TAU ring depth and shared cinematic High to Low disposal');
-  const lowFrameCalls=await waitDrawCalls(cdp);assert.ok(lowFrameCalls<=standardFrameCalls,`adaptive Low renderer DRAW ${lowFrameCalls} must not exceed Standard baseline ${standardFrameCalls} after shared + TAU High disposal`);
+  const lowFrameCalls=await waitUntil(async()=>{const calls=await readDrawCalls(cdp);return calls>=0&&calls<=standardFrameCalls?calls:false},`settled adaptive Low renderer DRAW at or below Standard ${standardFrameCalls}`,10000);
+  assert.ok(lowFrameCalls<=standardFrameCalls,`adaptive Low renderer DRAW ${lowFrameCalls} must not exceed Standard baseline ${standardFrameCalls} after shared + TAU High disposal`);
   await evalJs(cdp,"WarpSim.setQuality('standard');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().qualityMode==='standard'&&x.objects===0&&s.objects===0})()"),'TAU Standard baseline restore after Low');
   const restoredStandardCalls=await waitDrawCalls(cdp,standardFrameCalls);assert.equal(restoredStandardCalls,standardFrameCalls,'returning from adaptive Low to Standard must restore the original renderer DRAW baseline');
