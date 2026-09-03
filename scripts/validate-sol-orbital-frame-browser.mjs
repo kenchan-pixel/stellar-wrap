@@ -51,7 +51,8 @@ async function exercise(cdp,width,height){const viewport=`${width}x${height}`;
 
   await evalJs(cdp,"WarpSim.setQuality('low');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpSolOrbitalFrame.snapshot(),s=WarpCinematicQuality.snapshot();return x.active===false&&x.objects===0&&x.drawCalls===0&&x.triangles===0&&x.masts===0&&x.lights===0&&x.braceSegments===0&&x.frameDepthSpan===0&&s.active===false&&s.objects===0})()"),'SOL frame + shared High layer dispose at Low');
-  const lowFrameCalls=await waitDrawCalls(cdp);assert.ok(lowFrameCalls<highFrameCalls&&lowFrameCalls<=standardFrameCalls,'Low adaptive tier must reduce renderer work without assuming the Standard draw baseline');
+  const lowFrameCalls=await waitUntil(async()=>{const calls=await readDrawCalls(cdp);return calls>=0&&calls<highFrameCalls&&calls<=standardFrameCalls?calls:false},'Low renderer draw reduction after High disposal',10000);
+  assert.ok(lowFrameCalls<highFrameCalls&&lowFrameCalls<=standardFrameCalls,'Low adaptive tier must reduce renderer work without assuming the Standard draw baseline');
   await evalJs(cdp,"WarpSim.setQuality('standard');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpSolOrbitalFrame.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().qualityMode==='standard'&&x.objects===0&&s.objects===0})()"),'SOL Standard restore after Low');
   const restoredStandardFrameCalls=await waitDrawCalls(cdp,standardFrameCalls);assert.equal(restoredStandardFrameCalls,standardFrameCalls,'Standard restore returns to the original renderer DRAW baseline');
