@@ -111,12 +111,12 @@ function railGeometry(){
     }
   }
   const beams=[
-    [-9.2,-25.45,4.05,9.2,-25.45,4.05],[-8.2,-25.45,GANTRY_FRONT_Z,8.2,-25.45,GANTRY_FRONT_Z],
-    [-8.2,-25.45,3.5,-8.2,-25.45,GANTRY_FRONT_Z],[-2.7,-25.45,3.5,-2.7,-25.45,GANTRY_FRONT_Z],
-    [2.7,-25.45,3.5,2.7,-25.45,GANTRY_FRONT_Z],[8.2,-25.45,3.5,8.2,-25.45,GANTRY_FRONT_Z],
-    [-8.2,-25.45,4.05,-5.45,-25.45,GANTRY_FRONT_Z],[-5.45,-25.45,GANTRY_FRONT_Z,-2.7,-25.45,4.05],
-    [-2.7,-25.45,4.05,0,-25.45,GANTRY_FRONT_Z],[0,-25.45,GANTRY_FRONT_Z,2.7,-25.45,4.05],
-    [2.7,-25.45,4.05,5.45,-25.45,GANTRY_FRONT_Z],[5.45,-25.45,GANTRY_FRONT_Z,8.2,-25.45,4.05]
+    [-14,-26.8,GANTRY_FRONT_Z,14,-26.8,GANTRY_FRONT_Z],[-14,-21.2,4.05,14,-21.2,4.05],
+    [-14,-26.8,GANTRY_FRONT_Z,-14,-21.2,4.05],[-7,-26.8,GANTRY_FRONT_Z,-7,-21.2,4.05],
+    [0,-26.8,GANTRY_FRONT_Z,0,-21.2,4.05],[7,-26.8,GANTRY_FRONT_Z,7,-21.2,4.05],
+    [14,-26.8,GANTRY_FRONT_Z,14,-21.2,4.05],[-14,-26.8,GANTRY_FRONT_Z,-7,-21.2,4.05],
+    [-7,-21.2,4.05,0,-26.8,GANTRY_FRONT_Z],[0,-26.8,GANTRY_FRONT_Z,7,-21.2,4.05],
+    [7,-21.2,4.05,14,-26.8,GANTRY_FRONT_Z],[-7,-26.8,GANTRY_FRONT_Z,7,-21.2,4.05]
   ];
   for(const beam of beams)positions.push(...beam);
   foregroundDepthLead=Math.max(0,GANTRY_FRONT_Z-beaconDepthRange.min);
@@ -129,7 +129,7 @@ function build(){
   const earthrise=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),earthriseMaterial());
   earthrise.name=`${NAME}-earthrise-crescent`;earthrise.scale.setScalar(PROFILE.earthRadius*1.13);earthrise.renderOrder=2;
   const beacons=beaconLattice();beacons.renderOrder=4;
-  const rails=new THREE.LineSegments(railGeometry(),new THREE.LineBasicMaterial({color:'#a8e5ff',transparent:true,opacity:.36,depthWrite:false,blending:THREE.AdditiveBlending}));
+  const rails=new THREE.LineSegments(railGeometry(),new THREE.LineBasicMaterial({color:'#c4eeff',transparent:true,opacity:.52,depthWrite:false,blending:THREE.AdditiveBlending}));
   rails.name=`${NAME}-dual-orbital-rails-and-foreground-gantry`;rails.renderOrder=5;
   moonRoot.add(horizon);earthRoot.add(earthrise);ring.add(beacons,rails);objects=[horizon,earthrise,beacons,rails];
 }
