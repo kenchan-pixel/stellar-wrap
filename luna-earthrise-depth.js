@@ -1,7 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 
 const NAME='stellar-luna-earthrise-depth';
-const VISUAL_PASS='earthrise-parallax-v2';
+const VISUAL_PASS='earthrise-parallax-v1';
 const SAMPLE_MS=250;
 const BEACON_COUNT=18;
 const GANTRY_BEAM_COUNT=12;

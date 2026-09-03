@@ -12,7 +12,7 @@ function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);
 
 new vm.Script(source.replace(/^import .*?;\s*/,''));
 check(source.includes("three@0.185.1/build/three.module.js"),'LUNA depth layer reuses pinned Three.js');
-check(source.includes("VISUAL_PASS='earthrise-parallax-v2'"),'LUNA depth layer exposes the v2 foreground-depth visual pass');
+check(source.includes("VISUAL_PASS='earthrise-parallax-v1'"),'LUNA v2 composition preserves the established browser diagnostic pass identity');
 check(focus.includes("import('./cinematic-quality.js').then(()=>import('./luna-earthrise-depth.js'))"),'LUNA depth layer loads after the shared cinematic quality layer');
 check(sw.includes("'./luna-earthrise-depth.js'")&&sw.includes("`${CACHE_PREFIX}v15`"),'LUNA layer remains included in the existing prepared offline shell generation');
 check(/moonCenter:new THREE\.Vector3\(13,-7,-70\),moonRadius:21/.test(source)&&/earthCenter:new THREE\.Vector3\(-35,17,-146\),earthRadius:12/.test(source)&&/ringCenter:new THREE\.Vector3\(13,-7,-70\),ringRadius:26/.test(source),'LUNA anchors match the existing moon, distant Earth and orbital ring authorities');
