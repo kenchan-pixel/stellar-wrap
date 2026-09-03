@@ -3,8 +3,11 @@
 
 const STYLE_ID='journeyCorridorDepthStyle';
 const ROOT_ID='journeyCorridorDepth';
+const APPROACH_ROOT_ID='journeyApproachDepth';
 const CORRIDORS=['SOL>LUNA','SOL>SIRIUS','SOL>PROX','LUNA>VEGA','LUNA>PROX','VEGA>CYG','CYG>ORION','TAU>SIRIUS','SIRIUS>PROX'];
+const SYSTEMS=['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX'];
 const WARP_PHASES=new Set(['warpEntry','warp','warpExit']);
+const APPROACH_PHASES=new Set(['warpExit','decelerate','approach']);
 let mountObserver=null;
 
 function ensureStyle(){
@@ -66,33 +69,107 @@ function ensureStyle(){
 @keyframes corridorDepthRush{from{background-position:0 -15vh}to{background-position:0 22vh}}
 @keyframes corridorDepthHorizon{from{opacity:.34;transform:translate(-50%,-50%) rotate(var(--depth-tilt)) scale(.88)}to{opacity:.62;transform:translate(-50%,-50%) rotate(var(--depth-tilt)) scale(1.1)}}
 @keyframes corridorDepthNear{from{opacity:.34;transform:translate3d(-1.5vw,0,0) skewX(var(--depth-skew)) rotate(var(--depth-tilt))}to{opacity:.58;transform:translate3d(1.5vw,-1.5vh,0) skewX(var(--depth-skew)) rotate(var(--depth-tilt))}}
+
+#journeyApproachDepth{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:0;
+  contain:layout paint style;
+  --approach-x:72%;--approach-y:42%;--approach-tilt:0deg;--approach-mid-tilt:0deg;--approach-near-tilt:0deg;--approach-skew:0deg;
+  transition:opacity .32s ease
+}
+#journeyApproachDepth span{
+  position:absolute;display:block;left:var(--approach-x);top:var(--approach-y);
+  pointer-events:none;border-radius:50%;transform-origin:50% 50%;
+  transition:transform .72s cubic-bezier(.2,.7,.2,1),opacity .42s ease
+}
+#journeyApproachDepth .approachDepthFar{
+  width:clamp(150px,48vw,390px);height:clamp(112px,36vw,292px);
+  margin-left:calc(clamp(150px,48vw,390px) / -2);margin-top:calc(clamp(112px,36vw,292px) / -2);
+  border:1px solid rgba(var(--journey-alt-rgb),.24);border-left-color:rgba(var(--journey-alt-rgb),.07);
+  border-bottom-color:transparent;opacity:.34;
+  background:radial-gradient(ellipse at 50% 50%,rgba(var(--journey-rgb),.035),transparent 67%)
+}
+#journeyApproachDepth .approachDepthMid{
+  width:clamp(112px,34vw,278px);height:clamp(82px,25vw,205px);
+  margin-left:calc(clamp(112px,34vw,278px) / -2);margin-top:calc(clamp(82px,25vw,205px) / -2);
+  border:1px solid rgba(var(--journey-rgb),.34);border-right-color:transparent;
+  border-top-color:rgba(var(--journey-alt-rgb),.12);opacity:.42
+}
+#journeyApproachDepth .approachDepthNear{
+  width:clamp(76px,23vw,188px);height:clamp(56px,17vw,140px);
+  margin-left:calc(clamp(76px,23vw,188px) / -2);margin-top:calc(clamp(56px,17vw,140px) / -2);
+  border:1px solid rgba(var(--journey-alt-rgb),.46);border-left-color:transparent;
+  border-bottom-color:rgba(var(--journey-rgb),.14);opacity:.5
+}
+#journeyAtmosphere[data-system="SOL"] #journeyApproachDepth{--approach-x:72%;--approach-y:40%;--approach-tilt:6deg;--approach-mid-tilt:-3deg;--approach-near-tilt:3deg;--approach-skew:2deg}
+#journeyAtmosphere[data-system="LUNA"] #journeyApproachDepth{--approach-x:29%;--approach-y:42%;--approach-tilt:-8deg;--approach-mid-tilt:4deg;--approach-near-tilt:-4deg;--approach-skew:-3deg}
+#journeyAtmosphere[data-system="VEGA"] #journeyApproachDepth{--approach-x:72%;--approach-y:39%;--approach-tilt:12deg;--approach-mid-tilt:-6deg;--approach-near-tilt:5deg;--approach-skew:4deg}
+#journeyAtmosphere[data-system="CYG"] #journeyApproachDepth{--approach-x:31%;--approach-y:41%;--approach-tilt:-5deg;--approach-mid-tilt:3deg;--approach-near-tilt:-2deg;--approach-skew:-2deg}
+#journeyAtmosphere[data-system="ORION"] #journeyApproachDepth{--approach-x:71%;--approach-y:39%;--approach-tilt:9deg;--approach-mid-tilt:-5deg;--approach-near-tilt:4deg;--approach-skew:5deg}
+#journeyAtmosphere[data-system="TAU"] #journeyApproachDepth{--approach-x:31%;--approach-y:40%;--approach-tilt:-13deg;--approach-mid-tilt:7deg;--approach-near-tilt:-6deg;--approach-skew:-5deg}
+#journeyAtmosphere[data-system="SIRIUS"] #journeyApproachDepth{--approach-x:71%;--approach-y:41%;--approach-tilt:5deg;--approach-mid-tilt:-3deg;--approach-near-tilt:2deg;--approach-skew:3deg}
+#journeyAtmosphere[data-system="PROX"] #journeyApproachDepth{--approach-x:30%;--approach-y:40%;--approach-tilt:-7deg;--approach-mid-tilt:4deg;--approach-near-tilt:-3deg;--approach-skew:-4deg}
+#journeyAtmosphere[data-phase="warpEntry"] #journeyApproachDepth,
+#journeyAtmosphere[data-phase="warp"] #journeyApproachDepth{opacity:0}
+#journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth{opacity:.16}
+#journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth{opacity:.34}
+#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.58}
+#journeyAtmosphere[data-phase="observe"] #journeyApproachDepth{opacity:0}
+#journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth .approachDepthFar{transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(.72)}
+#journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth .approachDepthMid{transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(.56)}
+#journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth .approachDepthNear{transform:translate(-50%,-50%) rotate(var(--approach-near-tilt)) scale(.4)}
+#journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth .approachDepthFar{transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(.88)}
+#journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth .approachDepthMid{transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(.84)}
+#journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth .approachDepthNear{transform:translate(-50%,-50%) rotate(var(--approach-near-tilt)) scale(.78)}
+#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth .approachDepthFar{transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(1)}
+#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth .approachDepthMid{transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(1.13)}
+#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth .approachDepthNear{transform:translate(-50%,-50%) rotate(var(--approach-near-tilt)) scale(1.3)}
+#journeyAtmosphere[data-phase="observe"] #journeyApproachDepth .approachDepthFar,
+#journeyAtmosphere[data-phase="observe"] #journeyApproachDepth .approachDepthMid,
+#journeyAtmosphere[data-phase="observe"] #journeyApproachDepth .approachDepthNear{transform:translate(-50%,-50%) scale(1.38)}
+
 @media (max-width:520px){
   #journeyCorridorDepth .corridorDepthRungs{left:3%;right:3%;bottom:-1%}
   #journeyCorridorDepth .corridorDepthNear{left:4%;right:4%;bottom:5%;height:21%}
   #journeyCorridorDepth .corridorDepthRail{bottom:-8%}
+  #journeyApproachDepth .approachDepthFar{width:clamp(142px,54vw,220px);height:clamp(106px,40vw,164px)}
+  #journeyApproachDepth .approachDepthMid{width:clamp(104px,39vw,162px);height:clamp(76px,29vw,120px)}
+  #journeyApproachDepth .approachDepthNear{width:clamp(72px,27vw,112px);height:clamp(52px,20vw,84px)}
 }
 @media (prefers-reduced-motion:reduce){
-  #journeyCorridorDepth,#journeyCorridorDepth span{animation:none!important;transition:none!important}
+  #journeyCorridorDepth,#journeyCorridorDepth span,#journeyApproachDepth,#journeyApproachDepth span{animation:none!important;transition:none!important}
   #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth{opacity:.54;transform:scale(1)}
+  #journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.48}
 }
 `;
   document.head.append(style);
 }
 
 function mount(){
+  const atmosphere=document.querySelector('#journeyAtmosphere');
   const host=document.querySelector('#journeyTransit');
-  if(!host)return false;
-  if(host.querySelector(`#${ROOT_ID}`))return true;
-  const root=document.createElement('div');
-  root.id=ROOT_ID;
-  root.setAttribute('aria-hidden','true');
-  const horizon=document.createElement('span');horizon.className='corridorDepthHorizon';
-  const left=document.createElement('span');left.className='corridorDepthRail corridorDepthRailLeft';
-  const right=document.createElement('span');right.className='corridorDepthRail corridorDepthRailRight';
-  const rungs=document.createElement('span');rungs.className='corridorDepthRungs';
-  const near=document.createElement('span');near.className='corridorDepthNear';
-  root.append(horizon,left,right,rungs,near);
-  host.append(root);
+  if(!atmosphere||!host)return false;
+  if(!host.querySelector(`#${ROOT_ID}`)){
+    const root=document.createElement('div');
+    root.id=ROOT_ID;
+    root.setAttribute('aria-hidden','true');
+    const horizon=document.createElement('span');horizon.className='corridorDepthHorizon';
+    const left=document.createElement('span');left.className='corridorDepthRail corridorDepthRailLeft';
+    const right=document.createElement('span');right.className='corridorDepthRail corridorDepthRailRight';
+    const rungs=document.createElement('span');rungs.className='corridorDepthRungs';
+    const near=document.createElement('span');near.className='corridorDepthNear';
+    root.append(horizon,left,right,rungs,near);
+    host.append(root);
+  }
+  if(!atmosphere.querySelector(`#${APPROACH_ROOT_ID}`)){
+    const approach=document.createElement('div');
+    approach.id=APPROACH_ROOT_ID;
+    approach.setAttribute('aria-hidden','true');
+    const far=document.createElement('span');far.className='approachDepthFar';
+    const mid=document.createElement('span');mid.className='approachDepthMid';
+    const near=document.createElement('span');near.className='approachDepthNear';
+    approach.append(far,mid,near);
+    atmosphere.append(approach);
+  }
   return true;
 }
 
@@ -120,7 +197,20 @@ function snapshot(){
   };
 }
 
+function approachSnapshot(){
+  const atmosphere=document.querySelector('#journeyAtmosphere');
+  const root=document.querySelector(`#${APPROACH_ROOT_ID}`);
+  const phase=atmosphere?.getAttribute('data-phase')||null;
+  const system=atmosphere?.getAttribute('data-system')||null;
+  return{
+    mounted:!!root,
+    elements:root?.children?.length||0,
+    phase,system,
+    active:!!root&&SYSTEMS.includes(system)&&APPROACH_PHASES.has(phase)&&document.querySelector('#app')?.classList.contains('journeyAtmosphereActive')===true
+  };
+}
+
 ensureStyle();ensureMount();
 addEventListener('beforeunload',()=>mountObserver?.disconnect(),{once:true});
-window.WarpJourneyCorridorDepth={snapshot,corridors:()=>[...CORRIDORS]};
+window.WarpJourneyCorridorDepth={snapshot,approachSnapshot,corridors:()=>[...CORRIDORS],systems:()=>[...SYSTEMS]};
 })();

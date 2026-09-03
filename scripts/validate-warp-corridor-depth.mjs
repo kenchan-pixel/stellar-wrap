@@ -11,20 +11,27 @@ const parse=spawnSync(process.execPath,['--check','journey-corridor-depth.js'],{
 assert.equal(parse.status,0,parse.stderr||'journey-corridor-depth.js must parse');
 
 assert.match(source,/const CORRIDORS=\['SOL>LUNA','SOL>SIRIUS','SOL>PROX','LUNA>VEGA','LUNA>PROX','VEGA>CYG','CYG>ORION','TAU>SIRIUS','SIRIUS>PROX'\]/,'must cover exactly the nine approved direct corridors');
+assert.match(source,/const SYSTEMS=\['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX'\]/,'approach depth must cover exactly the eight approved Real Space systems');
 assert.match(source,/const WARP_PHASES=new Set\(\['warpEntry','warp','warpExit'\]\)/,'must reuse the existing three warp phases');
-assert.match(source,/root\.append\(horizon,left,right,rungs,near\)/,'runtime must mount exactly five bounded presentation elements');
+assert.match(source,/const APPROACH_PHASES=new Set\(\['warpExit','decelerate','approach'\]\)/,'approach bridge must reuse the existing arrival phases');
+assert.match(source,/root\.append\(horizon,left,right,rungs,near\)/,'runtime must mount exactly five bounded corridor elements');
+assert.match(source,/approach\.append\(far,mid,near\)/,'runtime must mount exactly three bounded approach-depth planes');
 assert.match(source,/corridorDepthHorizon/);assert.match(source,/corridorDepthRailLeft/);assert.match(source,/corridorDepthRailRight/);assert.match(source,/corridorDepthRungs/);assert.match(source,/corridorDepthNear/);
+assert.match(source,/approachDepthFar/);assert.match(source,/approachDepthMid/);assert.match(source,/approachDepthNear/);
 for(const id of ['SOL>LUNA','SOL>SIRIUS','SOL>PROX','LUNA>VEGA','LUNA>PROX','VEGA>CYG','CYG>ORION','TAU>SIRIUS','SIRIUS>PROX'])assert.ok(source.includes(`data-corridor=\"${id}\"`),`${id} must define corridor perspective orientation`);
-for(const phase of ['warpEntry','warp','warpExit','decelerate','approach','observe'])assert.ok(source.includes(`data-phase=\"${phase}\"`),`${phase} must have an explicit visibility contract`);
+for(const id of ['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX'])assert.ok(source.includes(`data-system=\"${id}\"`),`${id} must define a destination-specific approach-depth anchor`);
+for(const phase of ['warpEntry','warp','warpExit','decelerate','approach','observe'])assert.ok(source.includes(`data-phase=\"${phase}\"`),`${phase} must have an explicit depth visibility contract`);
+assert.match(source,/#journeyAtmosphere\[data-phase="approach"\] #journeyApproachDepth\{opacity:\.58\}/,'approach phase must make the depth bridge visibly active');
+assert.match(source,/#journeyAtmosphere\[data-phase="observe"\] #journeyApproachDepth\{opacity:0\}/,'depth bridge must clear before final observation');
 assert.match(source,/@media \(prefers-reduced-motion:reduce\)/,'must support reduced motion');
 assert.match(source,/MutationObserver/,'mount must be event-driven when Journey Atmosphere loads later');
 assert.doesNotMatch(source,/setInterval|setTimeout|requestAnimationFrame|localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|WebSocket|\bTHREE\b|new WebGLRenderer/,'must not add timers, render-loop, persistence, network or Three.js authority');
 assert.doesNotMatch(source,/filter\s*:|backdrop-filter/,'must avoid filter/backdrop-filter fill-rate cost');
 assert.doesNotMatch(source,/WarpSim\.(select|launch|jumpTo|abort)|Dijkstra|MAX_LEG|arrivalClock|camera\./,'must not mutate route, timing or camera authority');
-assert.ok(loader.includes("import('./journey-corridor-depth.js').catch(()=>{})"),'existing bootstrap must load corridor depth module');
-assert.ok(sw.includes("'./journey-corridor-depth.js'"),'offline CORE must include corridor depth module');
-assert.ok(pkg.includes('validate-warp-corridor-depth.mjs'),'npm run check must include focused corridor depth validation');
-assert.ok(doc.includes('Warp Corridor Perspective Depth')&&doc.includes('Vertical Slice')&&doc.includes('Completion Signal'),'SOT must define the named vertical slice and completion signal');
+assert.ok(loader.includes("import('./journey-corridor-depth.js').catch(()=>{})"),'existing bootstrap must load journey depth module');
+assert.ok(sw.includes("'./journey-corridor-depth.js'"),'offline CORE must include journey depth module');
+assert.ok(pkg.includes('validate-warp-corridor-depth.mjs')&&pkg.includes('validate-warp-corridor-depth-browser.mjs'),'npm run check must include focused static and browser depth validation');
+assert.ok(doc.includes('Warp-to-Approach Depth Bridge')&&doc.includes('Completion Signal'),'SOT must define the expanded named vertical slice and completion signal');
 assert.ok(existsSync('docs/WARP_CORRIDOR_DEPTH.md'));
 
 class ClassList{constructor(){this.s=new Set()}add(...v){v.forEach(x=>this.s.add(x))}contains(v){return this.s.has(v)}}
@@ -41,7 +48,7 @@ class El{
 }
 const root=new El('html'),head=new El('head'),body=new El('body');root.append(head,body);
 const app=new El('main');app.id='app';app.classList.add('journeyAtmosphereActive');body.append(app);
-const atmosphere=new El('div');atmosphere.id='journeyAtmosphere';atmosphere.setAttribute('data-phase','warp');app.append(atmosphere);
+const atmosphere=new El('div');atmosphere.id='journeyAtmosphere';atmosphere.setAttribute('data-phase','warp');atmosphere.setAttribute('data-system','LUNA');app.append(atmosphere);
 const transit=new El('div');transit.id='journeyTransit';transit.setAttribute('data-corridor','SOL>LUNA');atmosphere.append(transit);
 const document={documentElement:root,head,body,createElement:t=>new El(t),querySelector:s=>root.querySelector(s)};
 class MO{constructor(cb){this.cb=cb}observe(){}disconnect(){}}
@@ -53,11 +60,18 @@ await import(new URL(`../journey-corridor-depth.js?validate=${Date.now()}`,impor
 const api=globalThis.WarpJourneyCorridorDepth;
 assert.ok(api,'must expose bounded diagnostic API');
 assert.equal(api.corridors().length,9,'diagnostic API must expose nine corridors');
-assert.equal(document.querySelector('#journeyCorridorDepth')?.children.length,5,'runtime mount must contain exactly five children');
+assert.equal(api.systems().length,8,'diagnostic API must expose eight approach systems');
+assert.equal(document.querySelector('#journeyCorridorDepth')?.children.length,5,'runtime corridor mount must contain exactly five children');
+assert.equal(document.querySelector('#journeyApproachDepth')?.children.length,3,'runtime approach mount must contain exactly three children');
 assert.deepEqual(api.snapshot(),{mounted:true,elements:5,phase:'warp',corridor:'SOL>LUNA',active:true});
+assert.deepEqual(api.approachSnapshot(),{mounted:true,elements:3,phase:'warp',system:'LUNA',active:false});
 atmosphere.setAttribute('data-phase','approach');
 assert.equal(api.snapshot().active,false,'approach must make corridor depth inactive');
-app.classList.s.delete('journeyAtmosphereActive');atmosphere.setAttribute('data-phase','warp');
-assert.equal(api.snapshot().active,false,'inactive Journey Atmosphere must fail closed');
+assert.deepEqual(api.approachSnapshot(),{mounted:true,elements:3,phase:'approach',system:'LUNA',active:true});
+atmosphere.setAttribute('data-phase','observe');
+assert.equal(api.approachSnapshot().active,false,'observe must make approach depth inactive');
+app.classList.s.delete('journeyAtmosphereActive');atmosphere.setAttribute('data-phase','warpExit');
+assert.equal(api.snapshot().active,false,'inactive Journey Atmosphere must fail closed for corridor depth');
+assert.equal(api.approachSnapshot().active,false,'inactive Journey Atmosphere must fail closed for approach depth');
 
-console.log('Warp Corridor Perspective Depth: 31/31 checks passed');
+console.log('Warp Corridor + Approach Depth: focused checks passed');
