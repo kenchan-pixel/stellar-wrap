@@ -1,0 +1,44 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {spawnSync} from 'node:child_process';
+
+const source=fs.readFileSync(new URL('../sol-orbital-frame.js',import.meta.url),'utf8');
+const browserSource=fs.readFileSync(new URL('./validate-sol-orbital-frame-browser.mjs',import.meta.url),'utf8');
+const focus=fs.readFileSync(new URL('../exploration-focus-tray.js',import.meta.url),'utf8');
+const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const doc=fs.readFileSync(new URL('../docs/SOL_ORBITAL_FRAME.md',import.meta.url),'utf8');
+let passed=0;
+function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);passed++;console.log(`PASS SOL ORBITAL FRAME ${passed}: ${label}`)}
+
+new vm.Script(source.replace(/^import .*?;\s*/,''));
+check(source.includes("three@0.185.1/build/three.module.js"),'SOL focused layer reuses pinned Three.js');
+check(source.includes("VISUAL_PASS='orbital-observation-frame-v1'"),'SOL focused layer exposes stable visual-pass diagnostics');
+check(focus.includes("import('./cinematic-quality.js').then(()=>import('./sol-orbital-frame.js')).then(()=>import('./luna-earthrise-depth.js'))"),'SOL frame loads after shared cinematic quality and before later focused destination layers');
+check(sw.includes("'./sol-orbital-frame.js'")&&sw.includes("`${CACHE_PREFIX}v15`"),'SOL frame is included in the current prepared offline shell generation');
+check(/earthCenter:new THREE\.Vector3\(14,-5,-80\),earthRadius:18/.test(source)&&/moonCenter:new THREE\.Vector3\(-28,11,-128\),moonRadius:4\.7/.test(source),'SOL frame reuses the existing Earth and Moon scene anchors');
+check(/const MAST_COUNT=16/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,MAST_COUNT\)/.test(source),'16 observation masts share one instanced draw');
+check(/const LIGHT_COUNT=20/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,LIGHT_COUNT\)/.test(source)&&/new THREE\.OctahedronGeometry\(\.24,0\)/.test(source),'20 navigation lights share one low-poly instanced draw');
+check(/const BRACE_SEGMENT_COUNT=30/.test(source)&&/new THREE\.LineSegments\(braceGeometry\(\)/.test(source),'30 brace segments share one LineSegments draw');
+check(/triangles:352,drawCalls:3,masts:MAST_COUNT,lights:LIGHT_COUNT,braceSegments:BRACE_SEGMENT_COUNT,depthSpan:6\.8/.test(source),'focused GPU budget is bounded to 352 mesh triangles and three draws');
+check(/object\.isInstancedMesh\?object\.count:1/.test(source),'runtime triangle measurement accounts for instanced geometry');
+check(/frameDepthRange=\{min:minZ,max:maxZ,span:maxZ-minZ\}/.test(source),'foreground depth is measured from live mast transforms');
+check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='SOL'/.test(source),'SOL frame is safe-final-exploration and High-only');
+check(/if\(!high&&objects\.length\)disposeOwn\(\)/.test(source)&&/if\(high&&earthRoot&&moonRoot&&!objects\.length\)build\(\)/.test(source),'downgrade/departure disposes and High rebuilds on demand');
+check(/masts:active\?MAST_COUNT:0/.test(source)&&/frameDepthSpan:active\?Number\(frameDepthRange\.span\.toFixed\(2\)\):0/.test(source),'diagnostics expose bounded object counts and live depth span');
+check(/new MutationObserver\(sync\)/.test(source)&&/attributeFilter:\['width','height'\]/.test(source),'canvas backing-size changes synchronize direct Photo Capture Boost');
+check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'state synchronization is bounded to 4 Hz outside the renderer loop');
+check(!/requestAnimationFrame\s*\(/.test(source),'SOL frame adds no independent render loop');
+check(!/localStorage|sessionStorage|indexedDB/.test(source),'SOL frame adds no persistence authority');
+check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'SOL frame adds no runtime network or analytics path');
+check(/object\.geometry\?\.dispose/.test(source)&&/material\?\.dispose/.test(source),'owned geometry and materials are explicitly released');
+check(/__stellarSolOrbitalFrameAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'scene-construction hook is explicitly restorable');
+check(/highFrameCalls-standardFrameCalls,7/.test(browserSource)&&/#perfHud/.test(browserSource),'browser gate measures actual combined shared + focused SOL draw delta');
+check(/WarpPhotoMode\.capture/.test(browserSource)&&/__solOrbitalCaptureProbe/.test(browserSource),'browser gate proves Standard-to-High Photo Capture includes the focused frame');
+check(/390,844/.test(browserSource)&&/360,800/.test(browserSource)&&/sol-orbital-frame-/.test(browserSource),'both required phone viewports emit visual evidence');
+check(doc.includes('352')&&doc.includes('3')&&doc.includes('16')&&doc.includes('20')&&doc.includes('30'),'SOT records bounded frame object/geometry budgets');
+check(doc.includes('390×844')&&doc.includes('360×800')&&doc.includes('Photo Capture')&&doc.includes('Standard／Low'),'SOT records mobile, capture and lower-tier zero-cost acceptance');
+
+const browser=spawnSync(process.execPath,['scripts/validate-sol-orbital-frame-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
+if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
+check(browser.status===0,'real production WebGL SOL frame passes capture, measured renderer budget, lifecycle and both phone viewport gates');
+console.log(`SOL Orbital Observation Frame validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);
