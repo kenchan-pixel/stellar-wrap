@@ -33,7 +33,7 @@ assert.match(scenic,/selectionPending:selectionDest/,'Scenic runtime must expose
 assert.match(gateway,/frontier-scenic\.html\?dest=/,'confirmed Frontier entries must use the unified scenic shell');
 assert.doesNotMatch(gateway,/NEW EXPEDITION/,'Frontier landing must not keep the legacy featured-expedition copy; runtime validation proves zero featured destination pointers');
 assert.doesNotMatch(gateway,/localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'mode gateway must not create storage/network authority');
-assert.doesNotMatch(gateway,/WarpSim\.(?:select|start|isRouteValid)|\bDijkstra\b|\b(?:const|let|var)\s+[GN]\s*=/,'mode gateway must not own Real Space route/topology authority');
+assert.doesNotMatch(gateway,/WarpSim\.(?:start|isRouteValid)|\bDijkstra\b|\b(?:const|let|var)\s+[GN]\s*=/,'mode gateway must not own Real Space route/topology authority; Gallery may delegate destination selection to WarpSim.select');
 assert.doesNotMatch(index,/\bid\s*:\s*['"](?:AURELIA|NADIR|VESPER|EIDOLON)['"]/,'Frontier destinations must remain outside the Real Space system table');
 assert.match(scenic,/#frontierFrame\{[^}]*pointer-events:none/s,'scenic scene must be display-only to the user');
 assert.match(scenic,/WarpFrontierScenic=/,'scenic shell must expose validation state');
