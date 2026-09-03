@@ -24,6 +24,8 @@ function assertDepth(snapshot,label){assert.ok(snapshot.frameDepthSpan>6&&snapsh
 async function exercise(cdp,width,height){const viewport=`${width}x${height}`;
   await evalJs(cdp,"WarpSim.jumpTo('SOL');WarpSim.setQuality('standard');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpSolOrbitalFrame.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='SOL'&&WarpSim.state().exploring&&x.captured===true&&x.objects===0&&s.objects===0})()"),'safe SOL Standard exploration');
+  await evalJs(cdp,"(()=>{const b=document.querySelector('#exploreOrbit');if(b?.textContent.includes('開'))b.click();return b?.textContent||''})()");
+  await waitUntil(()=>evalJs(cdp,"document.querySelector('#exploreOrbit')?.textContent.includes('暫停')"),'SOL exploration auto-orbit paused for deterministic renderer budget');
   await evalJs(cdp,"(()=>{const hud=document.querySelector('#perfHud');if(hud&&!hud.classList.contains('show'))document.querySelector('#diagnosticsToggle')?.click();return true})()");
   const standardFrameCalls=await waitDrawCalls(cdp);
   const standard=await evalJs(cdp,'WarpSolOrbitalFrame.snapshot()');
