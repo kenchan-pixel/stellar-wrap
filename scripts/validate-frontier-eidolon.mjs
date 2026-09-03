@@ -32,7 +32,9 @@ assert.match(eidolon,/EIDOLON_DETAIL_PROFILE='EIDOLON_RIFT_V2'/,'EIDOLON must ex
 assert.match(eidolon,/MEMORY_RIB_COUNT=18,SIGIL_NODE_COUNT=24,RIFT_SEGMENT_COUNT=48/,'EIDOLON rift-relic detail counts must stay bounded');
 assert.ok((eidolon.match(/new THREE\.InstancedMesh/g)||[]).length>=3,'EIDOLON must batch pylons, memory ribs and sigil nodes with instancing');
 assert.equal((eidolon.match(/new THREE\.ShaderMaterial/g)||[]).length,1,'EIDOLON rift must use one bounded shader material');
-assert.equal((eidolon.match(/requestAnimationFrame\(render\)/g)||[]).length,1,'EIDOLON must retain one renderer animation loop');
+assert.equal((eidolon.match(/function render\(/g)||[]).length,1,'EIDOLON must define exactly one renderer animation loop');
+assert.equal((eidolon.match(/renderer\.render\(scene,camera\)/g)||[]).length,1,'EIDOLON animation loop must contain exactly one renderer draw call');
+assert.match(eidolon,/function render\(now=performance\.now\(\)\)\{update\(now\);renderer\.render\(scene,camera\);requestAnimationFrame\(render\)\}requestAnimationFrame\(render\);/,'EIDOLON must self-schedule one renderer loop and bootstrap it once');
 assert.match(eidolon,/phase='approach'/,'EIDOLON approach state must exist');
 assert.match(eidolon,/setPhase\('arrival'\)/,'EIDOLON arrival state must exist');
 assert.match(eidolon,/setPhase\('explore'\)/,'EIDOLON explore state must exist');
