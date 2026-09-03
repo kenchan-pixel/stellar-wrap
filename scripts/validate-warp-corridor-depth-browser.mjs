@@ -43,11 +43,11 @@ async function inspect(chrome,base,width,height){
     assert.ok(live.root&&live.root.left>=-1&&live.root.right<=width+1&&live.root.top>=-1&&live.root.bottom<=height+1,'corridor depth root must stay inside phone viewport');
     assert.ok(live.opacity>=0.65,'warp corridor depth must be visibly active during cruise');assert.equal(live.pointerEvents,'none');assert.equal(live.rails,2);assert.ok(Number(live.horizon)>0.2,'vanishing-point horizon must be visible');assert.ok(live.pageScroll<=width+1,'corridor depth must not cause page overflow');
     await sleep(220);const bytes=await screenshot(cdp,`warp-corridor-depth-${viewport}.png`);assert.ok(bytes>9000,'warp corridor screenshot must contain rendered runtime evidence');
-    await waitUntil(()=>evalJs(cdp,"['decelerate','approach','observe'].includes(WarpSim.state().phase)"),`SOL→LUNA clears corridor before approach ${viewport}`,35000);
-    const cleared=await evalJs(cdp,`(()=>{const root=document.querySelector('#journeyCorridorDepth');return{snapshot:WarpJourneyCorridorDepth.snapshot(),opacity:root?Number(getComputedStyle(root).opacity):1,phase:WarpSim.state().phase}})()`);
-    assert.equal(cleared.snapshot.active,false);assert.ok(cleared.opacity<=0.05,'corridor depth must clear before destination approach/observation');
+    await waitUntil(()=>evalJs(cdp,"(()=>{const clearPhases=['decelerate','approach','observe'],root=document.querySelector('#journeyCorridorDepth'),atmosphere=document.querySelector('#journeyAtmosphere'),renderedPhase=atmosphere?.getAttribute('data-phase'),snapshot=WarpJourneyCorridorDepth.snapshot(),opacity=root?Number(getComputedStyle(root).opacity):1;return clearPhases.includes(WarpSim.state().phase)&&clearPhases.includes(renderedPhase)&&snapshot.active===false&&opacity<=0.05})()"),`SOL→LUNA rendered corridor clears before approach ${viewport}`,35000);
+    const cleared=await evalJs(cdp,`(()=>{const root=document.querySelector('#journeyCorridorDepth'),atmosphere=document.querySelector('#journeyAtmosphere');return{snapshot:WarpJourneyCorridorDepth.snapshot(),opacity:root?Number(getComputedStyle(root).opacity):1,phase:WarpSim.state().phase,atmospherePhase:atmosphere?.getAttribute('data-phase')}})()`);
+    assert.equal(cleared.snapshot.active,false);assert.ok(['decelerate','approach','observe'].includes(cleared.atmospherePhase),'rendered journey phase must have left warp before corridor clear acceptance');assert.ok(cleared.opacity<=0.05,'corridor depth must clear before destination approach/observation');
     await evalJs(cdp,"WarpSim.abort();true");
-    console.log(`${viewport}: corridor=${live.corridor}, elements=${live.snapshot.elements}, opacity=${live.opacity.toFixed(2)}, screenshot=${bytes} bytes, clearedAt=${cleared.phase}`);
+    console.log(`${viewport}: corridor=${live.corridor}, elements=${live.snapshot.elements}, opacity=${live.opacity.toFixed(2)}, screenshot=${bytes} bytes, clearedAt=${cleared.phase}/${cleared.atmospherePhase}`);
   } finally {cdp?.close();await stop(browser);await cleanupProfile(profile)}
 }
 
