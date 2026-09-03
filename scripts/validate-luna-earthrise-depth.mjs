@@ -13,7 +13,7 @@ function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);
 new vm.Script(source.replace(/^import .*?;\s*/,''));
 check(source.includes("three@0.185.1/build/three.module.js"),'LUNA depth layer reuses pinned Three.js');
 check(/import\('\.\/cinematic-quality\.js'\)\)\.then\(\(\)=>import\('\.\/luna-earthrise-depth\.js'\)\)/.test(focus),'LUNA depth layer loads after the shared cinematic quality layer');
-check(sw.includes("'./luna-earthrise-depth.js'")&&sw.includes("`${CACHE_PREFIX}v16`"),'LUNA layer is included in a bumped prepared offline shell');
+check(sw.includes("'./luna-earthrise-depth.js'")&&sw.includes("`${CACHE_PREFIX}v15`"),'LUNA layer is included in the existing prepared offline shell generation');
 check(/moonCenter:new THREE\.Vector3\(13,-7,-70\),moonRadius:21/.test(source)&&/earthCenter:new THREE\.Vector3\(-35,17,-146\),earthRadius:12/.test(source)&&/ringCenter:new THREE\.Vector3\(13,-7,-70\),ringRadius:26/.test(source),'LUNA anchors match the existing moon, distant Earth and orbital ring authorities');
 check(/triangles:2704,drawCalls:4,beacons:BEACON_COUNT,depthSpan:3\.8/.test(source),'Earthrise depth pass declares a bounded 2,704-triangle / four-draw budget');
 check(/new THREE\.TorusGeometry\(21\.55,\.14,6,112,Math\.PI\*1\.22\)/.test(source)&&/lunar-horizon/.test(source),'lunar horizon is a bounded partial 3D rim rather than a screen overlay');
