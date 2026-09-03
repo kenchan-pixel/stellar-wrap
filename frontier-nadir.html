@@ -178,8 +178,8 @@ buildLensedStreaks();
 
 const photonP=new Float32Array(28*3),photonC=new Float32Array(28*3);
 for(let i=0;i<28;i++){
-  const a=(-.92+i/27*1.84)*Math.PI,upper=i<14,r=6.08+(rnd()-.5)*.12;
-  const angle=upper?a:-a;
+  const upper=i<14,t=upper?i/13:(i-14)/13,arc=(.08+.84*t)*Math.PI,r=6.08+(rnd()-.5)*.12;
+  const angle=upper?arc:-arc;
   photonP[i*3]=Math.cos(angle)*r*1.58;photonP[i*3+1]=Math.sin(angle)*r*.72;photonP[i*3+2]=-1.02;
   const blue=photonP[i*3]<0;photonC[i*3]=blue?.7:1;photonC[i*3+1]=blue?.86:.55;photonC[i*3+2]=blue?1:.22;
 }
