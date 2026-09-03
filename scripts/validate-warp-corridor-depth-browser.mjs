@@ -45,7 +45,7 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"['decelerate','approach','observe'].includes(WarpSim.state().phase)"),`SOL→LUNA clears corridor before approach ${viewport}`,35000);
     const cleared=await evalJs(cdp,`(()=>{const root=document.querySelector('#journeyCorridorDepth');return{snapshot:WarpJourneyCorridorDepth.snapshot(),opacity:root?Number(getComputedStyle(root).opacity):1,phase:WarpSim.state().phase}})()`);
     assert.equal(cleared.snapshot.active,false);assert.ok(cleared.opacity<=0.05,'corridor depth must clear before destination approach/observation');
-    WarpSim?.abort?.();
+    await evalJs(cdp,"WarpSim.abort();true");
     console.log(`${viewport}: corridor=${live.corridor}, elements=${live.snapshot.elements}, opacity=${live.opacity.toFixed(2)}, screenshot=${bytes} bytes, clearedAt=${cleared.phase}`);
   } finally {cdp?.close();await stop(browser);rmSync(profile,{recursive:true,force:true})}
 }
