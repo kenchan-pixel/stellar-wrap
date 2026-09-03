@@ -3,9 +3,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 const NAME='stellar-sirius-phase-aperture';
 const VISUAL_PASS='phase-aperture-v2';
 const SAMPLE_MS=250;
-const PROFILE={relayCenter:new THREE.Vector3(0,-4,-82),relayRadius:17.5,triangles:4064,drawCalls:4,nodes:16};
+const PROFILE={relayCenter:new THREE.Vector3(0,-4,-82),relayRadius:17.5,triangles:4064,drawCalls:4,nodes:16,depthSpan:10.8};
 const approx=(a,b,t=.25)=>Math.abs(a-b)<=t;
-let relay=null,objects=[],captureCount=0,lastState=null;
+let relay=null,objects=[],captureCount=0,lastState=null,beaconDepthRange={min:0,max:0,span:0};
 const previousAdd=THREE.Object3D.prototype.add;
 
 function geometryTriangles(object){
@@ -22,7 +22,7 @@ function disposeOwn(){
     const materials=Array.isArray(object.material)?object.material:[object.material];
     for(const material of materials)material?.dispose?.();
   }
-  objects=[];
+  objects=[];beaconDepthRange={min:0,max:0,span:0};
 }
 function candidate(object){
   if(!object?.isMesh||object.geometry?.type!=='TorusGeometry')return false;
@@ -70,13 +70,19 @@ function beaconLattice(){
   beacons.name=`${NAME}-phase-beacon-lattice`;
   const dummy=new THREE.Object3D();
   const cool=new THREE.Color('#74d9ff'),hot=new THREE.Color('#f4fdff');
+  let minZ=Infinity,maxZ=-Infinity;
   for(let i=0;i<PROFILE.nodes;i++){
     const angle=i/PROFILE.nodes*Math.PI*2;
-    dummy.position.set(Math.cos(angle)*12.6,Math.sin(angle)*7.8,Math.sin(angle*2)*2.4);
-    dummy.rotation.set(angle*.18,angle*.32,angle+Math.PI*.5);
+    const lane=i%2===0?1:-1;
+    const radiusX=lane>0?13.2:10.9,radiusY=lane>0?8.4:6.8;
+    const z=lane*4.1+Math.sin(angle*2)*1.3;
+    dummy.position.set(Math.cos(angle)*radiusX,Math.sin(angle)*radiusY,z);
+    dummy.rotation.set(angle*.18+lane*.08,angle*.32-lane*.06,angle+Math.PI*.5);
     const scale=i%4===0?1.75:i%2===0?1.2:.86;dummy.scale.setScalar(scale);dummy.updateMatrix();
     beacons.setMatrixAt(i,dummy.matrix);beacons.setColorAt(i,i%4===0?hot:cool);
+    minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
   }
+  beaconDepthRange={min:minZ,max:maxZ,span:maxZ-minZ};
   beacons.instanceMatrix.needsUpdate=true;if(beacons.instanceColor)beacons.instanceColor.needsUpdate=true;
   beacons.rotation.set(.08,-.16,.28);
   return beacons;
@@ -85,16 +91,16 @@ function build(){
   if(!relay||objects.length)return;
   const upper=new THREE.Mesh(new THREE.TorusGeometry(17.7,.18,8,96,Math.PI*1.04),material(.35,'#77e8ff','#f1fdff'));
   upper.name=`${NAME}-upper-phase-arc`;
-  upper.rotation.set(.42,.16,-.58);
-  upper.position.set(0,0,.08);
+  upper.rotation.set(.5,.3,-.62);
+  upper.position.set(0,.45,-3.2);
   const lower=new THREE.Mesh(new THREE.TorusGeometry(14.9,.16,8,96,Math.PI*1.12),material(2.15,'#6fc8ff','#d7f6ff'));
   lower.name=`${NAME}-lower-phase-arc`;
-  lower.rotation.set(-.48,.62,.44);
-  lower.position.set(0,0,-.08);
+  lower.rotation.set(-.54,.72,.4);
+  lower.position.set(0,-.35,3);
   const iris=new THREE.Mesh(new THREE.TorusGeometry(10.2,.12,6,72),material(4.05,'#8fe7ff','#ffffff'));
   iris.name=`${NAME}-inner-iris`;
-  iris.rotation.set(-.18,-.35,.92);
-  iris.position.set(0,0,.18);
+  iris.rotation.set(-.22,-.42,.98);
+  iris.position.set(.35,.1,.8);
   const beacons=beaconLattice();
   relay.add(upper,lower,iris,beacons);
   objects=[upper,lower,iris,beacons];
@@ -111,7 +117,8 @@ function sync(){
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{};
   const active=shouldRun(state)&&objects.length===4;
-  return{visualPass:VISUAL_PASS,target:'SIRIUS',quality:state.qualityMode||null,active,captured:!!relay,captureCount,objects:objects.length,nodes:active?PROFILE.nodes:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,singlePass:active&&objects.every(object=>object.material?.forceSinglePass===true)};
+  const layerDepths=active?objects.slice(0,3).map(object=>Number(object.position.z.toFixed(2))):[];
+  return{visualPass:VISUAL_PASS,target:'SIRIUS',quality:state.qualityMode||null,active,captured:!!relay,captureCount,objects:objects.length,nodes:active?PROFILE.nodes:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,singlePass:active&&objects.every(object=>object.material?.forceSinglePass===true),layerDepths,beaconDepthSpan:active?Number(beaconDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');
