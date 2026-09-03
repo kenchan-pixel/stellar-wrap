@@ -7,6 +7,8 @@ import {createServer as createTcpServer} from 'node:net';
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const EVIDENCE_DIR=join(process.cwd(),'artifacts','focus-tray-browser');
+const APPROACH_CENTER_TOLERANCE_PX=6;
+const APPROACH_MIN_VISIBLE_RATIO=.7;
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const candidate of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const found=commandPath(candidate);if(found)return found}return''}
 async function freePort(){return await new Promise((resolve,reject)=>{const server=createTcpServer();server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const a=server.address(),port=typeof a==='object'&&a?a.port:0;server.close(error=>error?reject(error):resolve(port))})})}
@@ -53,14 +55,29 @@ async function inspect(chrome,base,width,height){
     assert.equal(cleared.snapshot.active,false);assert.ok(['decelerate','approach','observe'].includes(cleared.atmospherePhase),'rendered journey phase must have left warp before corridor clear acceptance');assert.ok(cleared.opacity<=0.05,'corridor depth must clear before destination approach/observation');
 
     await waitUntil(()=>evalJs(cdp,"(()=>{const root=document.querySelector('#journeyApproachDepth'),atmosphere=document.querySelector('#journeyAtmosphere'),snapshot=WarpJourneyCorridorDepth.approachSnapshot();return WarpSim.state().phase==='approach'&&atmosphere?.getAttribute('data-phase')==='approach'&&snapshot.active===true&&snapshot.system==='LUNA'&&root&&Number(getComputedStyle(root).opacity)>=0.52})()"),`SOL→LUNA settled approach parallax ${viewport}`,35000);
-    const approach=await evalJs(cdp,`(()=>{const root=document.querySelector('#journeyApproachDepth'),atmosphere=document.querySelector('#journeyAtmosphere'),r=root?.getBoundingClientRect(),styles=root?getComputedStyle(root):null,far=root?.querySelector('.approachDepthFar'),mid=root?.querySelector('.approachDepthMid'),near=root?.querySelector('.approachDepthNear');return{snapshot:WarpJourneyCorridorDepth.approachSnapshot(),corridor:WarpJourneyCorridorDepth.snapshot(),phase:WarpSim.state().phase,atmospherePhase:atmosphere?.getAttribute('data-phase'),root:r?{left:r.left,right:r.right,top:r.top,bottom:r.bottom}:null,opacity:styles?Number(styles.opacity):0,pointerEvents:styles?.pointerEvents||'',anchorX:styles?.getPropertyValue('--approach-x').trim()||'',transforms:[far,mid,near].map(el=>el?getComputedStyle(el).transform:''),pageScroll:document.documentElement.scrollWidth,innerWidth}})()`);
+    const approach=await evalJs(cdp,`(()=>{
+      const root=document.querySelector('#journeyApproachDepth'),atmosphere=document.querySelector('#journeyAtmosphere'),r=root?.getBoundingClientRect(),styles=root?getComputedStyle(root):null,far=root?.querySelector('.approachDepthFar'),mid=root?.querySelector('.approachDepthMid'),near=root?.querySelector('.approachDepthNear');
+      const anchorXValue=styles?.getPropertyValue('--approach-x').trim()||'',anchorYValue=styles?.getPropertyValue('--approach-y').trim()||'';
+      const anchorXPercent=parseFloat(anchorXValue)/100,anchorYPercent=parseFloat(anchorYValue)/100;
+      const anchor=r&&Number.isFinite(anchorXPercent)&&Number.isFinite(anchorYPercent)?{x:r.left+r.width*anchorXPercent,y:r.top+r.height*anchorYPercent}:null;
+      const planes=[far,mid,near].map(el=>{if(!el)return null;const p=el.getBoundingClientRect(),visibleWidth=Math.max(0,Math.min(p.right,innerWidth)-Math.max(p.left,0)),visibleHeight=Math.max(0,Math.min(p.bottom,innerHeight)-Math.max(p.top,0)),area=Math.max(1,p.width*p.height);return{left:p.left,right:p.right,top:p.top,bottom:p.bottom,width:p.width,height:p.height,centerX:p.left+p.width/2,centerY:p.top+p.height/2,visibleRatio:visibleWidth*visibleHeight/area}});
+      return{snapshot:WarpJourneyCorridorDepth.approachSnapshot(),corridor:WarpJourneyCorridorDepth.snapshot(),phase:WarpSim.state().phase,atmospherePhase:atmosphere?.getAttribute('data-phase'),root:r?{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}:null,opacity:styles?Number(styles.opacity):0,pointerEvents:styles?.pointerEvents||'',anchorX:anchorXValue,anchorY:anchorYValue,anchor,planes,transforms:[far,mid,near].map(el=>el?getComputedStyle(el).transform:''),pageScroll:document.documentElement.scrollWidth,innerWidth,innerHeight}
+    })()`);
     assert.deepEqual(approach.snapshot,{mounted:true,elements:3,phase:'approach',system:'LUNA',active:true});
     assert.equal(approach.corridor.active,false,'warp corridor must remain inactive while approach depth owns the handoff');
     assert.equal(approach.phase,'approach');assert.equal(approach.atmospherePhase,'approach');assert.equal(approach.pointerEvents,'none');
-    assert.equal(approach.anchorX,'29%','LUNA approach depth must use its destination-specific left-side anchor');
+    assert.equal(approach.anchorX,'29%','LUNA approach depth must use its destination-specific left-side anchor');assert.equal(approach.anchorY,'42%','LUNA approach depth must use its destination-specific vertical anchor');
     assert.ok(approach.root&&approach.root.left>=-1&&approach.root.right<=width+1&&approach.root.top>=-1&&approach.root.bottom<=height+1,'approach depth root must stay inside phone viewport');
     assert.ok(approach.opacity>=0.52,'approach parallax must be visibly active');
     assert.equal(new Set(approach.transforms).size,3,'far/mid/near approach planes must render at three distinct transforms');
+    assert.ok(approach.anchor&&Number.isFinite(approach.anchor.x)&&Number.isFinite(approach.anchor.y),'approach anchor must resolve to live viewport coordinates');
+    assert.equal(approach.planes.length,3,'approach gate must measure all three rendered planes');
+    approach.planes.forEach((plane,index)=>{
+      assert.ok(plane,`approach plane ${index} must exist`);
+      assert.ok(Math.abs(plane.centerX-approach.anchor.x)<=APPROACH_CENTER_TOLERANCE_PX,`approach plane ${index} horizontal center must stay within ${APPROACH_CENTER_TOLERANCE_PX}px of destination anchor`);
+      assert.ok(Math.abs(plane.centerY-approach.anchor.y)<=APPROACH_CENTER_TOLERANCE_PX,`approach plane ${index} vertical center must stay within ${APPROACH_CENTER_TOLERANCE_PX}px of destination anchor`);
+      assert.ok(plane.visibleRatio>=APPROACH_MIN_VISIBLE_RATIO,`approach plane ${index} must remain meaningfully visible in the phone viewport`);
+    });
     assert.ok(approach.pageScroll<=width+1,'approach depth must not cause page overflow');
     await sleep(180);const approachBytes=await screenshot(cdp,`approach-parallax-LUNA-${viewport}.png`);assert.ok(approachBytes>9000,'approach screenshot must contain rendered runtime evidence');
 
