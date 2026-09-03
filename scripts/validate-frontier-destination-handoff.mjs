@@ -61,7 +61,7 @@ class Cdp{
   async connect(){
     this.ws=new WebSocket(this.url);
     await new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('CDP connect timeout')),8000);this.ws.addEventListener('open',()=>{clearTimeout(t);resolve();},{once:true});this.ws.addEventListener('error',e=>{clearTimeout(t);reject(e.error||new Error('CDP error'));},{once:true});});
-    this.ws.addEventListener('message',event=>{const m=JSON.parse(String(event.data));if(!m.id){const q=this.events.get(m.method)||[];this.events.delete(m.method);q.forEach(w=>{clearTimeout(w.timer);w.resolve(m.params||{});});return;}const p=this.pending.get(m.id);if(!p)return;this.pending.delete(m.id);clearTimeout(p.timer);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result||{});});
+    this.ws.addEventListener('message',event=>{const m=JSON.parse(String(event.data));if(!m.id){const q=this.events.get(m.method)||[];this.events.delete(m.method);q.forEach(w=>{clearTimeout(w.timer);w.resolve(m.params||{});});return;}const p=this.pending.get(m.id);if(!p)return;this.pending.delete(m.id);clearTimeout(pending?.timer);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result||{});});
   }
   send(method,params={},timeout=12000){const id=++this.id;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP timeout ${method}`));},timeout);this.pending.set(id,{resolve,reject,timer});this.ws.send(JSON.stringify({id,method,params}));});}
   waitEvent(method,timeout=12000){return new Promise((resolve,reject)=>{const w={resolve,reject,timer:setTimeout(()=>reject(new Error(`event timeout ${method}`)),timeout)};const q=this.events.get(method)||[];q.push(w);this.events.set(method,q);});}
@@ -90,7 +90,7 @@ async function inspect(chrome,base,width,height){
     cdp=new Cdp(target.webSocketDebuggerUrl);await cdp.connect();await cdp.send('Page.enable');await cdp.send('Runtime.enable');
     await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true,screenWidth:width,screenHeight:height});
     await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
-    const loaded=cdp.waitEvent('Page.loadEventFired',15000);await cdp.send('Page.navigate',{url:`${base}frontier-scenic.html?dest=AURELIA&test=1`});await loaded;
+    const loaded=cdp.waitEvent('Page.loadEventFired',15000);await cdp.send('Page.navigate',{url:`${base}frontier-scenic.html?dest=AURELIA`});await loaded;
     await waitUntil(()=>evalJs(cdp,"!!window.WarpFrontierScenic&&!!WarpFrontierScenic.state().child&&document.querySelector('#scenicApp')?.classList.contains('ready')"),'AURELIA scenic runtime',30000);
     await evalJs(cdp,'WarpFrontierScenic.skipArrival()');
     await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().child?.phase==='explore'&&WarpFrontierScenic.state().child?.vista==='overview'"),'AURELIA fixed overview',12000);
@@ -100,12 +100,17 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().selectionPending==='NADIR'&&WarpFrontierScenic.state().selectionVisible"),'NADIR staged');
     assert.equal(await evalJs(cdp,"WarpFrontierScenic.state().destination"),'AURELIA');
     await trustedTap(cdp,'#destinationCommitConfirm');
-    await waitUntil(()=>evalJs(cdp,"(()=>{const t=document.querySelector('#transition');if(!t)return false;const s=getComputedStyle(t),state=WarpFrontierScenic.state();return state.switching&&state.transitionVisible&&state.arrivalSignature==='NADIR'&&t.classList.contains('active')&&t.getAttribute('aria-hidden')==='false'&&s.visibility==='visible'&&Number(s.opacity)>.9})()"),'rendered NADIR signature handoff',1800);
-    const handoff=await evalJs(cdp,"(()=>{const t=document.querySelector('#transition'),sig=document.querySelector('.transitionSig'),tr=t.getBoundingClientRect(),sr=sig.getBoundingClientRect(),ts=getComputedStyle(t);return{active:t.classList.contains('active'),aria:t.getAttribute('aria-hidden'),opacity:Number(ts.opacity),visibility:ts.visibility,signature:WarpFrontierScenic.state().arrivalSignature,copy:document.querySelector('#transitionSignature')?.textContent,from:document.querySelector('#transitionFrom')?.textContent,to:document.querySelector('#transitionTo')?.textContent,sigW:sr.width,sigH:sr.height,inViewport:sr.left>=0&&sr.right<=innerWidth+1&&sr.top>=0&&sr.bottom<=innerHeight+1,overlayW:tr.width,overlayH:tr.height,captureDisabled:document.querySelector('#capture')?.disabled}})()");
+    const evidenceName=`frontier-arrival-signature-${width}x${height}.png`;
+    const handoff=await waitUntil(async()=>{
+      const sample=await evalJs(cdp,"(()=>{const t=document.querySelector('#transition'),sig=document.querySelector('.transitionSig');if(!t||!sig)return null;const tr=t.getBoundingClientRect(),sr=sig.getBoundingClientRect(),ts=getComputedStyle(t),state=WarpFrontierScenic.state();const ready=state.switching&&state.transitionVisible&&state.arrivalSignature==='NADIR'&&t.classList.contains('active')&&t.getAttribute('aria-hidden')==='false'&&ts.visibility==='visible'&&Number(ts.opacity)>.9;return{ready,active:t.classList.contains('active'),aria:t.getAttribute('aria-hidden'),opacity:Number(ts.opacity),visibility:ts.visibility,signature:state.arrivalSignature,copy:document.querySelector('#transitionSignature')?.textContent,from:document.querySelector('#transitionFrom')?.textContent,to:document.querySelector('#transitionTo')?.textContent,sigW:sr.width,sigH:sr.height,inViewport:sr.left>=0&&sr.right<=innerWidth+1&&sr.top>=0&&sr.bottom<=innerHeight+1,overlayW:tr.width,overlayH:tr.height,captureDisabled:document.querySelector('#capture')?.disabled}})()");
+      if(!sample?.ready)return false;
+      sample.screenshotBytes=await screenshot(cdp,evidenceName);
+      return sample;
+    },'rendered NADIR signature handoff',2200);
     assert.equal(handoff.active,true);assert.equal(handoff.aria,'false');assert.equal(handoff.visibility,'visible');assert.ok(handoff.opacity>.9);
     assert.equal(handoff.signature,'NADIR');assert.ok(handoff.copy.includes('事件視界'));assert.ok(handoff.from.includes('AURELIA ARC'));assert.ok(handoff.to.includes('NADIR WELL'));
     assert.ok(handoff.sigW>=100&&handoff.sigH>=80);assert.equal(handoff.inViewport,true);assert.equal(handoff.overlayW,width);assert.equal(handoff.overlayH,height);assert.equal(handoff.captureDisabled,true);
-    assert.ok((await screenshot(cdp,`frontier-arrival-signature-${width}x${height}.png`))>8000);
+    assert.ok(handoff.screenshotBytes>8000);
     await waitUntil(()=>evalJs(cdp,"WarpFrontierScenic.state().destination==='NADIR'&&!WarpFrontierScenic.state().switching&&!!WarpFrontierScenic.state().child"),'NADIR destination loaded',30000);
     assert.equal(await evalJs(cdp,'WarpFrontierScenic.state().arrivalSignature'),'');
     await evalJs(cdp,'WarpFrontierScenic.skipArrival()');
