@@ -32,6 +32,8 @@ assert.match(eidolon,/EIDOLON_DETAIL_PROFILE='EIDOLON_RIFT_V2'/,'EIDOLON must ex
 assert.match(eidolon,/MEMORY_RIB_COUNT=18,SIGIL_NODE_COUNT=24,RIFT_SEGMENT_COUNT=48/,'EIDOLON rift-relic detail counts must stay bounded');
 assert.ok((eidolon.match(/new THREE\.InstancedMesh/g)||[]).length>=3,'EIDOLON must batch pylons, memory ribs and sigil nodes with instancing');
 assert.equal((eidolon.match(/new THREE\.ShaderMaterial/g)||[]).length,1,'EIDOLON rift must use one bounded shader material');
+assert.match(eidolon,/float edge=1\.0-smoothstep\(\.74,1\.0,r\)/,'EIDOLON rift edge must use ordered smoothstep bounds for cross-GPU portability');
+assert.doesNotMatch(eidolon,/smoothstep\(1\.0,\.74,r\)/,'EIDOLON rift must not rely on undefined reversed smoothstep bounds');
 assert.equal((eidolon.match(/function render\(/g)||[]).length,1,'EIDOLON must define exactly one renderer animation loop');
 assert.match(eidolon,/function render\(now=performance\.now\(\)\)\{update\(now\);renderer\.render\(scene,camera\);requestAnimationFrame\(render\)\}requestAnimationFrame\(render\);/,'EIDOLON must self-schedule one renderer loop and bootstrap it once');
 assert.match(eidolon,/phase='approach'/,'EIDOLON approach state must exist');
