@@ -11,7 +11,8 @@ function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);
 
 new vm.Script(source.replace(/^import .*?;\s*/,''));
 check(source.includes("three@0.185.1/build/three.module.js"),'CYG layer reuses pinned Three.js');
-check(/import\('\.\/cinematic-quality\.js'\)\.then\(\(\)=>import\('\.\/cyg-cinematic-quality\.js'\)\)/.test(focus),'CYG extension loads after the existing cinematic layer');
+const sharedLoader="import('./cinematic-quality.js')",cygLoader="import('./cyg-cinematic-quality.js')";
+check(focus.includes(sharedLoader)&&focus.includes(cygLoader)&&focus.indexOf(sharedLoader)<focus.indexOf(cygLoader),'CYG extension loads after the existing cinematic layer even when other High-tier extensions are chained between them');
 check(sw.includes("'./cyg-cinematic-quality.js'"),'CYG cinematic extension is included in the offline shell');
 check(/primaryCenter:new THREE\.Vector3\(-18,10,-108\)/.test(source)&&/primaryRadius:11/.test(source),'CYG primary star anchor matches the existing core scene');
 check(/companionCenter:new THREE\.Vector3\(18,-7,-118\)/.test(source)&&/companionRadius:8/.test(source),'CYG companion star anchor matches the existing core scene');
