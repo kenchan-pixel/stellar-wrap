@@ -12,6 +12,7 @@ function findChrome(){for(const candidate of [process.env.CHROME_BIN,'google-chr
 async function freePort(){return await new Promise((resolve,reject)=>{const server=createTcpServer();server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const a=server.address(),port=typeof a==='object'&&a?a.port:0;server.close(error=>error?reject(error):resolve(port))})})}
 async function waitUntil(fn,label,timeout=30000){const end=Date.now()+timeout;let last;while(Date.now()<end){try{const value=await fn();if(value)return value}catch(error){last=error}await sleep(90)}throw new Error(`Timed out waiting for ${label}${last?`: ${last.message}`:''}`)}
 async function stop(child){if(!child||child.exitCode!==null)return;const done=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');await Promise.race([done,sleep(700)]);if(child.exitCode===null){child.kill('SIGKILL');await Promise.race([done,sleep(900)])}}
+async function cleanupProfile(profile){for(let attempt=0;attempt<3;attempt++){try{rmSync(profile,{recursive:true,force:true});return}catch{await sleep(180*(attempt+1))}}}
 async function waitHttp(url){return waitUntil(async()=>{const response=await fetch(url,{cache:'no-store'});return response.ok},`server ${url}`,8000)}
 class Cdp{
   constructor(url){this.url=url;this.id=0;this.pending=new Map();this.events=new Map()}
@@ -47,7 +48,7 @@ async function inspect(chrome,base,width,height){
     assert.equal(cleared.snapshot.active,false);assert.ok(cleared.opacity<=0.05,'corridor depth must clear before destination approach/observation');
     await evalJs(cdp,"WarpSim.abort();true");
     console.log(`${viewport}: corridor=${live.corridor}, elements=${live.snapshot.elements}, opacity=${live.opacity.toFixed(2)}, screenshot=${bytes} bytes, clearedAt=${cleared.phase}`);
-  } finally {cdp?.close();await stop(browser);rmSync(profile,{recursive:true,force:true})}
+  } finally {cdp?.close();await stop(browser);await cleanupProfile(profile)}
 }
 
 const chrome=findChrome();
