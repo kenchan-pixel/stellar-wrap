@@ -1,11 +1,11 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 
 const NAME='stellar-prox-starport-transit';
-const VISUAL_PASS='starport-transit-lattice-v1';
+const VISUAL_PASS='starport-transit-lattice-v2';
 const SAMPLE_MS=250;
-const PROFILE={starportCenter:new THREE.Vector3(15,-6,-82),starportRadius:20,starportTube:.42,triangles:2304,drawCalls:3,beacons:36};
+const PROFILE={starportCenter:new THREE.Vector3(15,-6,-82),starportRadius:20,starportTube:.42,triangles:2520,drawCalls:4,beacons:36,gantryBeams:18,gantryFrontZ:6.2,gantryBackZ:2.8,depthBudget:8.2};
 const approx=(a,b,t=.25)=>Math.abs(a-b)<=t;
-let starport=null,objects=[],captureCount=0,lastState=null;
+let starport=null,objects=[],captureCount=0,lastState=null,beaconDepth={min:0,max:0,span:0};
 const previousAdd=THREE.Object3D.prototype.add;
 
 function measureTriangles(list=objects){
@@ -13,7 +13,8 @@ function measureTriangles(list=objects){
   for(const object of list){
     if(!object?.isMesh)continue;
     const geometry=object.geometry;if(!geometry)continue;
-    triangles+=(geometry.index?.count??geometry.attributes?.position?.count??0)/3;
+    const base=(geometry.index?.count??geometry.attributes?.position?.count??0)/3;
+    triangles+=base*(object.isInstancedMesh?object.count:1);
   }
   return Math.round(triangles);
 }
@@ -60,18 +61,50 @@ function laneMaterial(phase,colorA,colorB){
 function beaconGeometry(){
   const positions=new Float32Array(PROFILE.beacons*3),colors=new Float32Array(PROFILE.beacons*3);
   const cool=new THREE.Color('#8deeff'),warm=new THREE.Color('#ffc179'),mixed=new THREE.Color();
+  let minZ=Infinity,maxZ=-Infinity;
   for(let i=0;i<PROFILE.beacons;i++){
-    const a=(i/PROFILE.beacons)*Math.PI*2+.12,r=i%3===0?26.1:23.6;
+    const a=(i/PROFILE.beacons)*Math.PI*2+.12,r=i%3===0?26.1:23.6,z=Math.sin(a*3.0)*1.45+(i%2?-.35:.35);
     positions[i*3]=Math.cos(a)*r;
     positions[i*3+1]=Math.sin(a)*r;
-    positions[i*3+2]=Math.sin(a*3.0)*1.45+(i%2?-.35:.35);
+    positions[i*3+2]=z;
+    minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
     mixed.copy(cool).lerp(warm,i%4===0?.78:.16);
     colors[i*3]=mixed.r;colors[i*3+1]=mixed.g;colors[i*3+2]=mixed.b;
   }
+  beaconDepth={min:minZ,max:maxZ,span:maxZ-minZ};
   const geometry=new THREE.BufferGeometry();
   geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
   return geometry;
+}
+function gantrySegments(){
+  const near=[new THREE.Vector3(-13,-17,PROFILE.gantryFrontZ),new THREE.Vector3(13,-17,PROFILE.gantryFrontZ),new THREE.Vector3(11,-10,PROFILE.gantryFrontZ),new THREE.Vector3(-11,-10,PROFILE.gantryFrontZ)];
+  const mid=[new THREE.Vector3(-11,-16,PROFILE.gantryBackZ),new THREE.Vector3(11,-16,PROFILE.gantryBackZ),new THREE.Vector3(9,-9,PROFILE.gantryBackZ),new THREE.Vector3(-9,-9,PROFILE.gantryBackZ)];
+  const segments=[];
+  const edge=(a,b)=>segments.push([a,b]);
+  for(const frame of[near,mid]){edge(frame[0],frame[1]);edge(frame[1],frame[2]);edge(frame[2],frame[3]);edge(frame[3],frame[0])}
+  for(let i=0;i<4;i++)edge(near[i],mid[i]);
+  edge(near[0],near[2]);edge(near[1],near[3]);edge(mid[0],mid[2]);edge(mid[1],mid[3]);
+  edge(new THREE.Vector3(0,-17,PROFILE.gantryFrontZ),new THREE.Vector3(0,-16,PROFILE.gantryBackZ));
+  edge(new THREE.Vector3(0,-10,PROFILE.gantryFrontZ),new THREE.Vector3(0,-9,PROFILE.gantryBackZ));
+  return segments;
+}
+function gantryMesh(){
+  const beamGeometry=new THREE.BoxGeometry(1,1,1);
+  const beamMaterial=new THREE.MeshBasicMaterial({color:'#c8f5ff',transparent:true,opacity:.68,depthWrite:false,blending:THREE.AdditiveBlending});
+  beamMaterial.forceSinglePass=true;
+  const gantry=new THREE.InstancedMesh(beamGeometry,beamMaterial,PROFILE.gantryBeams);
+  gantry.name=`${NAME}-foreground-docking-gantry`;gantry.frustumCulled=false;
+  const helper=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),delta=new THREE.Vector3();
+  const segments=gantrySegments();
+  for(let i=0;i<segments.length;i++){
+    const [a,b]=segments[i];delta.subVectors(b,a);const length=delta.length();
+    helper.position.copy(a).add(b).multiplyScalar(.5);
+    helper.quaternion.setFromUnitVectors(up,delta.clone().normalize());
+    helper.scale.set(.22,length,.22);helper.updateMatrix();gantry.setMatrixAt(i,helper.matrix);
+  }
+  gantry.instanceMatrix.needsUpdate=true;
+  return gantry;
 }
 function build(){
   if(!starport||objects.length)return;
@@ -81,7 +114,8 @@ function build(){
   crossing.name=`${NAME}-crossing-transit-lane`;crossing.rotation.set(-.38,.34,-.56);crossing.position.z=-.16;
   const beacons=new THREE.Points(beaconGeometry(),new THREE.PointsMaterial({size:.5,vertexColors:true,transparent:true,opacity:.86,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
   beacons.name=`${NAME}-approach-beacons`;beacons.rotation.set(.08,-.16,.2);
-  starport.add(outer,crossing,beacons);objects=[outer,crossing,beacons];
+  const gantry=gantryMesh();
+  starport.add(outer,crossing,beacons,gantry);objects=[outer,crossing,beacons,gantry];
 }
 function shouldRun(state){return !!state&&state.exploring&&!state.flying&&!state.contextLost&&state.qualityMode==='high'&&state.current==='PROX'}
 function sync(){
@@ -93,8 +127,8 @@ function sync(){
 }
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{};
-  const active=shouldRun(state)&&objects.length===3;
-  return{visualPass:VISUAL_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
+  const active=shouldRun(state)&&objects.length===4;
+  return{visualPass:VISUAL_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,gantryBeams:active?PROFILE.gantryBeams:0,beaconDepthSpan:active?beaconDepth.span:0,foregroundDepthLead:active?PROFILE.gantryFrontZ-beaconDepth.min:0,depthBudget:PROFILE.depthBudget,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');
