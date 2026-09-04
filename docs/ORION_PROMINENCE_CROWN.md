@@ -9,7 +9,7 @@
 
 ## Goal / user outcome
 
-Make ORION read as a place the player has actually reached: a near-field rocky observatory silhouette sits in front of the extreme red supergiant and its asymmetric prominence crown. High quality and Photo Capture should therefore show a clear **foreground outpost → braided active-star crown → red giant → nebula depth** composition rather than a distant glowing sphere alone.
+Make ORION read as a place the player has actually reached: a near-field rocky observatory silhouette sits in front of the extreme red supergiant and its asymmetric prominence crown. High quality and Photo Capture should therefore show a clear **foreground outpost → braided crown → active red giant → nebula depth** composition rather than a distant glowing sphere alone.
 
 The current refinement specifically raises the red giant's capture value without spending more geometry: each of the two existing prominence arcs now renders as a multi-strand braided plasma ribbon with fixed bright knots, warmer edge colour and a wider asymmetric crown silhouette. The treatment is deliberately static in shader space, so it adds no animation loop or simulation authority.
 
