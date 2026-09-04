@@ -10,7 +10,8 @@ const CARD_ART={
   gatewayGallery:'gallery'
 };
 const DEST_ART={AURELIA:'aurelia',NADIR:'nadir',VESPER:'vesper',EIDOLON:'eidolon'};
-let observer=null;
+const VOYAGE_ART={SOL:'sol',LUNA:'luna',VEGA:'vega',CYG:'cyg',ORION:'orion',TAU:'tau',SIRIUS:'sirius',PROX:'prox'};
+let observer=null,recordsObserver=null;
 
 function ensureStyle(){
   if(document.querySelector(`#${STYLE_ID}`))return;
@@ -61,11 +62,73 @@ function ensureStyle(){
 #modeGateway .modeGatewayDestArt[data-art="vesper"]::after{left:1px;top:20px;width:47px;height:10px;border:1px solid rgba(176,244,225,.66);border-left-color:transparent;border-radius:50%;transform:rotate(11deg)}
 #modeGateway .modeGatewayDestArt[data-art="eidolon"]::before{left:4px;top:7px;width:39px;height:34px;border:2px dashed rgba(222,204,255,.72);border-radius:50%;transform:rotate(-26deg);box-shadow:0 0 12px rgba(163,119,220,.2)}
 #modeGateway .modeGatewayDestArt[data-art="eidolon"]::after{left:14px;top:5px;width:22px;height:40px;border:1px dashed rgba(180,139,238,.58);border-radius:50%;transform:rotate(32deg)}
-@media(max-width:520px){#modeGateway .modeGatewayCard>strong,#modeGateway .modeGatewayCard>small,#modeGateway .modeGatewayCard>em{max-width:78%}#modeGateway .modeGatewayCardArt{right:-20px;opacity:.66}#modeGateway .modeGatewayDestArt{right:22px}}
-@media(max-width:360px){#modeGateway .modeGatewayCardArt{right:-27px;opacity:.56}#modeGateway .modeGatewayCard>strong,#modeGateway .modeGatewayCard>small,#modeGateway .modeGatewayCard>em{max-width:82%}}
+
+/* Gallery Voyage Postcards v2: turn real journey receipts into scenic records without new data authority. */
+#modeGateway .modeGatewayJourney.cinematicVoyage{position:relative;min-height:118px;padding-right:112px;overflow:hidden;isolation:isolate;background:linear-gradient(105deg,rgba(120,175,255,.06),rgba(7,12,24,.88) 62%,rgba(4,8,17,.96))}
+#modeGateway .modeGatewayJourney.cinematicVoyage::before{content:"";position:absolute;z-index:0;right:0;top:0;width:43%;height:100%;pointer-events:none;background:linear-gradient(90deg,rgba(4,8,17,0),rgba(4,8,17,.08) 22%,rgba(4,8,17,.42))}
+#modeGateway .modeGatewayJourney.cinematicVoyage>.modeGatewayJourneyTop,#modeGateway .modeGatewayJourney.cinematicVoyage>.modeGatewayJourneyRoute,#modeGateway .modeGatewayJourney.cinematicVoyage>.modeGatewayJourneyMeta,#modeGateway .modeGatewayJourney.cinematicVoyage>.modeGatewayJourneyOutcome,#modeGateway .modeGatewayJourney.cinematicVoyage>.modeGatewayRevisit{position:relative;z-index:2}
+#modeGateway .modeGatewayJourney.cinematicVoyage>.modeGatewayRevisit{max-width:100%}
+#modeGateway .modeGatewayVoyageArt{position:absolute;z-index:1;right:3px;top:50%;width:104px;height:96px;transform:translateY(-50%);pointer-events:none;opacity:.9;overflow:hidden;border-radius:20px}
+#modeGateway .modeGatewayVoyageArt::before,#modeGateway .modeGatewayVoyageArt::after{content:"";position:absolute;display:block;box-sizing:border-box}
+#modeGateway .modeGatewayVoyageArt[data-system="sol"]{background:radial-gradient(circle at 66% 44%,rgba(64,149,211,.42),transparent 36%),radial-gradient(circle at 82% 15%,rgba(255,255,255,.65) 0 1px,transparent 1.6px)}
+#modeGateway .modeGatewayVoyageArt[data-system="sol"]::before{right:14px;top:17px;width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#b9ebff 0 7%,#378cc1 18%,#1f6b70 37%,#14384e 55%,#07111d 75%);box-shadow:-6px 0 20px rgba(105,201,255,.32),0 0 0 1px rgba(174,224,255,.22)}
+#modeGateway .modeGatewayVoyageArt[data-system="sol"]::after{right:3px;top:36px;width:89px;height:25px;border:1px solid rgba(174,222,255,.52);border-left-color:transparent;border-radius:50%;transform:rotate(-14deg)}
+#modeGateway .modeGatewayVoyageArt[data-system="luna"]{background:radial-gradient(circle at 28% 17%,rgba(125,187,255,.32) 0 5px,transparent 6px)}
+#modeGateway .modeGatewayVoyageArt[data-system="luna"]::before{right:7px;bottom:7px;width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 37% 28%,#c9ced4 0 8%,#8a929c 9% 21%,#5d6570 22% 34%,#343b45 48%,#171d26 72%);box-shadow:-7px -3px 17px rgba(207,221,236,.18)}
+#modeGateway .modeGatewayVoyageArt[data-system="luna"]::after{left:19px;top:12px;width:17px;height:17px;border-radius:50%;background:linear-gradient(145deg,#79bff4,#183e68);box-shadow:0 0 12px rgba(110,190,255,.36)}
+#modeGateway .modeGatewayVoyageArt[data-system="vega"]::before{right:9px;top:12px;width:72px;height:72px;border:4px solid rgba(179,223,255,.78);border-left-color:rgba(81,120,190,.18);border-radius:50%;transform:rotate(-18deg);box-shadow:0 0 17px rgba(91,182,255,.34),inset 0 0 15px rgba(119,198,255,.2)}
+#modeGateway .modeGatewayVoyageArt[data-system="vega"]::after{right:32px;top:35px;width:24px;height:24px;border-radius:50%;background:#d8f4ff;box-shadow:0 0 20px #8fdfff}
+#modeGateway .modeGatewayVoyageArt[data-system="cyg"]::before{left:13px;top:23px;width:23px;height:23px;border-radius:50%;background:#d8efff;box-shadow:0 0 19px #72c2ff,47px 24px 0 -4px #c5a6ff,47px 24px 16px -2px rgba(174,127,255,.65)}
+#modeGateway .modeGatewayVoyageArt[data-system="cyg"]::after{right:8px;top:12px;width:58px;height:70px;border:1px solid rgba(166,214,255,.48);border-radius:50%;transform:rotate(31deg)}
+#modeGateway .modeGatewayVoyageArt[data-system="orion"]{background:radial-gradient(circle at 78% 35%,rgba(245,106,74,.22),transparent 43%),linear-gradient(155deg,transparent 46%,rgba(190,78,106,.14) 48% 53%,transparent 55%)}
+#modeGateway .modeGatewayVoyageArt[data-system="orion"]::before{right:13px;top:17px;width:60px;height:60px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#ffd2a0 0 5%,#e16f48 21%,#8d302c 48%,#38141b 72%);box-shadow:0 0 22px rgba(239,92,60,.52)}
+#modeGateway .modeGatewayVoyageArt[data-system="orion"]::after{left:6px;bottom:11px;width:76px;height:20px;border-top:1px solid rgba(255,158,143,.36);border-radius:50%;transform:rotate(-9deg)}
+#modeGateway .modeGatewayVoyageArt[data-system="tau"]::before{right:11px;top:19px;width:60px;height:60px;border-radius:50%;background:repeating-linear-gradient(174deg,#d6b690 0 7px,#8f6e65 8px 12px,#4d4458 13px 18px);box-shadow:inset -13px -4px 18px rgba(0,0,0,.42),0 0 18px rgba(201,155,255,.14)}
+#modeGateway .modeGatewayVoyageArt[data-system="tau"]::after{right:-3px;top:35px;width:99px;height:27px;border:2px solid rgba(221,190,245,.7);border-left-color:transparent;border-radius:50%;transform:rotate(10deg);box-shadow:0 0 11px rgba(190,141,235,.18)}
+#modeGateway .modeGatewayVoyageArt[data-system="sirius"]::before{left:13px;top:18px;width:27px;height:27px;border-radius:50%;background:#e8f7ff;box-shadow:0 0 21px #8cd5ff,47px 24px 0 -8px #c5ddff,47px 24px 14px -5px rgba(150,199,255,.54)}
+#modeGateway .modeGatewayVoyageArt[data-system="sirius"]::after{right:1px;top:26px;width:74px;height:42px;border:2px solid rgba(174,219,255,.62);border-radius:50%;transform:rotate(-18deg);box-shadow:0 0 13px rgba(97,177,255,.22)}
+#modeGateway .modeGatewayVoyageArt[data-system="prox"]{background:linear-gradient(150deg,transparent 50%,rgba(255,94,54,.08) 52% 56%,transparent 58%)}
+#modeGateway .modeGatewayVoyageArt[data-system="prox"]::before{left:9px;top:18px;width:49px;height:49px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#ffd0a0 0 5%,#d74b35 19%,#791f28 49%,#2c0f1a 73%);box-shadow:0 0 20px rgba(222,61,48,.43)}
+#modeGateway .modeGatewayVoyageArt[data-system="prox"]::after{right:4px;top:24px;width:50px;height:49px;border:2px solid rgba(138,209,255,.65);border-left-color:transparent;border-radius:12px 50% 50% 14px;transform:rotate(-10deg);box-shadow:0 0 10px rgba(103,183,255,.18)}
+#modeGateway .modeGatewayJourney.cinematicVoyage[data-cinematic-system="TAU"]{border-color:rgba(210,176,240,.18)}
+#modeGateway .modeGatewayJourney.cinematicVoyage[data-cinematic-system="ORION"],#modeGateway .modeGatewayJourney.cinematicVoyage[data-cinematic-system="PROX"]{border-color:rgba(236,124,101,.16)}
+#modeGateway .modeGatewayJourney.cinematicVoyage[data-cinematic-system="SOL"],#modeGateway .modeGatewayJourney.cinematicVoyage[data-cinematic-system="SIRIUS"],#modeGateway .modeGatewayJourney.cinematicVoyage[data-cinematic-system="CYG"],#modeGateway .modeGatewayJourney.cinematicVoyage[data-cinematic-system="VEGA"]{border-color:rgba(132,197,255,.16)}
+
+@media(max-width:520px){#modeGateway .modeGatewayCard>strong,#modeGateway .modeGatewayCard>small,#modeGateway .modeGatewayCard>em{max-width:78%}#modeGateway .modeGatewayCardArt{right:-20px;opacity:.66}#modeGateway .modeGatewayDestArt{right:22px}#modeGateway .modeGatewayJourney.cinematicVoyage{padding-right:99px}#modeGateway .modeGatewayVoyageArt{width:92px;opacity:.82}}
+@media(max-width:360px){#modeGateway .modeGatewayCardArt{right:-27px;opacity:.56}#modeGateway .modeGatewayCard>strong,#modeGateway .modeGatewayCard>small,#modeGateway .modeGatewayCard>em{max-width:82%}#modeGateway .modeGatewayJourney.cinematicVoyage{padding-right:92px}#modeGateway .modeGatewayVoyageArt{right:-2px;width:88px;opacity:.76}}
 @media(prefers-reduced-motion:reduce){#modeGateway.modeGatewayCinematicReady::before,#modeGateway.modeGatewayCinematicReady::after{transition:none}}
 `;
   document.head.append(style);
+}
+
+function decorateVoyages(root=document.querySelector('#modeGateway')){
+  const host=root?.querySelector('#modeGatewayJourneyList');
+  if(!host)return 0;
+  let count=0;
+  for(const card of host.querySelectorAll('.modeGatewayJourney')){
+    const id=card.querySelector('[data-revisit]')?.dataset.revisit||'';
+    const art=VOYAGE_ART[id];
+    if(!art)continue;
+    card.classList.add('cinematicVoyage');
+    card.dataset.cinematicSystem=id;
+    let visual=card.querySelector('.modeGatewayVoyageArt');
+    if(!visual){
+      visual=document.createElement('span');
+      visual.className='modeGatewayVoyageArt';
+      visual.setAttribute('aria-hidden','true');
+      card.append(visual);
+    }
+    visual.dataset.system=art;
+    count++;
+  }
+  return count;
+}
+
+function watchVoyages(root){
+  const host=root?.querySelector('#modeGatewayJourneyList');
+  if(!host||recordsObserver)return;
+  recordsObserver=new MutationObserver(()=>decorateVoyages(root));
+  recordsObserver.observe(host,{childList:true});
 }
 
 function decorate(){
@@ -88,6 +151,8 @@ function decorate(){
       const visual=document.createElement('span');visual.className='modeGatewayDestArt';visual.dataset.art=art;visual.setAttribute('aria-hidden','true');button.append(visual);
     }
   }
+  decorateVoyages(root);
+  watchVoyages(root);
   root.classList.add('modeGatewayCinematicReady');
   return true;
 }
@@ -98,8 +163,10 @@ function snapshot(){
     ready:!!root?.classList.contains('modeGatewayCinematicReady'),
     cards:root?.querySelectorAll('.modeGatewayCardArt').length||0,
     destinations:root?.querySelectorAll('.modeGatewayDestArt').length||0,
+    voyages:root?.querySelectorAll('.modeGatewayJourney.cinematicVoyage').length||0,
     cardKinds:[...root?.querySelectorAll('.modeGatewayCardArt')||[]].map(el=>el.dataset.art),
-    destinationKinds:[...root?.querySelectorAll('.modeGatewayDestArt')||[]].map(el=>el.dataset.art)
+    destinationKinds:[...root?.querySelectorAll('.modeGatewayDestArt')||[]].map(el=>el.dataset.art),
+    voyageKinds:[...root?.querySelectorAll('.modeGatewayVoyageArt')||[]].map(el=>el.dataset.system)
   };
 }
 
