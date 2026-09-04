@@ -51,7 +51,7 @@ assert.match(eidolon,/VISTA_SETTLE_EPS=\.006,VISTA_SETTLE_MS=1200/,'EIDOLON guid
 assert.match(eidolon,/const settled=await waitForVistaSettle\(\)/,'EIDOLON capture must settle the selected vista before raising capture DPR');
 assert.match(eidolon,/vista:guidedVista\|\|'free'/,'EIDOLON diagnostic state must expose guided/free composition');
 assert.ok(sw.includes("'./frontier-eidolon.html'"),'offline CORE must include EIDOLON runtime');
-assert.match(sw,/CACHE_NAME=`\$\{CACHE_PREFIX\}v15`/,'offline cache-generation contract must remain v15');
+assert.match(sw,/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`;/,'offline shell must keep an explicit versioned cache generation; validate-offline owns the current generation number');
 assert.ok(modeDoc.includes('EIDOLON GATE｜遺光門廊'),'Mode Gateway SOT must describe EIDOLON');
 assert.ok(compositionDoc.includes('斷環全景')&&compositionDoc.includes('黑幕中軸')&&compositionDoc.includes('遺光殘標'),'EIDOLON composition SOT must describe all three guided vistas');
 assert.ok(riftDoc.includes('18')&&riftDoc.includes('24')&&riftDoc.includes('48')&&riftDoc.includes('EIDOLON_RIFT_V2'),'EIDOLON rift-relic SOT must record its bounded detail profile');
