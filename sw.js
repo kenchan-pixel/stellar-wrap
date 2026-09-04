@@ -7,6 +7,7 @@ const CORE=[
   './travel-journal.js',
   './responsive-ui.js',
   './mode-gateway.js',
+  './mode-gateway-cinematic.js',
   './frontier-scenic.html',
   './frontier.html',
   './frontier-nadir.html',
