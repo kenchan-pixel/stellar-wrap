@@ -15,17 +15,17 @@ check(source.includes("three@0.185.1/build/three.module.js"),'SIRIUS aperture re
 check(/import\('\.\/orion-prominence-quality\.js'\)\)\.then\(\(\)=>import\('\.\/sirius-phase-aperture\.js'\)\)/.test(focus),'SIRIUS aperture loads after existing cinematic extensions');
 check(sw.includes("'./sirius-phase-aperture.js'"),'SIRIUS aperture is included in the prepared offline shell');
 check(/relayCenter:new THREE\.Vector3\(0,-4,-82\),relayRadius:17\.5/.test(source),'SIRIUS aperture anchor matches the existing outer relay ring');
-check(/triangles:4064,drawCalls:4,nodes:16,depthSpan:10\.8,scaleMax:5\.2/.test(source),'SIRIUS v3 keeps the existing GPU budget while declaring a bounded pylon scale ceiling');
+check(/triangles:4064,drawCalls:4,nodes:16,depthSpan:10\.8,scaleMax:5\.2,pylonRadius:\.34/.test(source),'SIRIUS v3 keeps the existing GPU budget while declaring bounded pylon scale and readable base radius');
 check(/shader\.forceSinglePass=true/.test(source)&&/beaconMaterial\.forceSinglePass=true/.test(source),'transparent aperture and pylon materials explicitly retain one renderer pass');
 check(/singlePass:active&&objects\.every/.test(source),'SIRIUS diagnostics expose live single-pass material state');
 check(/VISUAL_PASS='phase-aperture-v3'/.test(source)&&/ARCHITECTURE='dual-star-pylon-weave-v3'/.test(source),'SIRIUS diagnostics identify the v3 engineered pylon architecture');
 check(/new THREE\.TorusGeometry\(17\.7,\.18,8,96,Math\.PI\*1\.04\)/.test(source),'upper relay aperture retains bounded partial torus geometry');
 check(/new THREE\.TorusGeometry\(14\.9,\.16,8,96,Math\.PI\*1\.12\)/.test(source),'lower relay aperture retains bounded partial torus geometry');
 check(/new THREE\.TorusGeometry\(10\.2,\.12,6,72\)/.test(source),'v3 retains the bounded inner phase iris instead of post-processing');
-check(/new THREE\.InstancedMesh\(geometry,beaconMaterial,PROFILE\.nodes\)/.test(source)&&/new THREE\.OctahedronGeometry\(\.22,0\)/.test(source),'phase-pylon weave still uses one instanced draw for 16 low-poly nodes');
+check(/new THREE\.InstancedMesh\(geometry,beaconMaterial,PROFILE\.nodes\)/.test(source)&&/new THREE\.OctahedronGeometry\(PROFILE\.pylonRadius,0\)/.test(source),'phase-pylon weave still uses one instanced draw for 16 low-poly nodes');
 check(/const lane=i%2===0\?1:-1/.test(source)&&/radiusX=lane>0\?13\.2:10\.9,radiusY=lane>0\?8\.4:6\.8/.test(source)&&/const z=lane\*4\.1\+Math\.sin\(angle\*2\)\*1\.3/.test(source),'v3 pylons retain the two staggered near/far orbital rails');
-check(/const major=i%4===0\?5\.2:lane>0\?4\.1:3/.test(source)&&/const width=i%4===0\?\.9:lane>0\?\.68:\.56/.test(source)&&/dummy\.scale\.set\(width,major,width\*\.72\)/.test(source),'v3 converts small isotropic nodes into bounded anisotropic engineered pylons');
-check(/pylonScaleRange=\{min:minScale,max:maxScale\}/.test(source)&&/pylonScaleMin:active/.test(source)&&/pylonScaleMax:active/.test(source)&&/budgetScaleMax:PROFILE\.scaleMax/.test(source),'diagnostics expose live pylon scale range and budget');
+check(/const major=i%4===0\?5\.2:lane>0\?4\.1:3/.test(source)&&/const width=i%4===0\?1\.15:lane>0\?\.9:\.74/.test(source)&&/dummy\.scale\.set\(width,major,width\*\.78\)/.test(source),'v3 readability closure enlarges pylon cross-sections while retaining bounded anisotropic scale');
+check(/pylonScaleRange=\{min:minScale,max:maxScale\}/.test(source)&&/pylonScaleMin:active/.test(source)&&/pylonScaleMax:active/.test(source)&&/budgetScaleMax:PROFILE\.scaleMax/.test(source)&&/pylonRadius:PROFILE\.pylonRadius/.test(source),'diagnostics expose live pylon scale range, radius and budget');
 check(/beaconDepthRange=\{min:minZ,max:maxZ,span:maxZ-minZ\}/.test(source)&&/beaconDepthSpan:active/.test(source),'diagnostics retain the measured two-rail depth span');
 check(/upper\.position\.set\(0,\.45,-3\.2\)/.test(source)&&/lower\.position\.set\(0,-\.35,3\)/.test(source)&&/iris\.position\.set\(\.35,\.1,\.8\)/.test(source),'three aperture surfaces retain explicit near/mid/far depth layers');
 check(/upper\.rotation\.set\(\.5,\.3,-\.62\)/.test(source)&&/lower\.rotation\.set\(-\.54,\.72,\.4\)/.test(source)&&/iris\.rotation\.set\(-\.22,-\.42,\.98\)/.test(source),'depth-separated aperture layers keep three distinct crossing planes');
@@ -45,7 +45,7 @@ check(/function assertDepthContract/.test(browserSource)&&/function assertPylonC
 check(/architecture/.test(browserSource)&&/pylonScaleMin/.test(browserSource)&&/pylonScaleMax/.test(browserSource)&&/budgetScaleMax/.test(browserSource),'production-browser gate reads the live v3 architecture and pylon-scale diagnostics');
 check(/#perfHud/.test(browserSource)&&/highFrameCalls-standardFrameCalls,8/.test(browserSource)&&/lowFrameCalls,standardFrameCalls/.test(browserSource),'production-browser gate measures actual renderer DRAW delta and lower-tier restoration');
 check(doc.includes('phase-aperture-v3')&&doc.includes('Dual-Star Pylon Weave'),'SIRIUS v3 SOT records the engineered pylon visual pass');
-check(doc.includes('4,064')&&doc.includes('4 draw')&&doc.includes('16')&&doc.includes('3.0–5.2'),'SIRIUS v3 SOT records unchanged GPU cost and bounded pylon scale');
+check(doc.includes('4,064')&&doc.includes('4 draw')&&doc.includes('16')&&doc.includes('3.0–5.2')&&doc.includes('0.34'),'SIRIUS v3 SOT records unchanged GPU cost, bounded pylon scale and readability radius');
 check(doc.includes('390×844')&&doc.includes('360×800')&&doc.includes('Photo Capture'),'SIRIUS v3 SOT records both phone gates and direct capture acceptance');
 
 const browser=spawnSync(process.execPath,['scripts/validate-sirius-phase-aperture-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
