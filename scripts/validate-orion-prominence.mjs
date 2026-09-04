@@ -18,6 +18,10 @@ check(/starCenter:new THREE\.Vector3\(28,8,-137\),starRadius:30/.test(source),'O
 check(/rockCenter:new THREE\.Vector3\(-26,-12,-90\),rockRadius:10/.test(source),'ORION rocky-outpost anchor matches the existing scene');
 check(/triangles:3264,drawCalls:3,observatoryMasts:16,mastDepthBudget:2\.2,foregroundLeadBudget:58/.test(source),'ORION v2 budget is explicitly bounded to 3,264 triangles / three draws / 16 masts');
 check(/VISUAL_PASS='prominence-observatory-v2'/.test(source)&&/visualPass:VISUAL_PASS/.test(source),'ORION diagnostics identify the v2 prominence-observatory pass');
+check(/CROWN_TREATMENT='braided-prominence-weave-v1'/.test(source)&&/crownTreatment:CROWN_TREATMENT/.test(source),'ORION diagnostics identify the braided prominence crown treatment');
+check(source.includes('float waveA=.23+.075*sin')&&source.includes('float waveB=.50+.09*sin')&&source.includes('float waveC=.77+.065*sin')&&source.includes('float braid=clamp(a+b*.92+c*.84,0.0,1.0)')&&source.includes('float knots=pow(max(0.0,.5+.5*cos'),'braided crown shader retains three bounded interlaced strands plus compact knots');
+check(source.includes('float dA=(vUv.y-waveA)*19.0;float dB=(vUv.y-waveB)*17.0;float dC=(vUv.y-waveC)*20.0;float a=exp(-(dA*dA));float b=exp(-(dB*dB));float c=exp(-(dC*dC));'),'braided crown strand falloff uses explicit squared distances for GPU-safe exponent input');
+check(/crownA\.rotation\.set\(1\.18,\.18,-\.66\);crownA\.scale\.set\(1\.09,\.96,1\.08\)/.test(source)&&/crownB\.rotation\.set\(\.34,1\.08,\.9\);crownB\.scale\.set\(\.98,1\.08,1\.04\)/.test(source),'braided crown retains the widened asymmetric two-arc composition');
 check(/new THREE\.TorusGeometry\(1\.24,\.035,8,96,Math\.PI\*1\.38\)/.test(source),'primary prominence arc remains bounded partial torus geometry');
 check(/new THREE\.TorusGeometry\(1\.34,\.028,8,96,Math\.PI\*1\.18\)/.test(source),'secondary prominence arc remains bounded partial torus geometry');
 check(/material\.forceSinglePass=true/.test(source),'transparent prominence materials are explicitly single-pass');
@@ -37,8 +41,9 @@ check(/__stellarOrionProminenceAddHook/.test(source)&&/THREE\.Object3D\.prototyp
 check(/window\.WarpOrionProminenceQuality=/.test(source),'ORION diagnostic API exposes autonomous validation state');
 check(doc.includes('3,264')&&doc.includes('3 draw calls')&&doc.includes('16 observatory masts')&&doc.includes('Standard／Low'),'ORION v2 SOT records the bounded High cost and zero-cost lower tiers');
 check(doc.includes('foreground outpost')&&doc.includes('active red giant')&&doc.includes('390×844 and 360×800'),'ORION v2 SOT records the intended near/far player-visible outcome and both mobile gates');
+check(doc.includes('braided-prominence-weave-v1')&&doc.includes('three interlaced emissive strands')&&doc.includes('wider asymmetric crown silhouette'),'ORION SOT records the braided crown treatment and zero-budget composition outcome');
 
 const browser=spawnSync(process.execPath,['scripts/validate-orion-prominence-browser.mjs'],{encoding:'utf8',timeout:180000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
-check(browser.status===0,'real production WebGL ORION v2 passes measured renderer budget, capture, depth, disposal, rebuild, revisit and both phone viewports');
+check(browser.status===0,'real production WebGL ORION v2 passes measured renderer budget, braided crown treatment, capture, depth, disposal, rebuild, revisit and both phone viewports');
 console.log(`ORION Prominence Observatory v2 validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);
