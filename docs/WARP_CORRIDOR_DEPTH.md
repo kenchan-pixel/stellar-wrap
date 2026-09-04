@@ -1,33 +1,34 @@
-# Warp Corridor + Warp-to-Approach Depth Bridge｜Vertical Slice v2
+# Warp Corridor + Warp-to-Approach Depth Bridge｜Vertical Slice v3
 
 ## Goal / intended player outcome
 
-令完整旅程由「進入曲速 → 曲速巡航 → 脫離 → 減速 → 接近目的地」有連續空間尺度，而唔係曲速有透視、到接近階段又突然變回平面提示。
+令完整旅程由「進入曲速 → 曲速巡航 → 脫離 → 減速 → 接近目的地」有連續空間尺度，而唔係曲速有透視、脫離曲速後突然變回平面提示。
 
-第一段 `#journeyCorridorDepth` 保留中央消失點、左右 rail、rungs 同 near frame；第二段新增 `#journeyApproachDepth`，在真正 3D 目的地出現前，以 far／mid／near 三層低成本視覺平面圍繞既有 Approach Vista，令目的地由遠至近逐步建立景深。
+v3 保留既有 Warp Corridor Perspective Depth 同三層 Approach Depth，並加入一個 **Warp Exit Shockfront｜曲速脫離衝擊環**：用同一 `#journeyApproachDepth` 的兩個 pseudo-element，在 `warpExit → decelerate → approach` 由細至大打開兩層偏心橢圓衝擊環，將曲速走廊收束自然交接到目的地 approach anchor，再於 `observe` 前完全消失。
 
 ## Scope
 
-- 保留現有 Warp Corridor Perspective Depth：5 個 pointer-transparent DOM elements，只在 `warpEntry / warp / warpExit` 活躍。
-- 同一個 `journey-corridor-depth.js` 新增 **Warp-to-Approach Depth Bridge**：3 個 pointer-transparent DOM elements（far／mid／near）。
-- Approach Depth 只在既有 `warpExit / decelerate / approach` 活躍；`observe` 前完全清走，真正 Three.js 目的地場景保持唯一主景觀。
-- 八個 Real Space 目的地各有固定 anchor／tilt／skew，身份只讀 `Journey Atmosphere` 現有 `data-system`；不複製星圖座標、航線或距離資料。
-- far／mid／near 在相同 phase 使用不同 scale／rotation，形成視差層次；只用 `transform`、`opacity`、border／gradient。
+- 保留現有 `#journeyCorridorDepth`：5 個 pointer-transparent DOM elements，只在 `warpEntry / warp / warpExit` 活躍。
+- 保留現有 `#journeyApproachDepth`：3 個 far／mid／near DOM elements，只在 `warpExit / decelerate / approach` 活躍。
+- v3 新增 **2 個 CSS pseudo-elements**（`::before / ::after`），不新增實際 DOM child、Three.js object、renderer draw 或 scene authority。
+- Shockfront 與既有 destination-specific `--approach-x / --approach-y / tilt / skew` 共用同一 anchor，所以八個 Real Space 目的地會沿各自接近方向展開，而不是固定中央瞄準圈。
+- `warpExit` 時 Shockfront 較集中而明顯；`decelerate` 擴張；`approach` 再放大及降低透明度；`observe` 完全清走。
+- 手機 ≤520 px 使用較窄的 bounded ellipse size，避免 360 px 寬畫面大量裁切。
 - `prefers-reduced-motion` 停止 transition／animation，但保留靜態深度 cue。
-- 不增加新 shell file；prepared offline shell 繼續快取同一 `journey-corridor-depth.js`。
+- 只用 transform、opacity、border、radial gradient；不使用 `filter`、`backdrop-filter`、timer、`requestAnimationFrame`、network、storage 或額外 dependency。
 
 ## Acceptance Criteria
 
-- [ ] Runtime 只 mount 1 個 `#journeyCorridorDepth`（exactly 5 children）及 1 個 `#journeyApproachDepth`（exactly 3 children）。
-- [ ] 九條既有 direct corridor 保持不同 perspective orientation；八個既有 Real Space destination 都有獨立 approach anchor／tilt identity。
+- [ ] Runtime 仍只 mount 1 個 `#journeyCorridorDepth`（exactly 5 children）及 1 個 `#journeyApproachDepth`（exactly 3 children）；Shockfront 不增加 DOM child count。
+- [ ] 九條既有 direct corridor 保持不同 perspective orientation；八個 Real Space destination 保持獨立 approach anchor／tilt identity。
 - [ ] Warp depth 只在 `warpEntry / warp / warpExit` active，`decelerate / approach / observe` inactive。
-- [ ] Approach depth 在 `warpExit / decelerate / approach` active，`observe` inactive；final observation 時 opacity 必須回到 0。
+- [ ] Approach depth 在 `warpExit / decelerate / approach` active，`observe` inactive。
+- [ ] Shockfront `::before / ::after` 在 `warpExit` 可見，經 `decelerate` 擴張，到 `approach` 降低透明度，`observe` opacity 回到 0。
 - [ ] `SOL → LUNA` production Chromium 390×844、360×800 均要實際驗證：
   - warp cruise：`SOL>LUNA`、5 corridor elements、opacity ≥0.65、無水平 overflow；
-  - approach：LUNA、3 approach elements、opacity ≥0.52、far／mid／near 有三個不同 rendered transforms；
-  - observation：approach layer inactive 並 fully faded。
-- [ ] Corridor fade-out 同 approach fade-in 不得改 `WarpSim` phase timing、arrival clock、camera authority 或 route authority。
-- [ ] 不新增 Three.js renderer／scene object、network、storage、timer、`requestAnimationFrame`、dependency、`filter` 或 `backdrop-filter`。
+  - approach：LUNA、3 approach elements、far／mid／near 有三個不同 rendered transforms；Shockfront 圍繞 LUNA 左側 approach anchor，而非覆蓋全畫面中央；
+  - observation：approach layer及 Shockfront 均 fully faded。
+- [ ] Shockfront 不得改 `WarpSim` phase timing、arrival clock、camera authority、route authority、DPR 或 Three.js renderer budget。
 - [ ] 完整 `npm run check`、V4 stable hash、route／flight／Hermite、安全及既有 browser gates 保持綠色。
 
 ## Out of Scope
@@ -39,16 +40,18 @@
 
 ## Validation evidence
 
-Exact-head acceptance 由 GitHub Actions、390×844／360×800 production Chromium runtime、warp screenshot、LUNA approach screenshot、PR review receipt 共同證明。
+Exact-head acceptance 由 GitHub Actions、390×844／360×800 production Chromium runtime、warp screenshot、LUNA approach screenshot、PR review receipt共同證明。
+
+視覺驗收重點係 Shockfront 是否讀成「曲速能量／空間層次交接」，而唔係大型 HUD 或瞄準器；若首次 exact-run screenshot 過強或過弱，需在同一 cycle 調整。
 
 物理 iPhone Safari 長時間熱力／frame pacing、細線／半透明混色仍屬補充證據，不係自動完成 gate。
 
 ## Risks / manual checks
 
-- iPhone Safari／不同 GPU 對 1 px border、半透明 gradient 同色域混合可能有差異；需實機時可補驗對比度。
-- 新 approach depth 應保持在目的地輪廓周邊，避免讀成大型 HUD／瞄準器；browser screenshot 需確認中央真正接近景觀仍清楚。
-- CSS transition 為 compositor-oriented，但長時間熱力仍需物理手機先可量度。
+- iPhone Safari／不同 GPU 對 1 px border、半透明 gradient 同色域混合可能有差異。
+- Shockfront 係 compositor-oriented CSS presentation；長時間熱力仍需物理手機先可量度。
+- Approach anchor 本身係視覺構圖資料，不代表真實航向、角度或距離。
 
 ## Completion Signal
 
-玩家由曲速走廊脫離後，會自然由中央透視速度感交接到目的地 far／mid／near 接近層次，再在 `observe` 前完全讓位俾真正 3D 地標。整段新增視覺只服從既有 corridor／destination／phase presentation authority，無新增模擬、renderer、持久化或網絡權威。
+玩家由曲速走廊脫離時，畫面會以 destination-specific 偏心雙層 Shockfront 將速度感與接近景深連成一體；衝擊環在減速／接近期間自然擴張並淡出，最終完全讓位俾真正 3D 地標。整個 v3 改良增加零 DOM child、零 Three.js draw、零模擬／相機／路線／持久化／網絡權威，同時在兩個主要手機 viewport 有可見及可重複驗證的旅程奇觀提升。
