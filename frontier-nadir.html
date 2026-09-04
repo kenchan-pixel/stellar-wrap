@@ -10,7 +10,7 @@
 </style>
 </head>
 <body>
-<div id="nadirApp"><canvas id="nadirSpace" aria-label="NADIR WELL 固定黑洞景觀：事件視界、吸積盤、引力透鏡冠與光子焦散"></canvas><div class="vignette"></div><div class="film"></div><div id="nadirLoading">正在建立 NADIR 引力井…</div></div>
+<div id="nadirApp"><canvas id="nadirSpace" aria-label="NADIR WELL 固定黑洞景觀：事件視界、吸積盤、引力透鏡冠與前景干涉觀測陣列"></canvas><div class="vignette"></div><div class="film"></div><div id="nadirLoading">正在建立 NADIR 引力井…</div></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 
@@ -22,7 +22,8 @@ const TEST_MODE=new URLSearchParams(location.search).get('test')==='1';
 const APPROACH_MS=TEST_MODE?900:5600;
 const ARRIVAL_MS=TEST_MODE?260:1050;
 const VISUAL_ID='NADIR_FIXED_LENSING_V4';
-const QUALITY_ID='NADIR_CAUSTIC_DEPTH_V2';
+const QUALITY_ID='NADIR_OBSERVATORY_DEPTH_V3';
+const OBSERVATORY_PROFILE='NADIR_INTERFEROMETER_FRAME_V1';
 let phase='approach';
 let phaseStarted=performance.now();
 let capturing=false;
@@ -187,15 +188,31 @@ const photonG=new THREE.BufferGeometry();photonG.setAttribute('position',new THR
 const photonM=new THREE.PointsMaterial({size:.34,vertexColors:true,transparent:true,opacity:.58,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
 const photonBank=new THREE.Points(photonG,photonM);photonBank.rotation.z=-.035;blackHole.add(photonBank);
 
-const station=new THREE.Group();station.position.set(-11.9,-12.7,3.8);station.rotation.set(.34,.58,-.22);hero.add(station);
-const stationRing=new THREE.Mesh(new THREE.TorusGeometry(3.05,.3,6,56),new THREE.MeshStandardMaterial({color:0x3f5262,metalness:.88,roughness:.34,emissive:0x061a22,emissiveIntensity:.52}));station.add(stationRing);
-const stationGlow=new THREE.Mesh(new THREE.TorusGeometry(3.05,.048,4,56),new THREE.MeshBasicMaterial({color:0x70d7ff,transparent:true,opacity:.52,blending:THREE.AdditiveBlending,depthWrite:false}));station.add(stationGlow);
-const spine=new THREE.Mesh(new THREE.BoxGeometry(.3,1.0,5.8),new THREE.MeshStandardMaterial({color:0x526575,metalness:.84,roughness:.35,emissive:0x06151c,emissiveIntensity:.42}));spine.rotation.x=Math.PI/2;station.add(spine);
-const podGeo=new THREE.BoxGeometry(.38,.62,.96),podMat=new THREE.MeshStandardMaterial({color:0x5b7182,metalness:.78,roughness:.36,emissive:0x062b3a,emissiveIntensity:.46}),pods=new THREE.InstancedMesh(podGeo,podMat,8),dummy=new THREE.Object3D();
-for(let i=0;i<8;i++){const a=i/8*Math.PI*2;dummy.position.set(Math.cos(a)*3.05,Math.sin(a)*3.05,0);dummy.rotation.set(0,0,a);dummy.updateMatrix();pods.setMatrixAt(i,dummy.matrix)}station.add(pods);
+const observatory=new THREE.Group();observatory.position.set(0,0,4.6);hero.add(observatory);
+const dummy=new THREE.Object3D();
+const collectorLayout=[
+  {p:[-10.3,-12.4,2.6],r:[.34,.56,-.2],s:1.0},
+  {p:[10.2,-14.4,-6.8],r:[.25,-.5,.17],s:.74},
+  {p:[11.6,8.4,-15.5],r:[-.18,-.62,.08],s:.48}
+];
+const collectorGeo=new THREE.TorusGeometry(2.7,.28,6,48),collectorMat=new THREE.MeshStandardMaterial({color:0x435c6f,metalness:.9,roughness:.3,emissive:0x061821,emissiveIntensity:.48}),collectors=new THREE.InstancedMesh(collectorGeo,collectorMat,collectorLayout.length);
+const collectorGlowGeo=new THREE.TorusGeometry(2.7,.052,4,40),collectorGlowMat=new THREE.MeshBasicMaterial({color:0x7bdcff,transparent:true,opacity:.52,blending:THREE.AdditiveBlending,depthWrite:false}),collectorGlows=new THREE.InstancedMesh(collectorGlowGeo,collectorGlowMat,collectorLayout.length);
+collectorLayout.forEach((entry,i)=>{dummy.position.set(...entry.p);dummy.rotation.set(...entry.r);dummy.scale.setScalar(entry.s);dummy.updateMatrix();collectors.setMatrixAt(i,dummy.matrix);collectorGlows.setMatrixAt(i,dummy.matrix)});observatory.add(collectors,collectorGlows);
 
-const beaconGeo=new THREE.BoxGeometry(.12,.12,2.2),beaconMat=new THREE.MeshBasicMaterial({color:0x74d7ff,transparent:true,opacity:.34}),beacons=new THREE.InstancedMesh(beaconGeo,beaconMat,6);
-for(let i=0;i<6;i++){const side=i<3?-1:1,row=i%3;dummy.position.set(side*(18+row*5),-16-row*4,-18-row*15);dummy.rotation.set(.18*side,.08,side*.15);dummy.scale.set(1,1,1+.35*row);dummy.updateMatrix();beacons.setMatrixAt(i,dummy.matrix)}
+const trussGeo=new THREE.BoxGeometry(.18,.18,4.2),trussMat=new THREE.MeshStandardMaterial({color:0x526a7d,metalness:.86,roughness:.34,emissive:0x05141c,emissiveIntensity:.36}),trusses=new THREE.InstancedMesh(trussGeo,trussMat,12);
+const trussLayout=[
+ [-12.6,-14.5,1.0,.18,.72,-.16,1.18],[-10.9,-15.6,.4,.22,.66,-.07,1.0],[-8.8,-14.4,-.5,.1,.78,.06,.92],[-11.4,-11.0,1.2,.72,.18,.28,.7],
+ [12.5,-16.2,-8.0,.16,-.68,.12,.9],[10.4,-16.7,-8.5,.22,-.61,.02,.78],[8.6,-15.0,-9.3,.1,-.76,-.08,.72],[11.6,-12.5,-7.5,.66,-.2,-.2,.56],
+ [13.5,9.7,-17.0,-.14,-.62,.06,.56],[11.7,10.4,-17.8,-.2,-.56,-.04,.49],[10.2,8.8,-18.4,-.08,-.72,-.12,.45],[12.8,6.7,-16.8,-.58,-.14,.18,.38]
+];
+trussLayout.forEach((v,i)=>{dummy.position.set(v[0],v[1],v[2]);dummy.rotation.set(v[3],v[4],v[5]);dummy.scale.set(1,1,v[6]);dummy.updateMatrix();trusses.setMatrixAt(i,dummy.matrix)});observatory.add(trusses);
+
+const podGeo=new THREE.BoxGeometry(.4,.66,1.02),podMat=new THREE.MeshStandardMaterial({color:0x617b8e,metalness:.8,roughness:.34,emissive:0x062c3a,emissiveIntensity:.5}),pods=new THREE.InstancedMesh(podGeo,podMat,12);
+const podLayout=[[-10.3,-9.4,2.6],[-10.2,-15.2,2.4],[-7.6,-12.5,1.7],[-12.8,-12.2,3.1],[10.2,-12.2,-6.8],[10.2,-16.5,-7],[8.2,-14.4,-7.8],[12.2,-14.3,-6.1],[11.6,9.8,-15.5],[11.6,7,-15.6],[10.2,8.4,-16.4],[12.9,8.4,-14.7]];
+podLayout.forEach((p,i)=>{const scale=i<4?1:i<8?.76:.52;dummy.position.set(...p);dummy.rotation.set(.1*(i%2?-1:1),.22*(i%3-1),i*.18);dummy.scale.setScalar(scale);dummy.updateMatrix();pods.setMatrixAt(i,dummy.matrix)});observatory.add(pods);
+
+const beaconGeo=new THREE.BoxGeometry(.12,.12,2.2),beaconMat=new THREE.MeshBasicMaterial({color:0x74d7ff,transparent:true,opacity:.34}),beacons=new THREE.InstancedMesh(beaconGeo,beaconMat,10);
+for(let i=0;i<10;i++){const side=i%2===0?-1:1,row=Math.floor(i/2);dummy.position.set(side*(11.8+row*1.7),-17+row*5.2,-9-row*13);dummy.rotation.set(.14*side,.06,side*.12);dummy.scale.set(1,1,1+.23*row);dummy.updateMatrix();beacons.setMatrixAt(i,dummy.matrix)}
 hero.add(beacons);
 scene.add(new THREE.AmbientLight(0x22354a,.3));const stationRim=new THREE.DirectionalLight(0xbde8ff,1.0);stationRim.position.set(-4,3,6);scene.add(stationRim);
 
@@ -236,7 +253,7 @@ async function capture(download=true){
   }finally{fit(previous);capturing=false}
 }
 function state(){
-  return{phase,autoOrbit:false,vista:'overview',capturing,visualId:VISUAL_ID,qualityId:QUALITY_ID,fixed:true,jets:false,eventHorizon:true,lensingCrown:true,photonCrown:true,causticSheet:true,starDeflection:true,lensedStreaks:true,depthBeacons:true,dopplerAsymmetry:true,portalRing:false,backingWidth:canvas.width,backingHeight:canvas.height,pixelRatio:renderer.getPixelRatio(),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles};
+  return{phase,autoOrbit:false,vista:'overview',capturing,visualId:VISUAL_ID,qualityId:QUALITY_ID,observatoryProfile:OBSERVATORY_PROFILE,fixed:true,jets:false,eventHorizon:true,lensingCrown:true,photonCrown:true,causticSheet:true,starDeflection:true,lensedStreaks:true,observatoryFrame:true,collectorRings:3,trussBeams:12,receiverPods:12,depthBeacons:10,dopplerAsymmetry:true,portalRing:false,backingWidth:canvas.width,backingHeight:canvas.height,pixelRatio:renderer.getPixelRatio(),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles};
 }
 function applyVista(id){return id==='overview'}
 function skipArrival(){settleFinal();return true}
