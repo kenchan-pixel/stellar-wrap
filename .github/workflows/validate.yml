@@ -15,7 +15,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -38,5 +38,6 @@ jobs:
             artifacts/photo-mode-browser/
             artifacts/mode-gateway-browser/
             artifacts/frontier-destination-handoff/
+            artifacts/gallery-voyage-postcards/
           if-no-files-found: ignore
           retention-days: 7
