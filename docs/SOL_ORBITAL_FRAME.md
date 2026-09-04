@@ -1,4 +1,4 @@
-# SOL Orbital Observation Frame｜近地軌道觀測框架
+# SOL Orbital Observation Frame v2｜近地軌道透視觀測框架
 
 ## Status
 
@@ -8,21 +8,21 @@
 
 ## Goal / intended player outcome
 
-Make the home-system vista read as a human orbital observation position rather than an isolated Earth sphere. In High quality and Photo Capture, the player should see a coherent depth stack:
+Make the home-system vista read as a large human orbital observation position rather than an isolated Earth sphere with a flat decorative rail. In High quality and Photo Capture, the player should see a coherent depth stack:
 
-**foreground orbital frame → Earth atmosphere / aurora / city-lit globe → distant Moon**.
+**large near gantry → smaller far gantry lane → Earth atmosphere / aurora / city-lit globe → distant Moon**.
 
-The artificial foreground must be clearly readable in mobile portrait without covering the Earth or forcing the whole live journey to run at higher resolution.
+The artificial foreground must create obvious perspective scale in mobile portrait without covering the Earth or forcing the whole live journey to run at higher resolution.
 
 ## Scope
 
-The focused SOL layer attaches to the existing Earth scene authority and adds exactly three High-only render objects:
+The focused SOL layer still attaches to the existing Earth scene authority and still adds exactly three High-only render objects:
 
-1. **16 instanced observation masts** arranged as an asymmetric lower orbital foreground arc.
-2. **20 instanced navigation lights** split across near/far lanes.
-3. One **30-segment LineSegments brace cage** joining the two depth lanes.
+1. **16 instanced observation masts** arranged as an asymmetric lower orbital foreground arc. v2 keeps the same instance count but gives alternating near/far masts a deliberate **1.46 : 0.72 height-scale hierarchy** so the structure reads in perspective rather than as a flat fence.
+2. **20 instanced navigation lights** reuse the same one-draw bank, with the near lane visibly larger and warm while the far lane is smaller and cool.
+3. One **30-segment LineSegments brace cage** keeps the same draw count but changes the six cross links into a mix of straight and diagonal chevrons between slightly different near/far radii.
 
-The structure reuses the current Earth/Moon anchors. It has no independent renderer, camera, animation loop, storage, network request, analytics path or external visual asset.
+Runtime diagnostics preserve the existing stable `orbital-observation-frame-v1` compatibility marker and add `orbital-perspective-gantry-v2` plus a live mast scale ratio. The structure reuses the current Earth/Moon anchors. It has no independent renderer, camera, animation loop, storage, network request, analytics path or external visual asset.
 
 ## Performance budget
 
@@ -38,8 +38,9 @@ Focused extension only:
 - navigation lights: **20**
 - brace line segments: **30**
 - live foreground near/far depth span: **>6.0 and ≤6.8 local units**
+- near/far mast height-scale ratio: **>2.0×** (`1.46 / 0.72 ≈ 2.03`)
 
-Together with the existing shared SOL High layer, the destination remains bounded to **+7 draw calls** above Standard for this accepted composition. Standard／Low own zero objects from this focused extension.
+Together with the existing shared SOL High layer, the destination remains bounded to **+7 draw calls** above Standard for this accepted composition. Standard／Low own zero objects from this focused extension. v2 raises visual scale by transforms, silhouette and brace layout rather than additional geometry, DPR or renderer passes.
 
 ## Lifecycle / capture contract
 
@@ -58,9 +59,9 @@ Destination Photo Mode continues to own capture. A direct Standard → Photo Cap
 ## Acceptance Criteria
 
 - SOL Standard has zero focused-frame objects.
-- SOL High exposes exactly 3 objects, 16 masts, 20 lights, 30 brace segments and 352 measured mesh triangles.
+- SOL High exposes `orbital-perspective-gantry-v2`, exactly 3 objects, 16 masts, 20 lights, 30 brace segments and 352 measured mesh triangles.
+- The v2 mast transform hierarchy reports a live scale ratio above **2.0×**, while the existing live depth span remains >6.0 and ≤6.8 local units.
 - Real renderer diagnostics show **+7 draw calls** from Standard to the combined shared SOL High + focused frame. High → Low must clear both High layers and reduce renderer work; restoring Standard must return to the original Standard draw count. Low is intentionally allowed to use fewer base draws/DPR under the existing adaptive-quality authority.
-- Live focused-frame depth span is >6.0 and ≤6.8 local units.
 - Direct Standard → High Photo Capture includes both the shared SOL cinematic layer and the focused frame before `toBlob()`.
 - High → Low disposal, Low → High rebuild and SOL → another system → SOL revisit all pass without accumulation.
 - Production Chromium at **390×844** and **360×800** remains viewport-contained and emits distinct Standard / High evidence.
@@ -75,4 +76,4 @@ Destination Photo Mode continues to own capture. A direct Standard → Photo Cap
 
 ## Completion Signal
 
-The SOL High/Photo vista reads as a bounded inhabited orbital observation position with a visibly closer artificial foreground, while Standard/Low cost, the V4 travel chain and existing renderer authority remain unchanged.
+The SOL High/Photo vista reads as a bounded inhabited orbital observation position with a materially stronger near/far perspective hierarchy, while Standard/Low cost, the V4 travel chain and existing renderer authority remain unchanged.
