@@ -17,6 +17,7 @@ Make PROX feel like the player is looking through a real orbital traffic corrido
 - Deform the two existing lane geometries once at build time; no extra mesh is created.
 - Each lane performs one smooth opposing far↔near sweep with `1.62` local depth amplitude and bounded radial perspective scale **0.94 → 1.08**.
 - The resulting lane-local depth span is about **3.5 local units**, within a **3.6** lane-depth budget and inside the existing overall foreground depth budget.
+- The foreground gantry still leads the farthest traffic element by about **8.0 units**, bounded by the existing **8.2** overall depth budget without moving the camera.
 - Keep complementary cool-white/cyan and warm-amber traffic signals so the industrial traffic structure stays distinct from the red-dwarf / lava palette.
 - Create the complete lattice only during safe final PROX exploration at the existing `high` renderer tier.
 - Observe the existing WebGL backing-canvas size so a direct Standard → High Photo Capture builds the same enhanced lattice before PNG extraction.
