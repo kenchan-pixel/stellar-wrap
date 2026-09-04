@@ -81,6 +81,20 @@ function ensureStyle(){
   pointer-events:none;border-radius:50%;transform-origin:50% 50%;
   transition:transform .72s cubic-bezier(.2,.7,.2,1),opacity .42s ease
 }
+#journeyApproachDepth::before,#journeyApproachDepth::after{
+  content:"";position:absolute;display:block;left:var(--approach-x);top:var(--approach-y);
+  pointer-events:none;border-radius:50%;opacity:0;transform-origin:50% 50%;
+  transition:transform .72s cubic-bezier(.2,.7,.2,1),opacity .34s ease
+}
+#journeyApproachDepth::before{
+  width:clamp(210px,72vw,560px);height:clamp(142px,49vw,380px);
+  border:1px solid rgba(var(--journey-alt-rgb),.28);border-left-color:rgba(var(--journey-rgb),.06);border-bottom-color:transparent;
+  background:radial-gradient(ellipse at 50% 50%,transparent 53%,rgba(var(--journey-alt-rgb),.055) 54%,transparent 63%)
+}
+#journeyApproachDepth::after{
+  width:clamp(136px,45vw,360px);height:clamp(92px,31vw,250px);
+  border:1px solid rgba(var(--journey-rgb),.34);border-right-color:transparent;border-top-color:rgba(var(--journey-alt-rgb),.1)
+}
 #journeyApproachDepth .approachDepthFar{
   width:clamp(150px,48vw,390px);height:clamp(112px,36vw,292px);
   border:1px solid rgba(var(--journey-alt-rgb),.24);border-left-color:rgba(var(--journey-alt-rgb),.07);
@@ -111,6 +125,13 @@ function ensureStyle(){
 #journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth{opacity:.34}
 #journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.58}
 #journeyAtmosphere[data-phase="observe"] #journeyApproachDepth{opacity:0}
+#journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth::before{opacity:.46;transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(.5)}
+#journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth::after{opacity:.34;transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(.34)}
+#journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth::before{opacity:.36;transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(.84)}
+#journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth::after{opacity:.28;transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(.74)}
+#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth::before{opacity:.24;transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(1.12)}
+#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth::after{opacity:.18;transform:translate(-50%,-50%) rotate(var(--approach-near-tilt)) scale(1.2)}
+#journeyAtmosphere[data-phase="observe"] #journeyApproachDepth::before,#journeyAtmosphere[data-phase="observe"] #journeyApproachDepth::after{opacity:0;transform:translate(-50%,-50%) scale(1.32)}
 #journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth .approachDepthFar{transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(.72)}
 #journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth .approachDepthMid{transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(.56)}
 #journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth .approachDepthNear{transform:translate(-50%,-50%) rotate(var(--approach-near-tilt)) scale(.4)}
@@ -128,12 +149,14 @@ function ensureStyle(){
   #journeyCorridorDepth .corridorDepthRungs{left:3%;right:3%;bottom:-1%}
   #journeyCorridorDepth .corridorDepthNear{left:4%;right:4%;bottom:5%;height:21%}
   #journeyCorridorDepth .corridorDepthRail{bottom:-8%}
+  #journeyApproachDepth::before{width:clamp(196px,78vw,304px);height:clamp(132px,53vw,206px)}
+  #journeyApproachDepth::after{width:clamp(128px,49vw,192px);height:clamp(86px,33vw,130px)}
   #journeyApproachDepth .approachDepthFar{width:clamp(142px,54vw,220px);height:clamp(106px,40vw,164px)}
   #journeyApproachDepth .approachDepthMid{width:clamp(104px,39vw,162px);height:clamp(76px,29vw,120px)}
   #journeyApproachDepth .approachDepthNear{width:clamp(72px,27vw,112px);height:clamp(52px,20vw,84px)}
 }
 @media (prefers-reduced-motion:reduce){
-  #journeyCorridorDepth,#journeyCorridorDepth span,#journeyApproachDepth,#journeyApproachDepth span{animation:none!important;transition:none!important}
+  #journeyCorridorDepth,#journeyCorridorDepth span,#journeyApproachDepth,#journeyApproachDepth span,#journeyApproachDepth::before,#journeyApproachDepth::after{animation:none!important;transition:none!important}
   #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth{opacity:.54;transform:scale(1)}
   #journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.48}
 }
