@@ -50,6 +50,18 @@ function assertAureliaV3Live(state,label){
   assert.ok(state.drawCalls>=17,`${label} must keep the v3 detail layers live in the renderer, got ${state.drawCalls} draws`);
   assert.ok(state.triangles>=13396,`${label} must keep the v3 detail layers live in the renderer, got ${state.triangles} triangles`);
 }
+function assertVesperV3Live(state,label){
+  const detail=state?.harvestDetails;
+  assert.ok(detail,`${label} must expose live VESPER harvest diagnostics`);
+  assert.equal(state.visualProfile,'VESPER_HARVEST_V3',`${label} must keep the live VESPER v3 profile`);
+  assert.equal(detail.harvestBooms,12,`${label} must keep 12 live radial harvest-boom instances`);
+  assert.equal(detail.condenserVanes,12,`${label} must keep 12 live condenser-vane instances`);
+  assert.equal(detail.detailObjects,2,`${label} must keep the two-object VESPER v3 depth layer`);
+  assert.equal(detail.detailTriangles,288,`${label} must keep the 288-triangle VESPER v3 detail budget`);
+  assert.ok(detail.depthSpan>=6.79&&detail.depthSpan<=6.81,`${label} must keep the bounded 6.8-unit VESPER depth span`);
+  assert.ok(state.drawCalls>=17,`${label} must keep the v3 harvest depth layers live in the renderer, got ${state.drawCalls} draws`);
+  assert.ok(state.triangles>=14352,`${label} must keep the v3 harvest depth layers live in the renderer, got ${state.triangles} triangles`);
+}
 
 async function inspect(chrome,base,width,height){
   const viewport=`${width}x${height}`,profile=mkdtempSync(join(tmpdir(),`stellar-frontier-backends-${width}-`));let browser,cdp,stderr='';
@@ -73,6 +85,7 @@ async function inspect(chrome,base,width,height){
       assert.ok(before.child.triangles>0&&before.child.triangles<=24000,`${id} triangles must remain bounded, got ${before.child.triangles}`);
       assert.ok(before.child.pixelRatio<=1.25+.001,`${id} normal DPR must remain <= 1.25, got ${before.child.pixelRatio}`);
       if(id==='AURELIA')assertAureliaV3Live(before.child,`${id} ${viewport} before capture`);
+      if(id==='VESPER')assertVesperV3Live(before.child,`${id} ${viewport} before capture`);
       const normal={w:before.child.backingWidth,h:before.child.backingHeight,dpr:before.child.pixelRatio,draws:before.child.drawCalls,triangles:before.child.triangles};
       const capture=await evalJs(cdp,'WarpFrontierScenic.capture(false)',true);
       assert.ok(capture&&capture.width>normal.w&&capture.height>normal.h,`${id} shell capture must raise the real backing buffer`);
@@ -81,8 +94,9 @@ async function inspect(chrome,base,width,height){
       assert.equal(restored.autoOrbit,false,`${id} capture must preserve fixed scenic camera authority`);assert.equal(restored.vista,'overview',`${id} capture must preserve overview vista`);
       assert.ok(restored.drawCalls>0&&restored.drawCalls<=18,`${id} draw calls must stay bounded after capture`);assert.ok(restored.triangles>0&&restored.triangles<=24000,`${id} triangles must stay bounded after capture`);
       if(id==='AURELIA')assertAureliaV3Live(restored,`${id} ${viewport} after capture restore`);
+      if(id==='VESPER')assertVesperV3Live(restored,`${id} ${viewport} after capture restore`);
       const bytes=await screenshot(cdp,`frontier-backend-${id.toLowerCase()}-${viewport}.png`);assert.ok(bytes>8000,`${id} restored scenic screenshot must contain rendered content`);
-      evidence[id]={capture:`${capture.width}x${capture.height}`,normal:`${normal.w}x${normal.h}`,dpr:normal.dpr,draws:normal.draws,triangles:normal.triangles,...(id==='AURELIA'?{aureliaProfile:restored.habitatDetail.profile,skylineTowers:restored.habitatDetail.skylineTowers,solarVanes:restored.habitatDetail.solarVanes,detailObjects:restored.habitatDetail.objects,detailTriangles:restored.habitatDetail.detailTriangles}:{})};
+      evidence[id]={capture:`${capture.width}x${capture.height}`,normal:`${normal.w}x${normal.h}`,dpr:normal.dpr,draws:normal.draws,triangles:normal.triangles,...(id==='AURELIA'?{aureliaProfile:restored.habitatDetail.profile,skylineTowers:restored.habitatDetail.skylineTowers,solarVanes:restored.habitatDetail.solarVanes,detailObjects:restored.habitatDetail.objects,detailTriangles:restored.habitatDetail.detailTriangles}:{}),...(id==='VESPER'?{vesperProfile:restored.visualProfile,harvestBooms:restored.harvestDetails.harvestBooms,condenserVanes:restored.harvestDetails.condenserVanes,harvestDepthSpan:restored.harvestDetails.depthSpan,harvestDetailTriangles:restored.harvestDetails.detailTriangles}:{})};
     }
     assert.equal(Object.keys(evidence).length,4);
     console.log(`Frontier renderer backends ${viewport}: ${JSON.stringify(evidence)}`);
