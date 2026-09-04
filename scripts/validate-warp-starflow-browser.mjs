@@ -218,7 +218,7 @@ async function inspect(chrome,base,width,height){
     assert.equal(initial.approach.mounted,true);assert.equal(initial.approach.elements,3);assert.equal(initial.approach.active,false);
 
     await evalJs(cdp,"(()=>{const warp=document.querySelector('#warp');if(warp){warp.value='1.8';warp.dispatchEvent(new Event('input',{bubbles:true}))}WarpSim.select('LUNA');WarpSim.launch();return true})()");
-    await waitUntil(()=>evalJs(cdp,"(()=>{const root=document.querySelector('#journeyCorridorDepth'),atmosphere=document.querySelector('#journeyAtmosphere');return WarpSim.state().phase==='warp'&&atmosphere?.getAttribute('data-phase')==='warp'&&WarpJourneyCorridorDepth.snapshot().active===true&&root&&Number(getComputedStyle(root,'::before').opacity)>=.30&&Number(getComputedStyle(root,'::after').opacity)>=.30})()"),`visible starflow cruise ${viewport}`,45000);
+    await waitUntil(()=>evalJs(cdp,"(()=>{const root=document.querySelector('#journeyCorridorDepth'),atmosphere=document.querySelector('#journeyAtmosphere');return WarpSim.state().phase==='warp'&&atmosphere?.getAttribute('data-phase')==='warp'&&WarpJourneyCorridorDepth.snapshot().active===true&&root&&Number(getComputedStyle(root).opacity)>=.65&&Number(getComputedStyle(root,'::before').opacity)>=.30&&Number(getComputedStyle(root,'::after').opacity)>=.30})()"),`visible starflow cruise ${viewport}`,45000);
 
     const cruiseA=await evalJs(cdp,STARFLOW_EXPRESSION);
     assertCruise(cruiseA,`${viewport} cruise`);
