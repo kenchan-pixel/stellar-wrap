@@ -97,7 +97,7 @@ function sync(){
 }
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===3;
-  return{visualPass:VISUAL_PASS,gantryProfile:GANTRY_PROFILE,target:'SOL',quality:state.qualityMode||null,active,captured:!!(earthRoot&&moonRoot),captureCount,objects:objects.length,masts:active?MAST_COUNT:0,lights:active?LIGHT_COUNT:0,braceSegments:active?BRACE_SEGMENT_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,frameDepthSpan:active?Number(frameDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,mastScaleRatio:active?Number(mastScaleRange.ratio.toFixed(2)):0};
+  return{visualPass:VISUAL_PASS,gantryProfile:active?GANTRY_PROFILE:null,target:'SOL',quality:state.qualityMode||null,active,captured:!!(earthRoot&&moonRoot),captureCount,objects:objects.length,masts:active?MAST_COUNT:0,lights:active?LIGHT_COUNT:0,braceSegments:active?BRACE_SEGMENT_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,frameDepthSpan:active?Number(frameDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,mastScaleRatio:active?Number(mastScaleRange.ratio.toFixed(2)):0};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');const qualityObserver=canvas?new MutationObserver(sync):null;

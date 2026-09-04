@@ -19,7 +19,7 @@ check(sw.includes("'./sol-orbital-frame.js'")&&sw.includes("`${CACHE_PREFIX}v15`
 check(/earthCenter:new THREE\.Vector3\(14,-5,-80\),earthRadius:18/.test(source)&&/moonCenter:new THREE\.Vector3\(-28,11,-128\),moonRadius:4\.7/.test(source),'SOL frame reuses the existing Earth and Moon scene anchors');
 check(/const MAST_COUNT=16/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,MAST_COUNT\)/.test(source),'16 observation masts share one instanced draw');
 check(/new THREE\.BoxGeometry\(\.46,6\.2,\.46\)/.test(source)&&/const NEAR_MAST_SCALE=1\.46/.test(source)&&/const FAR_MAST_SCALE=\.72/.test(source),'v2 masts use a stronger near/far perspective scale hierarchy without adding instances');
-check(/mastScaleRange=\{min:minScale,max:maxScale,ratio:maxScale\/minScale\}/.test(source)&&/mastScaleRatio:active\?Number\(mastScaleRange\.ratio\.toFixed\(2\)\):0/.test(source),'runtime diagnostics expose the live v2 mast scale ratio');
+check(/mastScaleRange=\{min:minScale,max:maxScale,ratio:maxScale\/minScale\}/.test(source)&&/gantryProfile:active\?GANTRY_PROFILE:null/.test(source)&&/mastScaleRatio:active\?Number\(mastScaleRange\.ratio\.toFixed\(2\)\):0/.test(source),'runtime diagnostics expose the live v2 profile/scale ratio only while the gantry is active');
 check(/const LIGHT_COUNT=20/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,LIGHT_COUNT\)/.test(source)&&/new THREE\.OctahedronGeometry\(\.24,0\)/.test(source),'20 navigation lights share one low-poly instanced draw');
 check(/near\?2\.05:\.82/.test(source)&&/mesh\.setColorAt\(i,near\?warm:cool\)/.test(source),'navigation lights reinforce near/far perspective through bounded scale and colour hierarchy');
 check(/const BRACE_SEGMENT_COUNT=30/.test(source)&&/new THREE\.LineSegments\(braceGeometry\(\)/.test(source),'30 brace segments share one LineSegments draw');
@@ -39,8 +39,11 @@ check(/object\.geometry\?\.dispose/.test(source)&&/material\?\.dispose/.test(sou
 check(/__stellarSolOrbitalFrameAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'scene-construction hook is explicitly restorable');
 check(/highFrameCalls-standardFrameCalls,7/.test(browserSource)&&/#perfHud/.test(browserSource),'browser gate measures actual combined shared + focused SOL draw delta');
 check(/WarpPhotoMode\.capture/.test(browserSource)&&/__solOrbitalCaptureProbe/.test(browserSource),'browser gate proves Standard-to-High Photo Capture includes the focused frame');
+check(/assertPerspective\(captureProbe/.test(browserSource)&&/assertPerspective\(high/.test(browserSource)&&/assertPerspective\(rebuild/.test(browserSource)&&/assertPerspective\(revisit/.test(browserSource),'browser gate regression-locks the live v2 profile and mast scale hierarchy across capture, High, rebuild and revisit');
+check(/assertPerspectiveCleared\(standard/.test(browserSource)&&/assertPerspectiveCleared\(low/.test(browserSource)&&/assertPerspectiveCleared\(departure/.test(browserSource),'browser gate proves inactive Standard/Low/departure states clear v2 live diagnostics');
 check(/390,844/.test(browserSource)&&/360,800/.test(browserSource)&&/sol-orbital-frame-/.test(browserSource),'both required phone viewports emit visual evidence');
 check(doc.includes('orbital-perspective-gantry-v2')&&doc.includes('2.03'),'SOT records the v2 perspective hierarchy and scale ratio');
+check(doc.includes('inactive')&&doc.includes('gantryProfile')&&doc.includes('mastScaleRatio'),'SOT records inactive v2 diagnostic clearing semantics');
 check(doc.includes('352')&&doc.includes('3')&&doc.includes('16')&&doc.includes('20')&&doc.includes('30'),'SOT records bounded frame object/geometry budgets');
 check(doc.includes('390×844')&&doc.includes('360×800')&&doc.includes('Photo Capture')&&doc.includes('Standard／Low'),'SOT records mobile, capture and lower-tier zero-cost acceptance');
 
