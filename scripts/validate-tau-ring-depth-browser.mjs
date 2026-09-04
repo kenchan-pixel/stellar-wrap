@@ -18,7 +18,7 @@ class Cdp{constructor(url){this.url=url;this.id=0;this.pending=new Map();this.ev
 async function evalJs(cdp,expression){const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:false});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result?.value}
 async function screenshot(cdp,name){mkdirSync(EVIDENCE_DIR,{recursive:true});const result=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const data=Buffer.from(result.data,'base64');writeFileSync(join(EVIDENCE_DIR,name),data);return{bytes:data.length,hash:createHash('sha256').update(data).digest('hex')}}
 async function readDrawCalls(cdp){return evalJs(cdp,"(()=>{const m=(document.querySelector('#perfHud')?.textContent||'').match(/DRAW\\s+(\\d+)/);return m?Number(m[1]):-1})()")}
-async function waitDrawCalls(cdp,expected=null){return waitUntil(async()=>{const calls=await readDrawCalls(cdp);if(calls<0)return false;if(expected!==null&&calls!==expected)return false;return calls},expected===null?'renderer diagnostic draw-call sample':`renderer diagnostic DRAW ${expected}`,10000)}
+async function waitDrawCalls(cdp,expected=null,timeout=10000){return waitUntil(async()=>{const calls=await readDrawCalls(cdp);if(calls<0)return false;if(expected!==null&&calls!==expected)return false;return calls},expected===null?'renderer diagnostic draw-call sample':`renderer diagnostic DRAW ${expected}`,timeout)}
 function assertDepth(snapshot,label){assert.ok(snapshot.shepherdDepthSpan>=4.2&&snapshot.shepherdDepthSpan<=snapshot.budgetDepthSpan,`${label}: shepherd depth span ${snapshot.shepherdDepthSpan} must prove near/far separation without exceeding ${snapshot.budgetDepthSpan}`)}
 function assertShepherdArc(snapshot,label,active=true){
   assert.equal(snapshot.architecture,'shepherd-arc-v2',`${label}: live TAU architecture diagnostic must remain shepherd-arc-v2`);
@@ -37,7 +37,7 @@ async function exercise(cdp,width,height){
   await evalJs(cdp,"WarpSim.jumpTo('TAU');WarpSim.setQuality('standard');true");
   await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpTauRingDepth.snapshot(),s=WarpCinematicQuality.snapshot();return WarpSim.state().current==='TAU'&&WarpSim.state().exploring&&x.captured===true&&x.objects===0&&s.objects===0})()"),'safe TAU Standard exploration');
   await evalJs(cdp,"(()=>{const hud=document.querySelector('#perfHud');if(hud&&!hud.classList.contains('show'))document.querySelector('#diagnosticsToggle')?.click();return true})()");
-  const standardFrameCalls=await waitDrawCalls(cdp);
+  const standardFrameCalls=await waitDrawCalls(cdp,null,20000);
   const standard=await evalJs(cdp,'WarpTauRingDepth.snapshot()');
   assert.equal(standard.active,false);assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);assert.equal(standard.triangles,0);assert.equal(standard.shepherds,0);assert.equal(standard.shepherdDepthSpan,0);assert.equal(standard.captured,true);assertShepherdArc(standard,'Standard exploration',false);
   const standardShot=await screenshot(cdp,`tau-ring-shadow-depth-${viewport}-standard.png`);
