@@ -2,6 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 
 const SAMPLE_MS=250;
 const VISUAL_PASS='prominence-observatory-v2';
+const CROWN_TREATMENT='braided-prominence-weave-v1';
 const PROFILE=Object.freeze({
   starCenter:new THREE.Vector3(28,8,-137),starRadius:30,
   rockCenter:new THREE.Vector3(-26,-12,-90),rockRadius:10,
@@ -12,7 +13,7 @@ const NAME='stellar-cinematic-orion-prominence';
 let star=null,rockRoot=null,objects=[],captureCount=0,mastDepth={min:0,max:0,span:0},mastSilhouette={minX:0,maxX:0,minY:0,maxY:0,spanY:0,minHeight:0,maxHeight:0};
 let addHooked=false,originalAdd=null,addWrapper=null;
 let qualityHooked=false,originalSetQuality=null,qualityWrapper=null;
-let lastSnapshot={active:false,target:null,quality:null,objects:0,triangles:0,budgetTriangles:0,drawCalls:0,captured:false,captureCount:0,visualPass:VISUAL_PASS};
+let lastSnapshot={active:false,target:null,quality:null,objects:0,triangles:0,budgetTriangles:0,drawCalls:0,captured:false,captureCount:0,visualPass:VISUAL_PASS,crownTreatment:CROWN_TREATMENT};
 
 function approx(a,b,t=.18){return Math.abs(a-b)<=t}
 function starMatches(candidate){return !!(candidate?.isMesh&&approx(candidate.position.x,PROFILE.starCenter.x)&&approx(candidate.position.y,PROFILE.starCenter.y)&&approx(candidate.position.z,PROFILE.starCenter.z)&&approx(candidate.scale.x,PROFILE.starRadius,.45)&&approx(candidate.scale.y,PROFILE.starRadius,.45))}
@@ -45,9 +46,9 @@ function hookSceneConstruction(){
 
 function prominenceMaterial(primary,edge,phase){
   const material=new THREE.ShaderMaterial({
-    uniforms:{uPrimary:{value:new THREE.Color(primary)},uEdge:{value:new THREE.Color(edge)},uOpacity:{value:.88},uPhase:{value:phase}},
+    uniforms:{uPrimary:{value:new THREE.Color(primary)},uEdge:{value:new THREE.Color(edge)},uOpacity:{value:.9},uPhase:{value:phase}},
     vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-    fragmentShader:`uniform vec3 uPrimary;uniform vec3 uEdge;uniform float uOpacity;uniform float uPhase;varying vec2 vUv;void main(){float endFade=smoothstep(.015,.12,vUv.x)*(1.0-smoothstep(.84,.985,vUv.x));float strand=.56+.44*(.5+.5*sin(vUv.y*25.0+vUv.x*33.0+uPhase));float knots=pow(max(0.0,.5+.5*cos(vUv.x*6.2831853*5.0+uPhase)),7.0);float spine=smoothstep(.05,.55,1.0-abs(vUv.y-.5)*2.0);float alpha=endFade*clamp(.24+strand*.42+knots*.55,0.0,1.0)*(.58+.42*spine)*uOpacity;vec3 color=mix(uPrimary,uEdge,clamp(.18+knots*.82,0.0,1.0));gl_FragColor=vec4(color,alpha);}`,
+    fragmentShader:`uniform vec3 uPrimary;uniform vec3 uEdge;uniform float uOpacity;uniform float uPhase;varying vec2 vUv;void main(){float endFade=smoothstep(.012,.105,vUv.x)*(1.0-smoothstep(.86,.992,vUv.x));float waveA=.23+.075*sin(vUv.x*42.0+uPhase);float waveB=.50+.09*sin(vUv.x*35.0+uPhase*1.7+1.3);float waveC=.77+.065*sin(vUv.x*48.0-uPhase*1.2+2.1);float a=exp(-pow((vUv.y-waveA)*19.0,2.0));float b=exp(-pow((vUv.y-waveB)*17.0,2.0));float c=exp(-pow((vUv.y-waveC)*20.0,2.0));float braid=clamp(a+b*.92+c*.84,0.0,1.0);float knots=pow(max(0.0,.5+.5*cos(vUv.x*6.2831853*6.0+uPhase)),9.0);float sheath=smoothstep(.0,.42,1.0-abs(vUv.y-.5)*2.0);float alpha=endFade*clamp(.10+braid*.76+knots*.48,0.0,1.0)*(.58+.42*sheath)*uOpacity;vec3 strandColor=mix(uPrimary,uEdge,clamp(.16+braid*.46+knots*.72,0.0,1.0));gl_FragColor=vec4(strandColor,alpha);}`,
     transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide
   });
   material.forceSinglePass=true;
@@ -76,10 +77,10 @@ function observatoryMastMesh(){
 
 function build(){
   if(!star||!rockRoot||objects.length)return;
-  const crownA=new THREE.Mesh(new THREE.TorusGeometry(1.24,.035,8,96,Math.PI*1.38),prominenceMaterial('#ff6b36','#ffe0a6',.35));
-  crownA.name=`${NAME}-crown-a`;crownA.rotation.set(1.08,.28,-.48);crownA.scale.set(1,.9,1);star.add(crownA);
-  const crownB=new THREE.Mesh(new THREE.TorusGeometry(1.34,.028,8,96,Math.PI*1.18),prominenceMaterial('#ff8a42','#fff0c7',2.15));
-  crownB.name=`${NAME}-crown-b`;crownB.rotation.set(.46,1.02,.72);crownB.scale.set(.94,1,1);star.add(crownB);
+  const crownA=new THREE.Mesh(new THREE.TorusGeometry(1.24,.035,8,96,Math.PI*1.38),prominenceMaterial('#ff6b36','#fff0bd',.35));
+  crownA.name=`${NAME}-crown-a`;crownA.rotation.set(1.18,.18,-.66);crownA.scale.set(1.09,.96,1.08);star.add(crownA);
+  const crownB=new THREE.Mesh(new THREE.TorusGeometry(1.34,.028,8,96,Math.PI*1.18),prominenceMaterial('#ff8a42','#fff7d8',2.15));
+  crownB.name=`${NAME}-crown-b`;crownB.rotation.set(.34,1.08,.9);crownB.scale.set(.98,1.08,1.04);star.add(crownB);
   const masts=observatoryMastMesh();rockRoot.add(masts);objects=[crownA,crownB,masts];
 }
 function hookQuality(){const api=window.WarpSim;if(qualityHooked||!api||typeof api.setQuality!=='function')return;originalSetQuality=api.setQuality.bind(api);qualityWrapper=mode=>{const value=originalSetQuality(mode);queueMicrotask(sync);return value};api.setQuality=qualityWrapper;qualityHooked=true}
@@ -88,7 +89,7 @@ function sync(){
   const safe=state.exploring&&!state.flying&&!state.contextLost,high=safe&&state.qualityMode==='high'&&state.current==='ORION';
   if(!high&&objects.length)disposeOwn();if(high&&star&&rockRoot&&!objects.length)build();for(const object of objects)object.visible=high;
   const active=!!(high&&objects.length===3),foregroundDepthLead=active?(PROFILE.rockCenter.z+mastDepth.max-PROFILE.starCenter.z):0;
-  lastSnapshot={active,target:state.current,quality:state.qualityMode,objects:objects.length,triangles:active?measuredTriangleCount():0,budgetTriangles:active?PROFILE.triangles:0,drawCalls:active?PROFILE.drawCalls:0,captured:!!(star&&rockRoot),captureCount,visualPass:VISUAL_PASS,observatoryMasts:active?PROFILE.observatoryMasts:0,mastDepthSpan:active?Number(mastDepth.span.toFixed(2)):0,mastDepthBudget:PROFILE.mastDepthBudget,foregroundDepthLead:active?Number(foregroundDepthLead.toFixed(2)):0,foregroundLeadBudget:PROFILE.foregroundLeadBudget,mastSilhouetteSpan:active?Number(mastSilhouette.spanY.toFixed(2)):0,mastSilhouetteSpanMin:PROFILE.mastSilhouetteSpanMin,mastSilhouetteBiasX:active?Number(mastSilhouette.minX.toFixed(2)):0,mastSilhouetteBiasXMin:PROFILE.mastSilhouetteBiasXMin,mastHeightMin:active?Number(mastSilhouette.minHeight.toFixed(2)):0,mastHeightMax:active?Number(mastSilhouette.maxHeight.toFixed(2)):0,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)}
+  lastSnapshot={active,target:state.current,quality:state.qualityMode,objects:objects.length,triangles:active?measuredTriangleCount():0,budgetTriangles:active?PROFILE.triangles:0,drawCalls:active?PROFILE.drawCalls:0,captured:!!(star&&rockRoot),captureCount,visualPass:VISUAL_PASS,crownTreatment:CROWN_TREATMENT,observatoryMasts:active?PROFILE.observatoryMasts:0,mastDepthSpan:active?Number(mastDepth.span.toFixed(2)):0,mastDepthBudget:PROFILE.mastDepthBudget,foregroundDepthLead:active?Number(foregroundDepthLead.toFixed(2)):0,foregroundLeadBudget:PROFILE.foregroundLeadBudget,mastSilhouetteSpan:active?Number(mastSilhouette.spanY.toFixed(2)):0,mastSilhouetteSpanMin:PROFILE.mastSilhouetteSpanMin,mastSilhouetteBiasX:active?Number(mastSilhouette.minX.toFixed(2)):0,mastSilhouetteBiasXMin:PROFILE.mastSilhouetteBiasXMin,mastHeightMin:active?Number(mastSilhouette.minHeight.toFixed(2)):0,mastHeightMax:active?Number(mastSilhouette.maxHeight.toFixed(2)):0,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)}
 }
 
 hookSceneConstruction();
