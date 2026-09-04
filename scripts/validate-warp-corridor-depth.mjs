@@ -18,12 +18,18 @@ assert.match(source,/root\.append\(horizon,left,right,rungs,near\)/,'runtime mus
 assert.match(source,/approach\.append\(far,mid,near\)/,'runtime must mount exactly three bounded approach-depth planes');
 assert.match(source,/corridorDepthHorizon/);assert.match(source,/corridorDepthRailLeft/);assert.match(source,/corridorDepthRailRight/);assert.match(source,/corridorDepthRungs/);assert.match(source,/corridorDepthNear/);
 assert.match(source,/approachDepthFar/);assert.match(source,/approachDepthMid/);assert.match(source,/approachDepthNear/);
+assert.match(source,/#journeyApproachDepth::before,#journeyApproachDepth::after/,'v3 must add the bounded shockfront as pseudo-elements without extra DOM children');
+assert.match(source,/#journeyAtmosphere\[data-phase="warpExit"\] #journeyApproachDepth::before\{opacity:\.46;transform:[^}]*scale\(\.5\)\}/,'warp exit must reveal a compact outer shockfront');
+assert.match(source,/#journeyAtmosphere\[data-phase="decelerate"\] #journeyApproachDepth::before\{opacity:\.36;transform:[^}]*scale\(\.84\)\}/,'deceleration must expand the outer shockfront');
+assert.match(source,/#journeyAtmosphere\[data-phase="approach"\] #journeyApproachDepth::before\{opacity:\.24;transform:[^}]*scale\(1\.12\)\}/,'approach must expand and soften the outer shockfront');
+assert.match(source,/#journeyAtmosphere\[data-phase="observe"\] #journeyApproachDepth::before,#journeyAtmosphere\[data-phase="observe"\] #journeyApproachDepth::after\{opacity:0;/,'shockfront must fully clear before final observation');
 for(const id of ['SOL>LUNA','SOL>SIRIUS','SOL>PROX','LUNA>VEGA','LUNA>PROX','VEGA>CYG','CYG>ORION','TAU>SIRIUS','SIRIUS>PROX'])assert.ok(source.includes(`data-corridor=\"${id}\"`),`${id} must define corridor perspective orientation`);
 for(const id of ['SOL','LUNA','VEGA','CYG','ORION','TAU','SIRIUS','PROX'])assert.ok(source.includes(`data-system=\"${id}\"`),`${id} must define a destination-specific approach-depth anchor`);
 for(const phase of ['warpEntry','warp','warpExit','decelerate','approach','observe'])assert.ok(source.includes(`data-phase=\"${phase}\"`),`${phase} must have an explicit depth visibility contract`);
 assert.match(source,/#journeyAtmosphere\[data-phase="approach"\] #journeyApproachDepth\{opacity:\.58\}/,'approach phase must make the depth bridge visibly active');
 assert.match(source,/#journeyAtmosphere\[data-phase="observe"\] #journeyApproachDepth\{opacity:0\}/,'depth bridge must clear before final observation');
-assert.match(source,/@media \(prefers-reduced-motion:reduce\)/,'must support reduced motion');
+assert.match(source,/@media \(max-width:520px\)[\s\S]*#journeyApproachDepth::before\{width:clamp\(196px,78vw,304px\)/,'phone layout must bound shockfront width instead of allowing unbounded clipping');
+assert.match(source,/@media \(prefers-reduced-motion:reduce\)[\s\S]*#journeyApproachDepth::before,#journeyApproachDepth::after/,'reduced-motion contract must include the shockfront');
 assert.match(source,/MutationObserver/,'mount must be event-driven when Journey Atmosphere loads later');
 assert.doesNotMatch(source,/setInterval|setTimeout|requestAnimationFrame|localStorage|sessionStorage|indexedDB|\bfetch\s*\(|XMLHttpRequest|WebSocket|\bTHREE\b|new WebGLRenderer/,'must not add timers, render-loop, persistence, network or Three.js authority');
 assert.doesNotMatch(source,/filter\s*:|backdrop-filter/,'must avoid filter/backdrop-filter fill-rate cost');
@@ -31,7 +37,7 @@ assert.doesNotMatch(source,/WarpSim\.(select|launch|jumpTo|abort)|Dijkstra|MAX_L
 assert.ok(loader.includes("import('./journey-corridor-depth.js').catch(()=>{})"),'existing bootstrap must load journey depth module');
 assert.ok(sw.includes("'./journey-corridor-depth.js'"),'offline CORE must include journey depth module');
 assert.ok(pkg.includes('validate-warp-corridor-depth.mjs')&&pkg.includes('validate-warp-corridor-depth-browser.mjs'),'npm run check must include focused static and browser depth validation');
-assert.ok(doc.includes('Warp-to-Approach Depth Bridge')&&doc.includes('Completion Signal'),'SOT must define the expanded named vertical slice and completion signal');
+assert.ok(doc.includes('Warp Exit Shockfront')&&doc.includes('Vertical Slice v3')&&doc.includes('Completion Signal'),'SOT must define the named v3 shockfront vertical slice and completion signal');
 assert.ok(existsSync('docs/WARP_CORRIDOR_DEPTH.md'));
 
 class ClassList{constructor(){this.s=new Set()}add(...v){v.forEach(x=>this.s.add(x))}contains(v){return this.s.has(v)}}
@@ -62,7 +68,7 @@ assert.ok(api,'must expose bounded diagnostic API');
 assert.equal(api.corridors().length,9,'diagnostic API must expose nine corridors');
 assert.equal(api.systems().length,8,'diagnostic API must expose eight approach systems');
 assert.equal(document.querySelector('#journeyCorridorDepth')?.children.length,5,'runtime corridor mount must contain exactly five children');
-assert.equal(document.querySelector('#journeyApproachDepth')?.children.length,3,'runtime approach mount must contain exactly three children');
+assert.equal(document.querySelector('#journeyApproachDepth')?.children.length,3,'runtime approach mount must contain exactly three children despite pseudo-element shockfronts');
 assert.deepEqual(api.snapshot(),{mounted:true,elements:5,phase:'warp',corridor:'SOL>LUNA',active:true});
 assert.deepEqual(api.approachSnapshot(),{mounted:true,elements:3,phase:'warp',system:'LUNA',active:false});
 atmosphere.setAttribute('data-phase','approach');
@@ -74,4 +80,4 @@ app.classList.s.delete('journeyAtmosphereActive');atmosphere.setAttribute('data-
 assert.equal(api.snapshot().active,false,'inactive Journey Atmosphere must fail closed for corridor depth');
 assert.equal(api.approachSnapshot().active,false,'inactive Journey Atmosphere must fail closed for approach depth');
 
-console.log('Warp Corridor + Approach Depth: focused checks passed');
+console.log('Warp Corridor + Approach Depth v3: focused checks passed');
