@@ -21,6 +21,19 @@ function ensureStyle(){
   --depth-tilt:0deg;--depth-shift:0vw;--depth-skew:0deg;
   transition:opacity .24s ease,transform .42s cubic-bezier(.2,.7,.2,1)
 }
+#journeyCorridorDepth::before,#journeyCorridorDepth::after{
+  content:"";position:absolute;top:20%;bottom:-16%;width:56%;pointer-events:none;opacity:0;
+  will-change:transform,opacity;transform-origin:50% 18%;
+  clip-path:polygon(0 8%,100% 32%,100% 70%,0 100%);
+  background:repeating-linear-gradient(112deg,transparent 0 9.4%,rgba(var(--journey-alt-rgb),.11) 9.7% 10.02%,transparent 10.3% 17.2%);
+  transform:translate3d(-3vw,-2vh,0) rotate(var(--depth-tilt)) skewX(var(--depth-skew)) scale(.94,.88)
+}
+#journeyCorridorDepth::before{left:-9%}
+#journeyCorridorDepth::after{
+  right:-9%;clip-path:polygon(100% 8%,0 32%,0 70%,100% 100%);
+  background:repeating-linear-gradient(68deg,transparent 0 10.6%,rgba(var(--journey-rgb),.1) 10.9% 11.22%,transparent 11.5% 19.4%);
+  transform:translate3d(3vw,-1vh,0) rotate(var(--depth-tilt)) skewX(var(--depth-skew)) scale(.9,.82)
+}
 #journeyCorridorDepth span{position:absolute;display:block;pointer-events:none;will-change:transform,opacity}
 #journeyCorridorDepth .corridorDepthHorizon{
   left:50%;top:45%;width:clamp(28px,9vw,74px);height:clamp(28px,9vw,74px);
@@ -63,9 +76,19 @@ function ensureStyle(){
 #journeyAtmosphere[data-phase="decelerate"] #journeyCorridorDepth,
 #journeyAtmosphere[data-phase="approach"] #journeyCorridorDepth,
 #journeyAtmosphere[data-phase="observe"] #journeyCorridorDepth{opacity:0;transform:scale(1.24)}
+#journeyAtmosphere[data-phase="warpEntry"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="warpEntry"] #journeyCorridorDepth::after{opacity:.09}
+#journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::after{opacity:.32}
+#journeyAtmosphere[data-phase="warpExit"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="warpExit"] #journeyCorridorDepth::after{opacity:.12}
+#journeyAtmosphere[data-phase="decelerate"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="decelerate"] #journeyCorridorDepth::after,
+#journeyAtmosphere[data-phase="approach"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="approach"] #journeyCorridorDepth::after,
+#journeyAtmosphere[data-phase="observe"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="observe"] #journeyCorridorDepth::after{opacity:0}
+#journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::before{animation:corridorDepthStarflowLeft .78s linear infinite alternate}
+#journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::after{animation:corridorDepthStarflowRight 1.08s linear infinite alternate}
 #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth .corridorDepthRungs{animation:corridorDepthRush 1.65s linear infinite}
 #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth .corridorDepthHorizon{animation:corridorDepthHorizon 2.8s ease-in-out infinite alternate}
 #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth .corridorDepthNear{animation:corridorDepthNear 2.2s ease-in-out infinite alternate}
+@keyframes corridorDepthStarflowLeft{from{transform:translate3d(-5vw,-3vh,0) rotate(var(--depth-tilt)) skewX(var(--depth-skew)) scale(.92,.84)}to{transform:translate3d(3vw,5vh,0) rotate(var(--depth-tilt)) skewX(var(--depth-skew)) scale(1.08,1.15)}}
+@keyframes corridorDepthStarflowRight{from{transform:translate3d(5vw,-2vh,0) rotate(var(--depth-tilt)) skewX(var(--depth-skew)) scale(.9,.82)}to{transform:translate3d(-3vw,6vh,0) rotate(var(--depth-tilt)) skewX(var(--depth-skew)) scale(1.1,1.18)}}
 @keyframes corridorDepthRush{from{background-position:0 -15vh}to{background-position:0 22vh}}
 @keyframes corridorDepthHorizon{from{opacity:.34;transform:translate(-50%,-50%) rotate(var(--depth-tilt)) scale(.88)}to{opacity:.62;transform:translate(-50%,-50%) rotate(var(--depth-tilt)) scale(1.1)}}
 @keyframes corridorDepthNear{from{opacity:.34;transform:translate3d(-1.5vw,0,0) skewX(var(--depth-skew)) rotate(var(--depth-tilt))}to{opacity:.58;transform:translate3d(1.5vw,-1.5vh,0) skewX(var(--depth-skew)) rotate(var(--depth-tilt))}}
@@ -151,6 +174,8 @@ function ensureStyle(){
 #journeyAtmosphere[data-phase="observe"] #journeyApproachDepth .approachDepthNear{transform:translate(-50%,-50%) scale(1.38)}
 
 @media (max-width:520px){
+  #journeyCorridorDepth::before,#journeyCorridorDepth::after{top:22%;bottom:-12%;width:52%}
+  #journeyCorridorDepth::before{left:-7%}#journeyCorridorDepth::after{right:-7%}
   #journeyCorridorDepth .corridorDepthRungs{left:3%;right:3%;bottom:-1%}
   #journeyCorridorDepth .corridorDepthNear{left:4%;right:4%;bottom:5%;height:21%}
   #journeyCorridorDepth .corridorDepthRail{bottom:-8%}
@@ -161,8 +186,9 @@ function ensureStyle(){
   #journeyApproachDepth .approachDepthNear{width:clamp(72px,27vw,112px);height:clamp(52px,20vw,84px)}
 }
 @media (prefers-reduced-motion:reduce){
-  #journeyCorridorDepth,#journeyCorridorDepth span,#journeyApproachDepth,#journeyApproachDepth span,#journeyApproachDepth::before,#journeyApproachDepth::after{animation:none!important;transition:none!important}
+  #journeyCorridorDepth,#journeyCorridorDepth::before,#journeyCorridorDepth::after,#journeyCorridorDepth span,#journeyApproachDepth,#journeyApproachDepth span,#journeyApproachDepth::before,#journeyApproachDepth::after{animation:none!important;transition:none!important}
   #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth{opacity:.54;transform:scale(1)}
+  #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::after{opacity:.18}
   #journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.48}
 }
 `;
