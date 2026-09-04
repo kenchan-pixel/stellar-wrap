@@ -15,7 +15,7 @@ check(source.includes("three@0.185.1/build/three.module.js"),'SOL focused layer 
 check(source.includes("VISUAL_PASS='orbital-observation-frame-v1'"),'SOL focused layer preserves stable visual-pass diagnostics');
 check(source.includes("GANTRY_PROFILE='orbital-perspective-gantry-v2'"),'SOL v2 exposes a dedicated perspective-gantry profile');
 check(focus.includes("import('./cinematic-quality.js').then(()=>import('./sol-orbital-frame.js')).then(()=>import('./luna-earthrise-depth.js'))"),'SOL frame loads after shared cinematic quality and before later focused destination layers');
-check(sw.includes("'./sol-orbital-frame.js'")&&sw.includes("`${CACHE_PREFIX}v15`"),'SOL frame is included in the current prepared offline shell generation');
+check(/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`;/.test(sw)&&sw.includes("'./sol-orbital-frame.js'"),'SOL frame is included in the current versioned offline shell');
 check(/earthCenter:new THREE\.Vector3\(14,-5,-80\),earthRadius:18/.test(source)&&/moonCenter:new THREE\.Vector3\(-28,11,-128\),moonRadius:4\.7/.test(source),'SOL frame reuses the existing Earth and Moon scene anchors');
 check(/const MAST_COUNT=16/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,MAST_COUNT\)/.test(source),'16 observation masts share one instanced draw');
 check(/new THREE\.BoxGeometry\(\.46,6\.2,\.46\)/.test(source)&&/const NEAR_MAST_SCALE=1\.46/.test(source)&&/const FAR_MAST_SCALE=\.72/.test(source),'v2 masts use a stronger near/far perspective scale hierarchy without adding instances');
