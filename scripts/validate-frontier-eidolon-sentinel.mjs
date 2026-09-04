@@ -32,12 +32,86 @@ function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stab
 async function freePort(){return await new Promise((resolve,reject)=>{const server=createTcpServer();server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const a=server.address(),port=typeof a==='object'&&a?a.port:0;server.close(error=>error?reject(error):resolve(port))})})}
 async function waitUntil(fn,label,timeout=25000){const end=Date.now()+timeout;let last;while(Date.now()<end){try{const value=await fn();if(value)return value}catch(error){last=error}await sleep(80)}throw new Error(`Timed out waiting for ${label}${last?`: ${last.message}`:''}`)}
 async function stop(child){if(!child||child.exitCode!==null)return;const done=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');await Promise.race([done,sleep(700)]);if(child.exitCode===null){child.kill('SIGKILL');await Promise.race([done,sleep(900)])}}
+async function cleanupProfile(profile,remove=rmSync){
+  if(!profile)return;
+  for(let attempt=0;attempt<4;attempt++){
+    try{remove(profile,{recursive:true,force:true});return}
+    catch(error){
+      if(!['ENOTEMPTY','EBUSY','EPERM','ENOENT'].includes(error?.code))throw error;
+      if(attempt===3){console.warn(`Chrome profile cleanup race ignored: ${error.code}`);return}
+      await sleep(80*(attempt+1));
+    }
+  }
+}
+{
+  let attempts=0;
+  await cleanupProfile('cleanup-regression-profile',()=>{attempts++;if(attempts<3){const error=new Error('simulated Chrome profile flush race');error.code='ENOTEMPTY';throw error}});
+  assert.equal(attempts,3,'cleanup regression: transient ENOTEMPTY must be retried without failing the browser gate');
+}
 async function waitHttp(url){return waitUntil(async()=>{const response=await fetch(url,{cache:'no-store'});return response.ok},`server ${url}`,9000)}
 class Cdp{constructor(url){this.url=url;this.id=0;this.pending=new Map();this.events=new Map()}async connect(){this.ws=new WebSocket(this.url);await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('CDP connect timeout')),8000);this.ws.addEventListener('open',()=>{clearTimeout(timer);resolve()},{once:true});this.ws.addEventListener('error',event=>{clearTimeout(timer);reject(event.error||new Error('CDP error'))},{once:true})});this.ws.addEventListener('message',event=>{const message=JSON.parse(String(event.data));if(!message.id){const queue=this.events.get(message.method)||[];this.events.delete(message.method);queue.forEach(waiter=>{clearTimeout(waiter.timer);waiter.resolve(message.params||{})});return}const pending=this.pending.get(message.id);if(!pending)return;this.pending.delete(message.id);clearTimeout(pending.timer);message.error?pending.reject(new Error(message.error.message)):pending.resolve(message.result||{})})}send(method,params={},timeout=15000){const id=++this.id;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP timeout ${method}`))},timeout);this.pending.set(id,{resolve,reject,timer});this.ws.send(JSON.stringify({id,method,params}))})}waitEvent(method,timeout=15000){return new Promise((resolve,reject)=>{const waiter={resolve,reject,timer:setTimeout(()=>reject(new Error(`event timeout ${method}`)),timeout)};const queue=this.events.get(method)||[];queue.push(waiter);this.events.set(method,queue)})}close(){try{this.ws?.close()}catch{}}}
 async function evalJs(cdp,expression,awaitPromise=false){const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result?.value}
 async function screenshot(cdp,name){mkdirSync(EVIDENCE_DIR,{recursive:true});const result=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const data=Buffer.from(result.data,'base64');writeFileSync(join(EVIDENCE_DIR,name),data);return data.length}
 async function launch(chrome,width,height){const profile=mkdtempSync(join(tmpdir(),`stellar-eidolon-sentinel-${width}-`));const port=await freePort();let stderr='';const browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--mute-audio','--use-angle=swiftshader','--enable-unsafe-swiftshader',`--remote-debugging-port=${port}`,`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','pipe']});browser.stderr?.on('data',chunk=>stderr=(stderr+String(chunk)).slice(-3000));const target=await waitUntil(async()=>{if(browser.exitCode!==null)throw new Error(stderr||`Chrome exited ${browser.exitCode}`);try{const response=await fetch(`http://127.0.0.1:${port}/json/list`),targets=await response.json();return targets.find(item=>item.type==='page'&&item.webSocketDebuggerUrl)||null}catch{return null}},'Chrome target');const cdp=new Cdp(target.webSocketDebuggerUrl);await cdp.connect();await cdp.send('Page.enable');await cdp.send('Runtime.enable');await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true,screenWidth:width,screenHeight:height});return{profile,browser,cdp}}
 
-async function inspect(chrome,base,width,height){const viewport=`${width}x${height}`;let profile,browser,cdp;try{({profile,browser,cdp}=await launch(chrome,width,height));const loaded=cdp.waitEvent('Page.loadEventFired',15000);await cdp.send('Page.navigate',{url:`${base}frontier-eidolon.html?test=1`});await loaded;await waitUntil(()=>evalJs(cdp,"document.querySelector('#eidolonApp')?.classList.contains('ready')&&!!window.WarpFrontierEidolon"),'EIDOLON runtime ready',30000);await evalJs(cdp,"WarpFrontierEidolon.skipArrival();WarpFrontierEidolon.applyVista('overview');true");await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().phase==='explore'&&WarpFrontierEidolon.state().vista==='overview'"),'EIDOLON overview');await sleep(350);const before=await evalJs(cdp,'WarpFrontierEidolon.state()');assert.equal(before.visualId,'EIDOLON_SENTINEL_DEPTH_V3');assert.equal(before.detailProfile,'EIDOLON_RIFT_V2');assert.equal(before.sentinelProfile,'EIDOLON_SENTINEL_DEPTH_V3');assert.equal(before.sentinelRibs,18);assert.ok(Math.abs(before.sentinelDepthSpan-7.6)<.001);assert.equal(before.sentinelScaleRatio,1.405);assert.equal(before.memoryRibs,18);assert.equal(before.sigilNodes,24);assert.equal(before.riftSegments,48);assert.equal(before.rift,true);assert.equal(before.drawCalls,15,`${viewport} v3 must retain the existing 15-draw runtime budget`);assert.equal(before.triangles,4492,`${viewport} v3 must retain the existing 4,492-triangle runtime budget`);assert.ok(before.pixelRatio<=1.25);const shotBytes=await screenshot(cdp,`frontier-eidolon-sentinel-${viewport}.png`);assert.ok(shotBytes>12000,`${viewport} screenshot must contain rendered scene evidence`);const capture=await evalJs(cdp,'WarpFrontierEidolon.capture(false)',true);assert.equal(capture.settled,true);assert.ok(capture.width>before.backingWidth&&capture.height>before.backingHeight,`${viewport} capture must temporarily raise backing resolution`);await sleep(120);const after=await evalJs(cdp,'WarpFrontierEidolon.state()');assert.equal(after.visualId,'EIDOLON_SENTINEL_DEPTH_V3');assert.equal(after.sentinelDepthSpan,7.6);assert.equal(after.sentinelScaleRatio,1.405);assert.equal(after.drawCalls,15);assert.equal(after.triangles,4492);assert.equal(after.backingWidth,before.backingWidth);assert.equal(after.backingHeight,before.backingHeight);assert.equal(after.pixelRatio,before.pixelRatio);assert.equal(after.vista,'overview');console.log(`EIDOLON Relic Sentinel Depth v3 ${viewport}: ${before.drawCalls} draws / ${before.triangles} tris / ${before.sentinelRibs} ribs / depth ${before.sentinelDepthSpan} / scale ${before.sentinelScaleRatio}x; capture ${capture.width}x${capture.height}; restored DPR ${after.pixelRatio}; screenshot ${shotBytes} bytes`)}finally{cdp?.close();await stop(browser);if(profile)rmSync(profile,{recursive:true,force:true})}}
+async function inspect(chrome,base,width,height){
+  const viewport=`${width}x${height}`;let profile,browser,cdp;
+  try{
+    ({profile,browser,cdp}=await launch(chrome,width,height));
+    const loaded=cdp.waitEvent('Page.loadEventFired',15000);
+    await cdp.send('Page.navigate',{url:`${base}frontier-eidolon.html?test=1`});
+    await loaded;
+    await waitUntil(()=>evalJs(cdp,"document.querySelector('#eidolonApp')?.classList.contains('ready')&&!!window.WarpFrontierEidolon"),'EIDOLON runtime ready',30000);
+    await evalJs(cdp,"WarpFrontierEidolon.skipArrival();WarpFrontierEidolon.applyVista('overview');true");
+    await waitUntil(()=>evalJs(cdp,"WarpFrontierEidolon.state().phase==='explore'&&WarpFrontierEidolon.state().vista==='overview'"),'EIDOLON overview');
+    await sleep(350);
+    const before=await evalJs(cdp,'WarpFrontierEidolon.state()');
+    assert.equal(before.visualId,'EIDOLON_SENTINEL_DEPTH_V3');
+    assert.equal(before.detailProfile,'EIDOLON_RIFT_V2');
+    assert.equal(before.sentinelProfile,'EIDOLON_SENTINEL_DEPTH_V3');
+    assert.equal(before.sentinelRibs,18);
+    assert.ok(Math.abs(before.sentinelDepthSpan-7.6)<.001);
+    assert.equal(before.sentinelScaleRatio,1.405);
+    assert.equal(before.memoryRibs,18);
+    assert.equal(before.sigilNodes,24);
+    assert.equal(before.riftSegments,48);
+    assert.equal(before.rift,true);
+    assert.equal(before.drawCalls,15,`${viewport} v3 must retain the existing 15-draw runtime budget`);
+    assert.equal(before.triangles,4492,`${viewport} v3 must retain the existing 4,492-triangle runtime budget`);
+    assert.ok(before.pixelRatio<=1.25);
+    const shotBytes=await screenshot(cdp,`frontier-eidolon-sentinel-${viewport}.png`);
+    assert.ok(shotBytes>12000,`${viewport} screenshot must contain rendered scene evidence`);
+    const capture=await evalJs(cdp,'WarpFrontierEidolon.capture(false)',true);
+    assert.equal(capture.settled,true);
+    assert.ok(capture.width>before.backingWidth&&capture.height>before.backingHeight,`${viewport} capture must temporarily raise backing resolution`);
+    await sleep(120);
+    const after=await evalJs(cdp,'WarpFrontierEidolon.state()');
+    assert.equal(after.visualId,'EIDOLON_SENTINEL_DEPTH_V3');
+    assert.equal(after.sentinelDepthSpan,7.6);
+    assert.equal(after.sentinelScaleRatio,1.405);
+    assert.equal(after.drawCalls,15);
+    assert.equal(after.triangles,4492);
+    assert.equal(after.backingWidth,before.backingWidth);
+    assert.equal(after.backingHeight,before.backingHeight);
+    assert.equal(after.pixelRatio,before.pixelRatio);
+    assert.equal(after.vista,'overview');
+    console.log(`EIDOLON Relic Sentinel Depth v3 ${viewport}: ${before.drawCalls} draws / ${before.triangles} tris / ${before.sentinelRibs} ribs / depth ${before.sentinelDepthSpan} / scale ${before.sentinelScaleRatio}x; capture ${capture.width}x${capture.height}; restored DPR ${after.pixelRatio}; screenshot ${shotBytes} bytes`);
+  }finally{
+    cdp?.close();
+    await stop(browser);
+    await cleanupProfile(profile);
+  }
+}
 
-const chrome=findChrome();assert.ok(chrome,'Chrome/Chromium is required for EIDOLON v3 production-browser acceptance');const serverPort=await freePort();const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});try{const base=`http://127.0.0.1:${serverPort}/`;await waitHttp(base);for(const [width,height] of [[390,844],[360,800]])await inspect(chrome,base,width,height);console.log('EIDOLON Relic Sentinel Depth v3 browser validation: 2/2 phone viewports passed')}finally{await stop(server)}
+const chrome=findChrome();
+assert.ok(chrome,'Chrome/Chromium is required for EIDOLON v3 production-browser acceptance');
+const serverPort=await freePort();
+const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
+try{
+  const base=`http://127.0.0.1:${serverPort}/`;
+  await waitHttp(base);
+  for(const [width,height] of [[390,844],[360,800]])await inspect(chrome,base,width,height);
+  console.log('EIDOLON Relic Sentinel Depth v3 browser validation: 2/2 phone viewports passed');
+}finally{
+  await stop(server);
+}
