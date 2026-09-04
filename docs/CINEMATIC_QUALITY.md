@@ -177,19 +177,22 @@ The 12,992 figure is the actual indexed `BufferGeometry` triangle count of the f
 
 ### PROX Starport Transit Lattice extension
 
-A focused High-only extension makes the starport read as an active industrial orbital structure:
+A focused High-only extension makes the starport read as an active industrial orbital traffic structure:
 
 - two partial-torus traffic lanes attach to the existing 20-unit outer starport torus and inherit its core rotation;
+- the two already-budgeted lane meshes now perform opposing far↔near geometry sweeps, adding about **3.5 local units** of lane depth and bounded **0.94 → 1.08** perspective scale without adding meshes or per-frame geometry work;
 - **36** bounded cyan/amber approach beacons create layered traffic depth without another animation loop;
+- one **18-beam InstancedMesh** forms the foreground docking gantry and keeps all beams in one draw;
 - direct Photo Capture is synchronized from the existing backing-canvas quality change so Standard → High capture includes the lattice before PNG extraction.
 
 Extension budget:
 
-- additional draw calls: **3**
-- additional mesh triangles: **2,304**
+- additional draw calls: **4**
+- additional mesh triangles: **2,520**
 - additional points: **36**
+- instanced gantry beams: **18**
 
-Therefore the PROX destination-specific High enhancement above the untouched core scene is bounded to **7 draw calls** and **15,296 mesh triangles** across the shared cinematic layer plus this extension. Standard／Low own zero objects from both layers after disposal. Exact extension acceptance is recorded in `docs/PROX_STARPORT_TRANSIT_LATTICE.md`.
+Therefore the PROX destination-specific High enhancement above the untouched core scene is bounded to **8 draw calls** and **15,512 mesh triangles** across the shared cinematic layer plus this extension. Standard／Low own zero objects from both layers after disposal. Exact extension acceptance is recorded in `docs/PROX_STARPORT_TRANSIT_LATTICE.md`.
 
 ## Capture handoff
 

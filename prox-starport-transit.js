@@ -3,9 +3,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 const NAME='stellar-prox-starport-transit';
 const VISUAL_PASS='starport-transit-lattice-v2';
 const SAMPLE_MS=250;
-const PROFILE={starportCenter:new THREE.Vector3(15,-6,-82),starportRadius:20,starportTube:.42,triangles:2520,drawCalls:4,beacons:36,gantryBeams:18,gantryFrontZ:6.2,gantryBackZ:2.8,depthBudget:8.2};
+const PROFILE={starportCenter:new THREE.Vector3(15,-6,-82),starportRadius:20,starportTube:.42,triangles:2520,drawCalls:4,beacons:36,gantryBeams:18,gantryFrontZ:6.2,gantryBackZ:2.8,depthBudget:8.2,laneDepthAmplitude:1.62,laneScaleFar:.94,laneScaleNear:1.08,laneDepthBudget:3.6};
 const approx=(a,b,t=.25)=>Math.abs(a-b)<=t;
-let starport=null,objects=[],captureCount=0,lastState=null,beaconDepth={min:0,max:0,span:0};
+let starport=null,objects=[],captureCount=0,lastState=null,beaconDepth={min:0,max:0,span:0},laneDepth={min:0,max:0,span:0,scaleMin:0,scaleMax:0,scaleRatio:0};
 const previousAdd=THREE.Object3D.prototype.add;
 
 function measureTriangles(list=objects){
@@ -18,6 +18,7 @@ function measureTriangles(list=objects){
   }
   return Math.round(triangles);
 }
+function clearLaneDepth(){laneDepth={min:0,max:0,span:0,scaleMin:0,scaleMax:0,scaleRatio:0}}
 function disposeOwn(){
   for(const object of objects){
     object.removeFromParent();
@@ -25,7 +26,7 @@ function disposeOwn(){
     const materials=Array.isArray(object.material)?object.material:[object.material];
     for(const material of materials)material?.dispose?.();
   }
-  objects=[];
+  objects=[];clearLaneDepth();
 }
 function candidate(object){
   if(!object?.isMesh||object.geometry?.type!=='TorusGeometry')return false;
@@ -77,6 +78,19 @@ function beaconGeometry(){
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
   return geometry;
 }
+function deformLaneGeometry(geometry,direction=1){
+  const position=geometry.attributes.position,uv=geometry.attributes.uv;
+  let minZ=Infinity,maxZ=-Infinity,minScale=Infinity,maxScale=-Infinity;
+  for(let i=0;i<position.count;i++){
+    const u=uv.getX(i),sweep=Math.sin((u-.5)*Math.PI)*direction;
+    const depth=sweep*PROFILE.laneDepthAmplitude;
+    const scale=PROFILE.laneScaleFar+((sweep+1)*.5)*(PROFILE.laneScaleNear-PROFILE.laneScaleFar);
+    position.setXYZ(i,position.getX(i)*scale,position.getY(i)*scale,position.getZ(i)+depth);
+    minZ=Math.min(minZ,position.getZ(i));maxZ=Math.max(maxZ,position.getZ(i));minScale=Math.min(minScale,scale);maxScale=Math.max(maxScale,scale);
+  }
+  position.needsUpdate=true;geometry.computeBoundingSphere();geometry.computeBoundingBox();
+  return{minZ,maxZ,scaleMin:minScale,scaleMax:maxScale};
+}
 function gantrySegments(){
   const near=[new THREE.Vector3(-13,-17,PROFILE.gantryFrontZ),new THREE.Vector3(13,-17,PROFILE.gantryFrontZ),new THREE.Vector3(11,-10,PROFILE.gantryFrontZ),new THREE.Vector3(-11,-10,PROFILE.gantryFrontZ)];
   const mid=[new THREE.Vector3(-11,-16,PROFILE.gantryBackZ),new THREE.Vector3(11,-16,PROFILE.gantryBackZ),new THREE.Vector3(9,-9,PROFILE.gantryBackZ),new THREE.Vector3(-9,-9,PROFILE.gantryBackZ)];
@@ -109,9 +123,13 @@ function gantryMesh(){
 function build(){
   if(!starport||objects.length)return;
   const outer=new THREE.Mesh(new THREE.TorusGeometry(23.2,.14,6,96,Math.PI*1.36),laneMaterial(.32,'#7beeff','#fff2cf'));
-  outer.name=`${NAME}-outer-transit-lane`;outer.rotation.set(.22,-.12,.44);outer.position.z=.18;
+  const outerDepth=deformLaneGeometry(outer.geometry,1);
+  outer.name=`${NAME}-outer-transit-lane`;outer.rotation.set(.22,-.12,.44);
   const crossing=new THREE.Mesh(new THREE.TorusGeometry(25.8,.11,6,96,Math.PI*1.08),laneMaterial(2.3,'#ffb062','#e8fbff'));
-  crossing.name=`${NAME}-crossing-transit-lane`;crossing.rotation.set(-.38,.34,-.56);crossing.position.z=-.16;
+  const crossingDepth=deformLaneGeometry(crossing.geometry,-1);
+  crossing.name=`${NAME}-crossing-transit-lane`;crossing.rotation.set(-.38,.34,-.56);
+  laneDepth={min:Math.min(outerDepth.minZ,crossingDepth.minZ),max:Math.max(outerDepth.maxZ,crossingDepth.maxZ),span:0,scaleMin:Math.min(outerDepth.scaleMin,crossingDepth.scaleMin),scaleMax:Math.max(outerDepth.scaleMax,crossingDepth.scaleMax),scaleRatio:0};
+  laneDepth.span=laneDepth.max-laneDepth.min;laneDepth.scaleRatio=laneDepth.scaleMax/laneDepth.scaleMin;
   const beacons=new THREE.Points(beaconGeometry(),new THREE.PointsMaterial({size:.5,vertexColors:true,transparent:true,opacity:.86,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
   beacons.name=`${NAME}-approach-beacons`;beacons.rotation.set(.08,-.16,.2);
   const gantry=gantryMesh();
@@ -128,7 +146,8 @@ function sync(){
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{};
   const active=shouldRun(state)&&objects.length===4;
-  return{visualPass:VISUAL_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,gantryBeams:active?PROFILE.gantryBeams:0,beaconDepthSpan:active?beaconDepth.span:0,foregroundDepthLead:active?PROFILE.gantryFrontZ-beaconDepth.min:0,depthBudget:PROFILE.depthBudget,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
+  const trafficMin=active?Math.min(beaconDepth.min,laneDepth.min):0;
+  return{visualPass:VISUAL_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,gantryBeams:active?PROFILE.gantryBeams:0,beaconDepthSpan:active?beaconDepth.span:0,laneDepthSpan:active?laneDepth.span:0,laneScaleRatio:active?laneDepth.scaleRatio:0,laneDepthBudget:PROFILE.laneDepthBudget,foregroundDepthLead:active?PROFILE.gantryFrontZ-trafficMin:0,depthBudget:PROFILE.depthBudget,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');
