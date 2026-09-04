@@ -30,7 +30,7 @@ ok(bootstrap.includes('cacheReady&&navigator.onLine')&&bootstrap.includes('cache
 ok(!bootstrap.includes('localStorage'),'offline bootstrap adds no persistent user-data store');
 
 ok(sw.includes("const CACHE_PREFIX='stellar-wrap-shell-'"),'service worker cache is versioned');
-ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v15`"),'offline shell retains the current exploration/cinematic generation');
+ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v16`"),'offline shell retains the current exploration/capture generation');
 ok(sw.includes("three@0.185.1/build/three.module.js"),'offline cache pins the approved Three.js version');
 
 const coreMatch=sw.match(/const CORE=\[(.*?)\];/s);
@@ -38,6 +38,7 @@ ok(!!coreMatch,'service worker exposes one explicit CORE active-shell manifest')
 const corePaths=coreMatch?[...coreMatch[1].matchAll(/'(\.\/[^']*)'/g)].map(match=>match[1]):[];
 ok(corePaths.includes('./')&&corePaths.includes('./index.html'),'CORE manifest includes navigation root and active index');
 ok(corePaths.includes('./tau-ring-depth.js'),'current TAU cinematic extension participates in offline readiness');
+ok(corePaths.includes('./capture-gallery.js'),'current Capture Gallery participates in offline readiness');
 ok(new Set(corePaths).size===corePaths.length,'CORE manifest contains no duplicate entries');
 for(const path of corePaths.filter(path=>path!=='./')){
   ok(existsSync(resolve(root,path.slice(2))),`offline CORE path exists: ${path}`);
