@@ -227,6 +227,7 @@ import('./mode-gateway.js').catch(()=>{});
 import('./responsive-ui.js').catch(()=>{});
 import('./exploration-survey.js').catch(()=>{});
 import('./star-atlas.js').then(()=>render()).catch(()=>{});
+import('./capture-gallery.js').catch(()=>{});
 import('./photo-mode.js').catch(()=>{});
 import('./arrival-debrief.js').catch(()=>{});
 import('./landmark-guide.js').catch(()=>{});
