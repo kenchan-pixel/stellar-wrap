@@ -234,7 +234,9 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"(()=>{const root=document.querySelector('#journeyCorridorDepth'),atmosphere=document.querySelector('#journeyAtmosphere');return WarpSim.state().phase==='warpExit'&&atmosphere?.getAttribute('data-phase')==='warpExit'&&root&&Number(getComputedStyle(root,'::before').opacity)>=.10&&Number(getComputedStyle(root,'::after').opacity)>=.10})()"),`starflow warp-exit handoff ${viewport}`,20000);
     const exit=await evalJs(cdp,STARFLOW_EXPRESSION);
     assert.equal(exit.state.phase,'warpExit');assert.equal(exit.phase,'warpExit');assert.equal(exit.snapshot.active,true);
-    assertPeripheralLayout(exit,`${viewport} warpExit`);
+    assert.equal(exit.before.content==='none',false,`${viewport} left starflow must remain mounted through warp exit`);
+    assert.equal(exit.after.content==='none',false,`${viewport} right starflow must remain mounted through warp exit`);
+    assert.ok(exit.scrollWidth<=exit.innerWidth+1,`${viewport} warp-exit starflow must not create horizontal overflow`);
     assert.ok(exit.before.opacity>=.10&&exit.before.opacity<=.14,`${viewport} left starflow must soften during warp exit`);
     assert.ok(exit.after.opacity>=.10&&exit.after.opacity<=.14,`${viewport} right starflow must soften during warp exit`);
     assert.equal(exit.before.animationName,'none',`${viewport} left starflow motion must stop before approach`);
