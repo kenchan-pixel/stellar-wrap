@@ -28,6 +28,9 @@ jobs:
       - name: Validate source, stable baseline and route graph
         run: npm run check
 
+      - name: Validate Capture Gallery cinematic focus
+        run: node scripts/validate-capture-gallery-focus.mjs
+
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,5 +44,6 @@ jobs:
             artifacts/gallery-voyage-postcards/
             artifacts/capture-gallery/
             artifacts/capture-gallery-swipe/
+            artifacts/capture-gallery-focus/
           if-no-files-found: ignore
           retention-days: 7
