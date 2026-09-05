@@ -12,7 +12,7 @@ Make saved Real Space captures feel tactile and cinematic on a phone. While revi
 - Keep at most the latest **6** captures in the dedicated IndexedDB store.
 - Preserve destination, time, pixel dimensions, frame metadata, real thumbnails, re-save, delete continuity and contextual world-return behaviour.
 - Preserve explicit previous/next controls, Arrow Left/Right and the existing **48 px horizontal swipe navigation threshold**.
-- Preserve Cinematic Focus Review: `純影像觀看`, full-viewport stored PNG, stationary-tap chrome restore, `C` toggle and two-stage `Escape` lifecycle.
+- Preserve Cinematic Focus Review in the existing full-screen viewer: `純影像觀看`, full-viewport stored PNG, stationary-tap chrome restore, `C` toggle and two-stage `Escape` lifecycle.
 - Add **Direct Swipe Review** to the existing full-screen image stage:
   - after horizontal intent is established, the displayed PNG follows the finger up to a bounded ±76 px visual offset;
   - drag strength applies only a small bounded scale/opacity response and adds no new element or second image;
