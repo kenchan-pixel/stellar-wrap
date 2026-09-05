@@ -4,7 +4,7 @@ if(window.WarpCaptureShare)return;
 
 const STYLE_ID='captureShareStyle';
 const SYSTEM_NAMES={SOL:'地球近軌',LUNA:'月環基地',VEGA:'織女星門',CYG:'天鵝航標',ORION:'獵戶前哨',TAU:'金牛塵海',SIRIUS:'天狼中繼站',PROX:'比鄰星港'};
-let bootObserver=null,gridObserver=null,grid=null;
+let bootObserver=null,gridObserver=null,grid=null,records=new Map();
 
 function supported(){
   if(typeof navigator?.share!=='function'||typeof navigator?.canShare!=='function'||typeof File!=='function')return false;
@@ -27,14 +27,14 @@ function ensureStyle(){
 `;
   document.head.append(style);
 }
-async function recordFor(id){
-  if(!id||typeof window.WarpCaptureGallery?.list!=='function')return null;
-  try{return (await window.WarpCaptureGallery.list()).find(record=>String(record.id)===String(id))||null}catch{return null}
+async function refreshRecords(){
+  if(typeof window.WarpCaptureGallery?.list!=='function'){records=new Map();return false}
+  try{const rows=await window.WarpCaptureGallery.list();records=new Map(rows.map(record=>[String(record.id),record]));return true}catch{records=new Map();return false}
 }
 async function share(id,button=null){
   if(!supported())return{ok:false,reason:'unsupported'};
-  const record=await recordFor(id);
-  if(!record?.blob||record.blob.type!=='image/png')return{ok:false,reason:'missing'};
+  const record=records.get(String(id));
+  if(!record?.blob||record.blob.type!=='image/png')return{ok:false,reason:'not-ready'};
   const name=SYSTEM_NAMES[record.system]||record.system||'Stellar Wrap';
   const file=new File([record.blob],filename(record),{type:'image/png',lastModified:Number(record.createdAt)||Date.now()});
   let canShare=false;try{canShare=navigator.canShare({files:[file]})===true}catch{}
@@ -56,11 +56,11 @@ async function share(id,button=null){
     if(button){button.disabled=false;button.textContent=prior||'分享留影'}
   }
 }
-function decorateCard(card){
+function decorateCard(card,canShare){
   const actions=card?.querySelector('.captureGalleryActions'),id=card?.dataset.captureId;
   if(!actions||!id)return false;
   let button=actions.querySelector('.captureGalleryShare');
-  if(!supported()){button?.remove();return false}
+  if(!canShare||!records.has(String(id))){button?.remove();return false}
   if(button)return true;
   button=document.createElement('button');
   button.type='button';button.className='captureGalleryShare';button.dataset.captureShareId=id;button.textContent='分享留影';button.setAttribute('aria-label','透過系統分享此留影');
@@ -73,24 +73,22 @@ function decorate(){
   ensureStyle();
   if(grid!==host){
     gridObserver?.disconnect();grid=host;
-    gridObserver=new MutationObserver(()=>decorate());
+    gridObserver=new MutationObserver(()=>{refresh().catch(()=>{})});
     gridObserver.observe(grid,{childList:true});
   }
-  if(!supported()){
-    for(const button of host.querySelectorAll('.captureGalleryShare'))button.remove();
-    return 0;
-  }
-  let count=0;for(const card of host.querySelectorAll('.captureGalleryCard'))if(decorateCard(card))count++;
+  const canShare=supported();
+  let count=0;for(const card of host.querySelectorAll('.captureGalleryCard'))if(decorateCard(card,canShare))count++;
   return count;
 }
+async function refresh(){await refreshRecords();return decorate()}
 function boot(){
-  if(document.querySelector('#captureGalleryGrid')){decorate();return}
-  bootObserver=new MutationObserver(()=>{if(document.querySelector('#captureGalleryGrid')){decorate();bootObserver?.disconnect();bootObserver=null}});
+  if(document.querySelector('#captureGalleryGrid')){refresh().catch(()=>{});return}
+  bootObserver=new MutationObserver(()=>{if(document.querySelector('#captureGalleryGrid')){refresh().catch(()=>{});bootObserver?.disconnect();bootObserver=null}});
   bootObserver.observe(document.documentElement,{childList:true,subtree:true});
 }
 
-window.WarpCaptureShare={available:supported,share,refresh:decorate};
-addEventListener('stellarwarp:capture-change',()=>decorate());
-addEventListener('pagehide',()=>{bootObserver?.disconnect();gridObserver?.disconnect()},{once:true});
+window.WarpCaptureShare={available:supported,share,refresh};
+addEventListener('stellarwarp:capture-change',()=>{refresh().catch(()=>{})});
+addEventListener('pagehide',()=>{bootObserver?.disconnect();gridObserver?.disconnect();records.clear()},{once:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
