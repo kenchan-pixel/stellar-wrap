@@ -4,6 +4,7 @@ const NAME='stellar-sol-orbital-frame';
 const VISUAL_PASS='orbital-observation-frame-v1';
 const GANTRY_PROFILE='orbital-perspective-gantry-v2';
 const LATTICE_PROFILE='orbital-observation-lattice-v3';
+const NIGHT_PROFILE='earth-night-terminator-v4';
 const SAMPLE_MS=250;
 const BAY_COUNT=8;
 const MAST_COUNT=16;
@@ -13,18 +14,21 @@ const NEAR_MAST_SCALE=1.46;
 const FAR_MAST_SCALE=.72;
 const FRAME_START=-2.78;
 const FRAME_END=-.42;
+const SOL_STAR_LOCAL=new THREE.Vector3(-78,38,-220);
 const PROFILE={
   earthCenter:new THREE.Vector3(14,-5,-80),earthRadius:18,
   moonCenter:new THREE.Vector3(-28,11,-128),moonRadius:4.7,
-  triangles:352,drawCalls:3,bays:BAY_COUNT,masts:MAST_COUNT,lights:LIGHT_COUNT,braceSegments:BRACE_SEGMENT_COUNT,depthSpan:6.8
+  triangles:3328,drawCalls:4,bays:BAY_COUNT,masts:MAST_COUNT,lights:LIGHT_COUNT,braceSegments:BRACE_SEGMENT_COUNT,depthSpan:6.8,
+  nightTriangles:2976,nightTexture:[512,256]
 };
 const approx=(a,b,t=.24)=>Math.abs(a-b)<=t;
-let earthRoot=null,moonRoot=null,objects=[],captureCount=0,lastState=null,frameDepthRange={min:0,max:0,span:0},mastScaleRange={min:0,max:0,ratio:0};
+let earthRoot=null,earthSurface=null,moonRoot=null,objects=[],nightLayer=null,captureCount=0,lastState=null,frameDepthRange={min:0,max:0,span:0},mastScaleRange={min:0,max:0,ratio:0};
 const previousAdd=THREE.Object3D.prototype.add;
+const earthWorld=new THREE.Vector3(),sunWorld=new THREE.Vector3(),sunDirection=new THREE.Vector3(-1,0,0);
 
-function planetCandidate(object,center,radius){
-  if(!object?.isGroup||!approx(object.position.x,center.x)||!approx(object.position.y,center.y)||!approx(object.position.z,center.z))return false;
-  return !!object.children?.find?.(child=>child?.isMesh&&approx(child.scale.x,radius,.42)&&approx(child.scale.y,radius,.42));
+function planetSurface(object,center,radius){
+  if(!object?.isGroup||!approx(object.position.x,center.x)||!approx(object.position.y,center.y)||!approx(object.position.z,center.z))return null;
+  return object.children?.find?.(child=>child?.isMesh&&approx(child.scale.x,radius,.42)&&approx(child.scale.y,radius,.42))||null;
 }
 function geometryTriangles(object){
   if(!object?.isMesh||!object.geometry)return 0;
@@ -37,13 +41,18 @@ function disposeOwn(){
   for(const object of objects){
     object.removeFromParent();object.geometry?.dispose?.();
     const materials=Array.isArray(object.material)?object.material:[object.material];
-    for(const material of materials)material?.dispose?.();
+    for(const material of materials){
+      for(const texture of material?.userData?.ownedTextures||[])texture?.dispose?.();
+      material?.dispose?.();
+    }
   }
-  objects=[];frameDepthRange={min:0,max:0,span:0};mastScaleRange={min:0,max:0,ratio:0};
+  objects=[];nightLayer=null;frameDepthRange={min:0,max:0,span:0};mastScaleRange={min:0,max:0,ratio:0};
 }
 function capture(object){
-  if(planetCandidate(object,PROFILE.earthCenter,PROFILE.earthRadius)&&object!==earthRoot){disposeOwn();earthRoot=object;captureCount++}
-  if(planetCandidate(object,PROFILE.moonCenter,PROFILE.moonRadius)&&object!==moonRoot){disposeOwn();moonRoot=object}
+  const earth=planetSurface(object,PROFILE.earthCenter,PROFILE.earthRadius);
+  if(earth&&object!==earthRoot){disposeOwn();earthRoot=object;earthSurface=earth;captureCount++}
+  const moon=planetSurface(object,PROFILE.moonCenter,PROFILE.moonRadius);
+  if(moon&&object!==moonRoot){disposeOwn();moonRoot=object}
 }
 function addWrapper(...args){
   const result=previousAdd.apply(this,args);capture(this);for(const object of args)capture(object);return result;
@@ -51,6 +60,62 @@ function addWrapper(...args){
 if(!window.__stellarSolOrbitalFrameAddHook){
   THREE.Object3D.prototype.add=addWrapper;
   window.__stellarSolOrbitalFrameAddHook={previousAdd,addWrapper};
+}
+
+function seeded(seed){return()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296)}
+function earthNightTexture(){
+  const canvas=document.createElement('canvas');canvas.width=PROFILE.nightTexture[0];canvas.height=PROFILE.nightTexture[1];
+  const ctx=canvas.getContext('2d'),rnd=seeded(90421),clusters=[
+    [.205,.34,.055,.032,36],[.145,.35,.04,.025,20],[.515,.34,.055,.03,42],
+    [.69,.48,.052,.035,34],[.72,.37,.068,.04,42],[.805,.355,.032,.022,26],[.56,.52,.045,.045,14]
+  ];
+  ctx.clearRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='lighter';
+  for(const [u,v,sx,sy,count] of clusters){
+    for(let i=0;i<count;i++){
+      const px=(u+(rnd()-.5)*sx)*canvas.width,py=(v+(rnd()-.5)*sy)*canvas.height,r=.55+rnd()*1.8;
+      const gradient=ctx.createRadialGradient(px,py,0,px,py,r*3.4);
+      const warm=rnd()>.24;
+      gradient.addColorStop(0,warm?'rgba(255,248,204,.96)':'rgba(190,225,255,.9)');
+      gradient.addColorStop(.24,warm?'rgba(255,181,82,.66)':'rgba(106,185,255,.54)');
+      gradient.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=gradient;ctx.fillRect(px-r*3.4,py-r*3.4,r*6.8,r*6.8);
+    }
+  }
+  const texture=new THREE.CanvasTexture(canvas);texture.wrapS=THREE.RepeatWrapping;texture.wrapT=THREE.ClampToEdgeWrapping;texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;return texture;
+}
+function earthNightMaterial(){
+  const lights=earthNightTexture(),material=new THREE.ShaderMaterial({
+    uniforms:{uLights:{value:lights},uSunDirection:{value:sunDirection.clone()},uOpacity:{value:.92}},
+    vertexShader:`uniform vec3 uSunDirection;varying vec2 vUv;varying float vNight;varying float vRim;
+void main(){
+  vUv=uv;
+  vec3 worldNormal=normalize(mat3(modelMatrix)*normal);
+  vec4 mv=modelViewMatrix*vec4(position,1.0);
+  vec3 viewNormal=normalize(normalMatrix*normal);
+  vec3 viewDir=normalize(-mv.xyz);
+  float sunFacing=dot(worldNormal,normalize(uSunDirection));
+  vNight=1.0-smoothstep(-0.10,0.18,sunFacing);
+  vRim=pow(1.0-clamp(dot(viewNormal,viewDir),0.0,1.0),1.6);
+  gl_Position=projectionMatrix*mv;
+}`,
+    fragmentShader:`uniform sampler2D uLights;uniform float uOpacity;varying vec2 vUv;varying float vNight;varying float vRim;
+void main(){
+  vec4 light=texture2D(uLights,vUv);
+  float alpha=light.a*vNight*(0.82+0.24*vRim)*uOpacity;
+  if(alpha<0.003)discard;
+  vec3 colour=light.rgb*(1.08+0.18*vRim);
+  gl_FragColor=vec4(colour,alpha);
+}`,
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,depthTest:true,side:THREE.FrontSide
+  });
+  material.userData.ownedTextures=[lights];return material;
+}
+function updateSunDirection(){
+  if(!nightLayer||!earthRoot?.parent)return;
+  earthRoot.getWorldPosition(earthWorld);
+  sunWorld.copy(SOL_STAR_LOCAL);earthRoot.parent.localToWorld(sunWorld);
+  sunDirection.copy(sunWorld).sub(earthWorld).normalize();
+  nightLayer.material?.uniforms?.uSunDirection?.value?.copy?.(sunDirection);
 }
 
 function mastField(){
@@ -88,21 +153,33 @@ function braceGeometry(){
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));return geometry;
 }
 function build(){
-  if(!earthRoot||!moonRoot||objects.length)return;
+  if(!earthRoot||!earthSurface||!moonRoot||objects.length)return;
   const masts=mastField();masts.renderOrder=3;
   const lights=navigationLights();lights.renderOrder=5;
   const braces=new THREE.LineSegments(braceGeometry(),new THREE.LineBasicMaterial({color:'#a8e7ff',transparent:true,opacity:.62,depthWrite:false,blending:THREE.AdditiveBlending}));
   braces.name=`${NAME}-perspective-chevron-braces`;braces.renderOrder=4;
-  earthRoot.add(masts,braces,lights);objects=[masts,braces,lights];
+  nightLayer=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),earthNightMaterial());
+  nightLayer.name=`${NAME}-earth-night-terminator`;nightLayer.scale.setScalar(1.009);nightLayer.renderOrder=2;
+  earthRoot.add(masts,braces,lights);earthSurface.add(nightLayer);objects=[masts,braces,lights,nightLayer];updateSunDirection();
 }
 function shouldRun(state){return !!state&&state.exploring&&!state.flying&&!state.contextLost&&state.qualityMode==='high'&&state.current==='SOL'}
 function sync(){
   const sim=window.WarpSim;if(!sim?.state)return;const state=sim.state();lastState=state;const high=shouldRun(state);
-  if(!high&&objects.length)disposeOwn();if(high&&earthRoot&&moonRoot&&!objects.length)build();for(const object of objects)object.visible=high;
+  if(!high&&objects.length)disposeOwn();
+  if(high&&earthRoot&&earthSurface&&moonRoot&&!objects.length)build();
+  if(high&&nightLayer)updateSunDirection();
+  for(const object of objects)object.visible=high;
 }
 function snapshot(){
-  const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===3;
-  return{visualPass:VISUAL_PASS,gantryProfile:active?GANTRY_PROFILE:null,latticeProfile:active?LATTICE_PROFILE:null,target:'SOL',quality:state.qualityMode||null,active,captured:!!(earthRoot&&moonRoot),captureCount,objects:objects.length,bays:active?BAY_COUNT:0,masts:active?MAST_COUNT:0,lights:active?LIGHT_COUNT:0,braceSegments:active?BRACE_SEGMENT_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,frameDepthSpan:active?Number(frameDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,mastScaleRatio:active?Number(mastScaleRange.ratio.toFixed(2)):0};
+  const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===4;
+  return{
+    visualPass:VISUAL_PASS,gantryProfile:active?GANTRY_PROFILE:null,latticeProfile:active?LATTICE_PROFILE:null,nightProfile:active?NIGHT_PROFILE:null,
+    target:'SOL',quality:state.qualityMode||null,active,captured:!!(earthRoot&&earthSurface&&moonRoot),captureCount,objects:objects.length,
+    bays:active?BAY_COUNT:0,masts:active?MAST_COUNT:0,lights:active?LIGHT_COUNT:0,braceSegments:active?BRACE_SEGMENT_COUNT:0,nightLayer:active?1:0,
+    drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,nightTriangles:active&&nightLayer?geometryTriangles(nightLayer):0,
+    frameDepthSpan:active?Number(frameDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,mastScaleRatio:active?Number(mastScaleRange.ratio.toFixed(2)):0,
+    sunDirection:active?[sunDirection.x,sunDirection.y,sunDirection.z].map(v=>Number(v.toFixed(3))):null,nightTexture:active?PROFILE.nightTexture:null
+  };
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');const qualityObserver=canvas?new MutationObserver(sync):null;

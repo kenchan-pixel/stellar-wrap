@@ -1,39 +1,54 @@
-# SOL Orbital Observation Frame v3｜近地軌道八艙格觀測框架
+# SOL Orbital Observation Frame v4｜近地軌道夜側觀測構圖
 
 ## Status
 
 - Product direction: approved Phase A Cinematic / Capture Quality.
 - Current implementation surface: `autonomous-evolution` Draft PR.
-- This slice deepens the existing SOL final-exploration composition only. It does not change route, camera, flight timing, global DPR ceilings, persistence, backend or release authority.
+- This slice deepens the existing SOL final-exploration / Photo Capture composition only. It does not change route, camera, flight timing, global DPR ceilings, persistence, backend or release authority.
 
 ## Goal / intended player outcome
 
-Make the home-system vista read as a coherent human orbital observation structure rather than an isolated Earth sphere surrounded by unrelated rails. In High quality and Photo Capture, the player should see a deliberate depth stack:
+Make SOL feel like a watchable orbital vista rather than a bright globe with foreground rails. High quality and Photo Capture should now read as one coherent depth stack:
 
-**paired near/far observation lattice → Earth atmosphere / aurora / city-lit globe → distant Moon**.
+**paired near/far observation lattice → terminator-aware city-lit Earth + atmosphere / aurora → distant Moon**.
 
-The v3 composition turns the existing foreground budget into an eight-bay（八艙格）truss: each structural station now has a large near mast and smaller far mast at the same orbital angle, with aligned depth lights and triangulated braces. The foreground should therefore read as one inhabited orbital frame instead of scattered fence pieces, while keeping the Earth unobstructed and preserving the same mobile GPU budget.
+The accepted v2 perspective hierarchy and v3 eight-bay lattice remain intact. v4 adds one bounded Earth-local night layer so populated regions glow only on the dark side of the globe and naturally disappear across the day/night terminator. This gives the flagship home-system capture a stronger sense of scale, rotation and inhabited-world identity without increasing global DPR or adding a render loop.
 
 ## Scope
 
-The focused SOL layer still attaches to the existing Earth scene authority and still adds exactly three High-only render objects:
+The focused SOL layer attaches only to existing core scene authority and owns exactly four High-only render objects:
 
-1. **16 instanced observation masts** remain one draw, but are authored as **8 paired near/far bays**. Each pair shares one orbital angle, using the accepted **1.46 : 0.72 height-scale hierarchy** so perspective is expressed through silhouette and scale instead of extra geometry.
-2. **20 instanced navigation lights** remain one draw and are now arranged as **10 aligned near/far marker pairs** across the same observation arc. Near markers stay larger/warm and far markers smaller/cool, so the eye can follow the structure's depth without adding particle volume.
-3. One **30-segment LineSegments lattice** remains one draw. The same segment budget is reorganized into near/far longitudinal rails, eight cross-depth rungs and diagonal triangulation, making the framework read as a connected truss rather than disconnected braces.
+1. **16 instanced observation masts** remain one draw and eight paired near/far bays. Each pair shares one orbital angle and preserves the accepted **1.46 : 0.72** height-scale hierarchy.
+2. **20 instanced navigation lights** remain one draw, arranged as ten aligned near/far marker pairs.
+3. One **30-segment LineSegments lattice** remains one draw, preserving the connected near/far rails, rungs and diagonal truss.
+4. One **Earth night-side city layer** is a `SphereGeometry(48, 32)` attached to the existing rotating Earth surface. A deterministic **512×256** procedural light atlas provides warm/cool city clusters. A small shader compares the live Earth world normal to the existing SOL star direction and fades light emission across the day/night terminator.
 
-Runtime diagnostics preserve the stable `orbital-observation-frame-v1` compatibility marker and accepted `orbital-perspective-gantry-v2` perspective marker, while adding `orbital-observation-lattice-v3` and a live `bays: 8` field only while the High-tier frame is active. The structure reuses the current Earth/Moon anchors. It has no independent renderer, camera, animation loop, storage, network request, analytics path or external visual asset.
+The new diagnostic profile is `earth-night-terminator-v4`. Existing `orbital-observation-frame-v1`, `orbital-perspective-gantry-v2` and `orbital-observation-lattice-v3` markers stay stable.
+
+## Terminator / scene-authority contract
+
+The v4 shader does not invent a second Sun or planet transform.
+
+- Earth position/radius remain the existing `SOL` core anchors.
+- The city layer is a child of the existing rotating Earth surface, so geographic light clusters inherit the same planet rotation.
+- Solar direction is derived from the existing SOL star local position `[-78, 38, -220]`, transformed through the current system root at the existing bounded 4 Hz sync.
+- The shader receives only the normalized live SOL star direction and uses it to fade city emission on the illuminated hemisphere.
+- No requestAnimationFrame, extra camera, extra renderer, shadow pass, external texture or network request is introduced.
+
+This keeps the effect coherent when the existing exploration system slowly orbits the scene.
 
 ## Performance budget
 
-Focused extension only — **unchanged from v2**:
+Focused v4 extension:
 
-- owned render objects: **3**
-- additional draw calls: **3**
-- measured mesh triangles: **352**
+- owned render objects: **4**
+- additional draw calls: **4**
+- measured mesh triangles: **3,328**
   - observation masts: 16 × 12 = 192 triangles
   - navigation lights: 20 × 8 = 160 triangles
+  - Earth night layer: **2,976** triangles
   - LineSegments lattice: no mesh triangles
+- procedural city-light texture: **512×256**, created only while High is active
 - observation bays: **8**
 - observation masts: **16**
 - navigation lights: **20**
@@ -41,11 +56,13 @@ Focused extension only — **unchanged from v2**:
 - live foreground near/far depth span: **>6.0 and ≤6.8 local units**
 - near/far mast height-scale ratio: **>2.0×** (`1.46 / 0.72 ≈ 2.03`)
 
-Together with the existing shared SOL High layer, the destination remains bounded to **+7 draw calls** above Standard for this accepted composition. Standard／Low own zero objects from this focused extension. v3 improves spatial coherence by transform placement and brace topology; it adds no mesh, draw call, DPR increase, renderer pass or per-frame geometry work.
+Together with the unchanged shared SOL cinematic layer, the accepted final-exploration delta is **+8 draw calls** above Standard. Standard／Low own zero objects from this focused layer. The city texture, shader material and geometry are explicitly disposed on downgrade/departure.
+
+The improvement is therefore bounded geometry/detail, not a permanent DPR increase or unbounded GPU effect.
 
 ## Lifecycle / capture contract
 
-The frame may exist only when all are true:
+The focused layer may exist only when all are true:
 
 - `current === 'SOL'`;
 - final exploration is active;
@@ -53,36 +70,37 @@ The frame may exist only when all are true:
 - WebGL context is healthy;
 - quality is `high`.
 
-High → Low/Standard, departure, or teardown must remove and dispose all owned geometry/materials. Returning to High or revisiting SOL must rebuild from the current Earth/Moon scene anchors without accumulation.
+High → Low/Standard, departure, or teardown removes all four owned objects and disposes owned geometry, materials and the procedural city texture. Returning to High or revisiting SOL rebuilds from current Earth/Moon anchors without accumulation.
 
-The stable `visualPass` compatibility marker and accepted v2 `gantryProfile` remain available for existing diagnostics. The new `latticeProfile` / `bays` diagnostics are live only while the frame is active. Inactive Standard／Low／departure snapshots must still clear `gantryProfile: null` and `mastScaleRatio: 0`, with the v3 lattice fields also inactive/zero. This prevents stale High-tier composition state from being mistaken for a live frame after disposal.
-
-Destination Photo Mode continues to own capture. A direct Standard → Photo Capture quality boost must create the focused SOL frame before PNG extraction, then restore the previous quality and dispose the extension after capture.
+Destination Photo Mode remains the sole capture authority. A direct Standard → Photo Capture quality boost must create both the existing observation lattice and the v4 night-side Earth layer before PNG extraction, then restore the prior tier and dispose the extra High-only objects.
 
 ## Acceptance Criteria
 
-- SOL Standard has zero focused-frame objects and no live lattice; accepted inactive diagnostics remain cleared.
-- SOL High preserves `orbital-perspective-gantry-v2`, exposes `orbital-observation-lattice-v3`, and reports 8 bays, exactly 3 objects, 16 masts, 20 lights, 30 brace segments and 352 measured mesh triangles.
-- The 16 masts resolve into eight shared-angle near/far structural pairs; the 20 navigation lights resolve into ten aligned depth-marker pairs; the 30-line brace budget forms continuous rails, depth rungs and diagonal triangulation.
-- The mast transform hierarchy keeps a live scale ratio above **2.0×** and no more than **2.1×**, while live near/far depth remains >6.0 and ≤6.8 local units.
-- Existing production-Chromium acceptance continues to exercise direct Photo Capture, normal High exploration, High rebuild and SOL revisit, and proves inactive Standard／Low／departure cleanup.
-- Real renderer diagnostics remain **+7 draw calls** from Standard to the combined shared SOL High + focused frame. High → Low must clear both High layers; restoring Standard must return to the original Standard draw count.
-- Direct Standard → High Photo Capture includes both the shared SOL cinematic layer and the focused frame before PNG extraction.
-- Production Chromium at **390×844** and **360×800** remains viewport-contained and emits distinct Standard / High evidence; exact-run screenshots are visually inspected for Earth visibility, coherent paired truss depth, no black frame and no horizontal clipping.
+- SOL Standard owns **0** focused objects, has no night layer, and clears all v2/v3/v4 live diagnostics.
+- SOL High reports `earth-night-terminator-v4`, exactly **4 objects / 4 draw calls / 3,328 measured triangles**, including exactly **2,976** night-layer triangles and one **512×256** light atlas.
+- The live SOL sun-direction diagnostic is normalized and follows the current system-root orientation.
+- The accepted eight-bay composition remains **16 masts / 20 lights / 30 brace segments**, with mast scale ratio >2.0× and ≤2.1× and depth span >6.0 and ≤6.8.
+- Real renderer diagnostics prove **+8 draw calls** from Standard to combined shared SOL High + focused v4.
+- Direct Standard → High Photo Capture includes the v4 night layer before PNG extraction, uses the larger existing High backing buffer, then restores Standard and disposes the layer.
+- High → Low, Low → High, SOL → LUNA and LUNA → SOL all prove disposal/rebuild with no object accumulation.
+- Production Chromium at **390×844** and **360×800** remains viewport-contained and emits distinct Standard / High screenshots.
+- Exact-run screenshots are visually inspected for visible Earth, a readable night/day boundary and city-light contrast, coherent lattice depth, no black frame and no horizontal clipping.
 - Existing V4+ travel, arrival, Frontier, Gallery, offline and security contracts remain green.
 
 ## Out of Scope
 
-- No new SOL scanner/checklist mechanic.
-- No change to Earth/Moon core positions, route topology, LY authority, arrival timing or exploration camera authority.
-- No permanent DPR increase, post-processing dependency, external texture, shadow system or second render loop.
-- No extra mesh count or draw-call budget versus v2.
-- Physical iPhone thermal/frame-pacing inspection remains supplementary evidence, not an automated completion gate.
+- No new SOL scanner, checklist or discovery mechanic.
+- No change to Earth/Moon core positions, star-map topology, LY authority, arrival timing or exploration camera.
+- No global DPR increase, post-processing dependency, shadow system, external texture or second render loop.
+- No attempt at cartographically exact city placement; the procedural clusters are a cinematic approximation aligned to the existing procedural Earth atlas.
+- Physical iPhone thermal/frame-pacing inspection remains supplementary evidence rather than an automated completion gate.
 
 ## Risks / supplementary checks
 
-The main risk is visual balance: a more coherent foreground truss must still frame the Earth rather than dominate it. Automated browser screenshots at both required phone viewports are the primary acceptance evidence for this slice; iPhone Safari blending, long-session thermal behavior and subjective touch feel remain supplementary.
+The main visual risk is over-bright city emission competing with the atmosphere/aurora or foreground lattice. The night layer therefore appears only on High/Photo, stays one low-cost additive draw, is terminator-masked, and uses a slightly raised Earth-local shell to avoid z-fighting.
+
+Primary acceptance evidence is production Chromium at both required phone viewports plus real renderer diagnostics and direct-capture lifecycle checks. iPhone Safari blending, sustained thermals and subjective touch feel remain supplementary.
 
 ## Completion Signal
 
-The SOL High/Photo vista visibly reads as one eight-bay orbital observation lattice with paired near/far scale, aligned lights and triangulated bracing; Earth and Moon remain the hero composition; the focused GPU budget stays exactly 3 draws / 352 mesh triangles; exact-head CI and both production-browser phone viewports pass; and the exact-head PR review has no unresolved actionable P0/P1/P2.
+SOL High/Photo visibly reads as an inhabited Earth viewed from a coherent eight-bay orbital structure: the accepted v2/v3 depth frame remains intact, city lights stay on the night hemisphere through a live SOL terminator, the focused budget remains bounded to **4 draws / 3,328 triangles**, exact-head CI and both phone viewport checks pass, screenshots show no clipping/black-frame regression, and exact-head PR review has no actionable P0/P1/P2.

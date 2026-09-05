@@ -12,48 +12,54 @@ function check(condition,label){if(!condition)throw new Error(`FAIL: ${label}`);
 
 new vm.Script(source.replace(/^import .*?;\s*/,''));
 check(source.includes("three@0.185.1/build/three.module.js"),'SOL focused layer reuses pinned Three.js');
-check(source.includes("VISUAL_PASS='orbital-observation-frame-v1'"),'SOL focused layer preserves stable visual-pass diagnostics');
-check(source.includes("GANTRY_PROFILE='orbital-perspective-gantry-v2'"),'SOL focused layer preserves the accepted v2 perspective-gantry profile');
-check(source.includes("LATTICE_PROFILE='orbital-observation-lattice-v3'"),'SOL v3 exposes a dedicated observation-lattice profile');
-check(focus.includes("import('./cinematic-quality.js').then(()=>import('./sol-orbital-frame.js')).then(()=>import('./luna-earthrise-depth.js'))"),'SOL frame loads after shared cinematic quality and before later focused destination layers');
-check(/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`;/.test(sw)&&sw.includes("'./sol-orbital-frame.js'"),'SOL frame is included in the current versioned offline shell');
-check(/earthCenter:new THREE\.Vector3\(14,-5,-80\),earthRadius:18/.test(source)&&/moonCenter:new THREE\.Vector3\(-28,11,-128\),moonRadius:4\.7/.test(source),'SOL frame reuses the existing Earth and Moon scene anchors');
-check(/const BAY_COUNT=8/.test(source)&&/const bay=Math\.floor\(i\/2\),t=bay\/\(BAY_COUNT-1\)/.test(source),'16 masts are authored as eight shared-angle near/far observation bays');
-check(/const MAST_COUNT=16/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,MAST_COUNT\)/.test(source),'16 observation masts share one instanced draw');
-check(/new THREE\.BoxGeometry\(\.46,6\.2,\.46\)/.test(source)&&/const NEAR_MAST_SCALE=1\.46/.test(source)&&/const FAR_MAST_SCALE=\.72/.test(source),'masts preserve the accepted near/far perspective scale hierarchy without extra instances');
-check(/mastScaleRange=\{min:minScale,max:maxScale,ratio:maxScale\/minScale\}/.test(source)&&/gantryProfile:active\?GANTRY_PROFILE:null/.test(source)&&/mastScaleRatio:active\?Number\(mastScaleRange\.ratio\.toFixed\(2\)\):0/.test(source),'runtime diagnostics expose the live v2 profile/scale ratio only while the gantry is active');
-check(/latticeProfile:active\?LATTICE_PROFILE:null/.test(source)&&/bays:active\?BAY_COUNT:0/.test(source),'runtime diagnostics expose the live v3 lattice and eight-bay composition only while active');
-check(/const LIGHT_COUNT=20/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,LIGHT_COUNT\)/.test(source)&&/new THREE\.OctahedronGeometry\(\.24,0\)/.test(source),'20 navigation lights share one low-poly instanced draw');
-check(/const lane=Math\.floor\(i\/2\)/.test(source)&&/laneCount=LIGHT_COUNT\/2/.test(source),'navigation lights are paired into ten aligned near/far depth markers');
-check(/near\?2\.05:\.82/.test(source)&&/mesh\.setColorAt\(i,near\?warm:cool\)/.test(source),'navigation lights reinforce near/far perspective through bounded scale and colour hierarchy');
-check(/const BRACE_SEGMENT_COUNT=30/.test(source)&&/new THREE\.LineSegments\(braceGeometry\(\)/.test(source),'30 brace segments share one LineSegments draw');
-check(/steps=BAY_COUNT/.test(source)&&/for\(let i=0;i<steps;i\+\+\)positions\.push\(\.\.\.point\(i,farZ,farR\),\.\.\.point\(i,nearZ,nearR\)\)/.test(source),'v3 brace lattice joins every near/far bay with a depth rung');
-check(/for\(let i=0;i<steps-1;i\+\+\)positions\.push\(\.\.\.point\(i,farZ,farR\),\.\.\.point\(i\+1,nearZ,nearR\)\)/.test(source),'v3 brace lattice triangulates adjacent bays while preserving the 30-segment budget');
-check(/triangles:352,drawCalls:3,bays:BAY_COUNT,masts:MAST_COUNT,lights:LIGHT_COUNT,braceSegments:BRACE_SEGMENT_COUNT,depthSpan:6\.8/.test(source),'focused GPU budget stays bounded to 352 mesh triangles and three draws');
-check(/object\.isInstancedMesh\?object\.count:1/.test(source),'runtime triangle measurement accounts for instanced geometry');
-check(/frameDepthRange=\{min:minZ,max:maxZ,span:maxZ-minZ\}/.test(source),'foreground depth is measured from live mast transforms');
-check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='SOL'/.test(source),'SOL frame is safe-final-exploration and High-only');
-check(/if\(!high&&objects\.length\)disposeOwn\(\)/.test(source)&&/if\(high&&earthRoot&&moonRoot&&!objects\.length\)build\(\)/.test(source),'downgrade/departure disposes and High rebuilds on demand');
-check(/masts:active\?MAST_COUNT:0/.test(source)&&/frameDepthSpan:active\?Number\(frameDepthRange\.span\.toFixed\(2\)\):0/.test(source),'diagnostics expose bounded object counts and live depth span');
-check(/new MutationObserver\(sync\)/.test(source)&&/attributeFilter:\['width','height'\]/.test(source),'canvas backing-size changes synchronize direct Photo Capture Boost');
-check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'state synchronization is bounded to 4 Hz outside the renderer loop');
-check(!/requestAnimationFrame\s*\(/.test(source),'SOL frame adds no independent render loop');
-check(!/localStorage|sessionStorage|indexedDB/.test(source),'SOL frame adds no persistence authority');
-check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'SOL frame adds no runtime network or analytics path');
-check(/object\.geometry\?\.dispose/.test(source)&&/material\?\.dispose/.test(source),'owned geometry and materials are explicitly released');
-check(/__stellarSolOrbitalFrameAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'scene-construction hook is explicitly restorable');
-check(/highFrameCalls-standardFrameCalls,7/.test(browserSource)&&/#perfHud/.test(browserSource),'browser gate measures actual combined shared + focused SOL draw delta');
-check(/WarpPhotoMode\.capture/.test(browserSource)&&/__solOrbitalCaptureProbe/.test(browserSource),'browser gate proves Standard-to-High Photo Capture includes the focused frame');
-check(/assertPerspective\(captureProbe/.test(browserSource)&&/assertPerspective\(high/.test(browserSource)&&/assertPerspective\(rebuild/.test(browserSource)&&/assertPerspective\(revisit/.test(browserSource),'browser gate regression-locks the live perspective profile and mast scale hierarchy across capture, High, rebuild and revisit');
-check(/assertPerspectiveCleared\(standard/.test(browserSource)&&/assertPerspectiveCleared\(low/.test(browserSource)&&/assertPerspectiveCleared\(departure/.test(browserSource),'browser gate proves inactive Standard/Low/departure states clear live diagnostics');
-check(/390,844/.test(browserSource)&&/360,800/.test(browserSource)&&/sol-orbital-frame-/.test(browserSource),'both required phone viewports emit visual evidence');
-check(doc.includes('orbital-observation-lattice-v3')&&doc.includes('eight')&&doc.includes('八'),'SOT records the v3 paired observation lattice');
-check(doc.includes('orbital-perspective-gantry-v2')&&doc.includes('2.03'),'SOT preserves the accepted v2 perspective hierarchy and scale ratio');
-check(doc.includes('inactive')&&doc.includes('gantryProfile')&&doc.includes('mastScaleRatio'),'SOT records inactive diagnostic clearing semantics');
-check(doc.includes('352')&&doc.includes('3')&&doc.includes('16')&&doc.includes('20')&&doc.includes('30'),'SOT records unchanged bounded frame object/geometry budgets');
-check(doc.includes('390×844')&&doc.includes('360×800')&&doc.includes('Photo Capture')&&doc.includes('Standard／Low'),'SOT records mobile, capture and lower-tier zero-cost acceptance');
+check(source.includes("VISUAL_PASS='orbital-observation-frame-v1'"),'stable frame visual-pass diagnostics are preserved');
+check(source.includes("GANTRY_PROFILE='orbital-perspective-gantry-v2'"),'accepted v2 perspective profile is preserved');
+check(source.includes("LATTICE_PROFILE='orbital-observation-lattice-v3'"),'accepted v3 observation lattice is preserved');
+check(source.includes("NIGHT_PROFILE='earth-night-terminator-v4'"),'v4 exposes a dedicated Earth night-terminator profile');
+check(focus.includes("import('./cinematic-quality.js').then(()=>import('./sol-orbital-frame.js')).then(()=>import('./luna-earthrise-depth.js'))"),'SOL focused layer keeps its approved bootstrap position');
+check(/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`;/.test(sw)&&sw.includes("'./sol-orbital-frame.js'"),'SOL focused layer remains in the current versioned offline shell');
 
-const browser=spawnSync(process.execPath,['scripts/validate-sol-orbital-frame-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
+check(/earthCenter:new THREE\.Vector3\(14,-5,-80\),earthRadius:18/.test(source)&&/moonCenter:new THREE\.Vector3\(-28,11,-128\),moonRadius:4\.7/.test(source),'v4 reuses existing Earth and Moon scene anchors');
+check(/const SOL_STAR_LOCAL=new THREE\.Vector3\(-78,38,-220\)/.test(source),'terminator direction derives from the existing SOL star position');
+check(/function planetSurface\(object,center,radius\)/.test(source)&&/earthSurface=earth/.test(source),'v4 captures the existing rotating Earth surface instead of creating another planet authority');
+
+check(/const BAY_COUNT=8/.test(source)&&/const bay=Math\.floor\(i\/2\),t=bay\/\(BAY_COUNT-1\)/.test(source),'16 masts remain authored as eight paired near/far bays');
+check(/const MAST_COUNT=16/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,MAST_COUNT\)/.test(source),'16 observation masts remain one instanced draw');
+check(/const NEAR_MAST_SCALE=1\.46/.test(source)&&/const FAR_MAST_SCALE=\.72/.test(source),'accepted near/far mast scale hierarchy is unchanged');
+check(/const LIGHT_COUNT=20/.test(source)&&/new THREE\.InstancedMesh\(geometry,material,LIGHT_COUNT\)/.test(source),'20 navigation lights remain one instanced draw');
+check(/const BRACE_SEGMENT_COUNT=30/.test(source)&&/new THREE\.LineSegments\(braceGeometry\(\)/.test(source),'30 brace segments remain one LineSegments draw');
+
+check(/function earthNightTexture\(\)/.test(source)&&/canvas\.width=PROFILE\.nightTexture\[0\]/.test(source)&&/clusters=\[/.test(source),'v4 adds a bounded procedural 512×256 city-light atlas');
+check(/function earthNightMaterial\(\)/.test(source)&&/uniform vec3 uSunDirection/.test(source)&&/vNight=1\.0-smoothstep\(-0\.10,0\.18,sunFacing\)/.test(source),'city-light shader fades across a true directional day/night terminator');
+check(/new THREE\.SphereGeometry\(1,48,32\)/.test(source)&&/earthSurface\.add\(nightLayer\)/.test(source),'night lights are one bounded sphere attached to the existing rotating Earth surface');
+check(/nightLayer\.scale\.setScalar\(1\.009\)/.test(source)&&/THREE\.AdditiveBlending/.test(source),'night overlay stays just above the Earth surface and uses low-cost additive glow');
+check(/earthRoot\.parent\.localToWorld\(sunWorld\)/.test(source)&&/sunWorld\.copy\(SOL_STAR_LOCAL\)/.test(source)&&/sunDirection\.copy\(sunWorld\)\.sub\(earthWorld\)\.normalize\(\)/.test(source),'terminator tracks the existing SOL system orientation instead of a fixed screen-space light');
+check(/material\.userData\.ownedTextures=\[lights\]/.test(source)&&/for\(const texture of material\?\.userData\?\.ownedTextures\|\|\[\]\)texture\?\.dispose\?\.\(\)/.test(source),'owned procedural city texture is explicitly disposed');
+
+check(/triangles:3328,drawCalls:4/.test(source)&&/nightTriangles:2976/.test(source),'focused v4 GPU budget is explicitly bounded to 3,328 triangles and four draws');
+check(/object\.isInstancedMesh\?object\.count:1/.test(source),'runtime triangle measurement still accounts for instancing');
+check(/nightProfile:active\?NIGHT_PROFILE:null/.test(source)&&/nightTriangles:active&&nightLayer\?geometryTriangles\(nightLayer\):0/.test(source),'runtime diagnostics expose the live v4 layer and measured night geometry');
+check(/sunDirection:active\?\[sunDirection\.x,sunDirection\.y,sunDirection\.z\]/.test(source)&&/nightTexture:active\?PROFILE\.nightTexture:null/.test(source),'runtime diagnostics expose bounded terminator direction and texture dimensions only while active');
+
+check(/state\.exploring&&!state\.flying&&!state\.contextLost/.test(source)&&/state\.qualityMode==='high'&&state\.current==='SOL'/.test(source),'v4 remains safe-final-exploration and High-only');
+check(/if\(!high&&objects\.length\)disposeOwn\(\)/.test(source)&&/if\(high&&earthRoot&&earthSurface&&moonRoot&&!objects\.length\)build\(\)/.test(source),'downgrade/departure disposes and High rebuilds only after all anchors are recaptured');
+check(/new MutationObserver\(sync\)/.test(source)&&/attributeFilter:\['width','height'\]/.test(source),'canvas backing-size changes still synchronize direct Photo Capture Boost');
+check(/setInterval\(sync,SAMPLE_MS\)/.test(source)&&/const SAMPLE_MS=250/.test(source),'state/terminator synchronization stays bounded to 4 Hz outside the renderer loop');
+check(!/requestAnimationFrame\s*\(/.test(source),'v4 adds no independent render loop');
+check(!/localStorage|sessionStorage|indexedDB/.test(source),'v4 adds no persistence authority');
+check(!/\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/.test(source),'v4 adds no runtime network or analytics path');
+check(/__stellarSolOrbitalFrameAddHook/.test(source)&&/THREE\.Object3D\.prototype\.add===addWrapper/.test(source),'scene-construction hook remains explicitly restorable');
+
+check(/highFrameCalls-standardFrameCalls,8/.test(browserSource),'browser gate measures actual combined shared + focused SOL draw delta of eight');
+check(/earth-night-terminator-v4/.test(browserSource)&&/nightTriangles/.test(browserSource)&&/sunDirection/.test(browserSource),'browser gate verifies v4 terminator diagnostics and measured geometry');
+check(/WarpPhotoMode\.capture/.test(browserSource)&&/__solOrbitalCaptureProbe/.test(browserSource),'browser gate proves Standard→High Photo Capture includes the v4 layer');
+check(/390,844/.test(browserSource)&&/360,800/.test(browserSource)&&/sol-orbital-frame-/.test(browserSource),'both required phone viewports emit visual evidence');
+
+check(doc.includes('earth-night-terminator-v4')&&doc.includes('夜側')&&doc.includes('terminator'),'SOT records the v4 night-side Earth composition');
+check(doc.includes('3,328')&&doc.includes('4')&&doc.includes('2,976'),'SOT records the bounded focused v4 geometry/draw budget');
+check(doc.includes('390×844')&&doc.includes('360×800')&&doc.includes('Photo Capture'),'SOT keeps production-browser and direct-capture acceptance');
+
+const browser=spawnSync(process.execPath,['scripts/validate-sol-orbital-frame-browser.mjs'],{encoding:'utf8',timeout:150000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
-check(browser.status===0,'real production WebGL SOL frame passes capture, measured renderer budget, lifecycle and both phone viewport gates');
-console.log(`SOL Orbital Observation Frame validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);
+check(browser.status===0,'real production WebGL SOL v4 passes capture, renderer budget, lifecycle and both phone viewport gates');
+console.log(`SOL Orbital Night-side Observation v4 validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);
