@@ -63,15 +63,14 @@ function explorationHandoff(destination){
 function renderRouteRibbon(routeIds){
   const host=document.querySelector('#arrivalDebriefRibbon');
   if(!host)return false;
-  const fragment=document.createDocumentFragment();
+  host.replaceChildren();
   routeIds.forEach((id,index)=>{
-    if(index){const leg=document.createElement('span');leg.className='arrivalDebriefLeg';leg.setAttribute('aria-hidden','true');fragment.append(leg)}
+    if(index){const leg=document.createElement('span');leg.className='arrivalDebriefLeg';leg.setAttribute('aria-hidden','true');host.append(leg)}
     const stop=document.createElement('span');stop.className='arrivalDebriefStop'+(index===routeIds.length-1?' destination':'');stop.dataset.system=id;
     const dot=document.createElement('i');dot.setAttribute('aria-hidden','true');
     const label=document.createElement('b');label.textContent=id;
-    stop.append(dot,label);fragment.append(stop);
+    stop.append(dot,label);host.append(stop);
   });
-  host.replaceChildren(fragment);
   host.setAttribute('aria-label','航程路線：'+routeIds.map(id=>SYSTEM_NAMES[id]).join(' 到 '));
   return true;
 }
