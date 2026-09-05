@@ -11,13 +11,16 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 assert.match(source,/data-viewer-action=\"prev\"/,'capture viewer must expose previous action');
 assert.match(source,/data-viewer-action=\"next\"/,'capture viewer must expose next action');
+assert.match(source,/data-viewer-action=\"return\"/,'capture viewer must expose capture-to-world return action');
+assert.match(source,/WarpSim\.select\(system\)/,'capture return must reuse existing Real Space selection authority');
+assert.doesNotMatch(source,/\.jumpTo\s*\(/,'capture return must not instant-jump to a photographed destination');
 assert.match(source,/pointerdown/,'capture viewer must listen for touch/pointer swipe start');
 assert.match(source,/Math\.abs\(dx\)>=48/,'capture viewer must use a bounded swipe threshold');
 assert.match(source,/event\.key==='ArrowLeft'/,'capture viewer must support keyboard previous navigation');
 assert.match(source,/keepViewer:true/,'deleting one of several captures must preserve immersive review');
-assert.doesNotMatch(source,/THREE\.|WebGLRenderer|requestAnimationFrame\s*\(|setInterval\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'swipe review must add no renderer, render-loop, polling or network authority');
+assert.doesNotMatch(source,/THREE\.|WebGLRenderer|requestAnimationFrame\s*\(|setInterval\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'capture review must add no renderer, render-loop, polling or network authority');
 const syntax=spawnSync(process.execPath,['--check','capture-gallery.js'],{encoding:'utf8'});assert.equal(syntax.status,0,`capture-gallery.js syntax failed: ${syntax.stderr}`);
-console.log('Capture Gallery swipe static contract passed');
+console.log('Capture Gallery swipe + return static contract passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}
 function findChrome(){for(const c of [process.env.CHROME_BIN,'google-chrome-stable','google-chrome','chromium','chromium-browser']){const p=commandPath(c);if(p)return p}return''}
@@ -43,9 +46,16 @@ async function inspect(chrome,base,width,height){
     await evalJs(cdp,'WarpModeGateway.openRecords();true');await waitUntil(()=>evalJs(cdp,"document.querySelectorAll('#captureGalleryGrid .captureGalleryCard').length===2"),'two capture cards');
     const firstId=await evalJs(cdp,"document.querySelector('#captureGalleryGrid .captureGalleryCard')?.dataset.captureId||''");assert.ok(firstId);
     await evalJs(cdp,`WarpCaptureGallery.open(${JSON.stringify(firstId)})`,true);await waitUntil(()=>evalJs(cdp,"!document.querySelector('#captureGalleryViewer')?.hidden&&document.querySelector('#captureGalleryViewerImage')?.complete"),'immersive viewer open');
-    const initial=await evalJs(cdp,`(()=>{const v=document.querySelector('#captureGalleryViewer'),r=v.getBoundingClientRect(),buttons=[...v.querySelectorAll('button')],heights=buttons.map(b=>b.getBoundingClientRect().height),prev=v.querySelector('[data-viewer-action="prev"]'),next=v.querySelector('[data-viewer-action="next"]');return{left:r.left,top:r.top,right:r.right,bottom:r.bottom,rootOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,title:document.querySelector('#captureGalleryViewerTitle')?.textContent||'',position:document.querySelector('#captureGalleryViewerPosition')?.textContent||'',heights,prevDisabled:prev?.disabled,nextDisabled:next?.disabled,bodyOverflow:document.body.style.overflow}})()`);
-    assert.equal(initial.title,'金牛塵海');assert.match(initial.position,/1 \/ 2/);assert.equal(initial.prevDisabled,true);assert.equal(initial.nextDisabled,false);assert.ok(initial.heights.every(value=>value>=44),'all viewer controls must keep 44px touch height');assert.ok(initial.left>=-1&&initial.top>=-1&&initial.right<=width+1&&initial.bottom<=height+1);assert.ok(initial.rootOverflow<=1);assert.equal(initial.bodyOverflow,'hidden');
+    const initial=await evalJs(cdp,`(()=>{const v=document.querySelector('#captureGalleryViewer'),r=v.getBoundingClientRect(),buttons=[...v.querySelectorAll('button')],heights=buttons.map(b=>b.getBoundingClientRect().height),prev=v.querySelector('[data-viewer-action="prev"]'),next=v.querySelector('[data-viewer-action="next"]'),ret=v.querySelector('[data-viewer-action="return"]');return{left:r.left,top:r.top,right:r.right,bottom:r.bottom,rootOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,title:document.querySelector('#captureGalleryViewerTitle')?.textContent||'',position:document.querySelector('#captureGalleryViewerPosition')?.textContent||'',heights,prevDisabled:prev?.disabled,nextDisabled:next?.disabled,returnDisabled:ret?.disabled,returnText:ret?.textContent||'',bodyOverflow:document.body.style.overflow}})()`);
+    assert.equal(initial.title,'金牛塵海');assert.match(initial.position,/1 \/ 2/);assert.equal(initial.prevDisabled,true);assert.equal(initial.nextDisabled,false);assert.equal(initial.returnDisabled,false);assert.equal(initial.returnText,'再次前往');assert.ok(initial.heights.every(value=>value>=44),'all viewer controls must keep 44px touch height');assert.ok(initial.left>=-1&&initial.top>=-1&&initial.right<=width+1&&initial.bottom<=height+1);assert.ok(initial.rootOverflow<=1);assert.equal(initial.bodyOverflow,'hidden');
     const initialBytes=await screenshot(cdp,`capture-gallery-swipe-start-${viewport}.png`);assert.ok(initialBytes>12000);
+
+    await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"return\"]').click();true");
+    await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpSim.state();return document.querySelector('#captureGalleryViewer')?.hidden===true&&s.current==='SOL'&&s.selected==='TAU'&&document.querySelector('#panel')?.classList.contains('open')&&WarpModeGateway.snapshot().visible===false})()"),'capture-to-existing-route handoff');
+    await sleep(360);const routeBytes=await screenshot(cdp,`capture-gallery-return-route-${viewport}.png`);assert.ok(routeBytes>12000);
+    const routeState=await evalJs(cdp,"(()=>{const s=WarpSim.state();return{current:s.current,selected:s.selected,flying:s.flying,panel:document.querySelector('#panel')?.classList.contains('open')}})()");assert.deepEqual(routeState,{current:'SOL',selected:'TAU',flying:false,panel:true},'capture return must plan rather than instant travel');
+
+    await evalJs(cdp,"document.querySelector('#panel')?.classList.remove('open');WarpModeGateway.openRecords();true");await waitUntil(()=>evalJs(cdp,"document.querySelectorAll('#captureGalleryGrid .captureGalleryCard').length===2"),'capture records reopened after route handoff');await evalJs(cdp,`WarpCaptureGallery.open(${JSON.stringify(firstId)})`,true);await waitUntil(()=>evalJs(cdp,"!document.querySelector('#captureGalleryViewer')?.hidden&&document.querySelector('#captureGalleryViewerTitle')?.textContent==='金牛塵海'"),'viewer reopened after route handoff');
 
     await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"next\"]').click();true");await waitUntil(()=>evalJs(cdp,"document.querySelector('#captureGalleryViewerTitle')?.textContent==='天狼中繼站'"),'next capture button');assert.match(await evalJs(cdp,"document.querySelector('#captureGalleryViewerPosition')?.textContent||''"),/2 \/ 2/);
     await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"prev\"]').click();true");await waitUntil(()=>evalJs(cdp,"document.querySelector('#captureGalleryViewerTitle')?.textContent==='金牛塵海'"),'previous capture button');
@@ -61,7 +71,7 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"WarpCaptureGallery.count().then(n=>n===1&&!document.querySelector('#captureGalleryViewer')?.hidden&&document.querySelector('#captureGalleryViewerTitle')?.textContent==='天狼中繼站')",true),'delete current while preserving viewer');assert.match(await evalJs(cdp,"document.querySelector('#captureGalleryViewerPosition')?.textContent||''"),/1 \/ 1/);
     const single=await evalJs(cdp,`(()=>{const v=document.querySelector('#captureGalleryViewer');return{prev:v.querySelector('[data-viewer-action="prev"]').disabled,next:v.querySelector('[data-viewer-action="next"]').disabled}})()`);assert.equal(single.prev,true);assert.equal(single.next,true);
     await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"delete\"]').click();true");await waitUntil(()=>evalJs(cdp,"WarpCaptureGallery.count().then(n=>n===0&&document.querySelector('#captureGalleryViewer')?.hidden===true&&document.body.style.overflow!=='hidden')",true),'last delete closes viewer');
-    console.log(`Capture Gallery swipe ${viewport}: prev/next, true touch swipe, keyboard navigation, in-viewer delete passed; screenshots ${initialBytes}/${swipeBytes} bytes`);
+    console.log(`Capture Gallery ${viewport}: route handoff, prev/next, true touch swipe, keyboard navigation, in-viewer delete passed; screenshots ${initialBytes}/${routeBytes}/${swipeBytes} bytes`);
   }catch(error){if(cdp)await screenshot(cdp,`capture-gallery-swipe-failure-${viewport}.png`).catch(()=>{});throw error}
   finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
@@ -69,4 +79,4 @@ async function inspect(chrome,base,width,height){
 const chrome=findChrome();
 if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for Capture Gallery swipe validation');console.log('Capture Gallery swipe browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`,server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
-try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('Capture Gallery swipe browser validation: both mobile portrait viewports passed')}finally{await stop(server)}
+try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('Capture Gallery swipe + return browser validation: both mobile portrait viewports passed')}finally{await stop(server)}
