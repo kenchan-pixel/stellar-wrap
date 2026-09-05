@@ -57,7 +57,7 @@ async function remove(id){
 }
 async function reset(){
   closeViewer();if(!available())return false;const db=await openDb(),tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).clear();await transactionDone(tx);
-  dispatchEvent(new CustomEvent('stellarwarp:capture-change',{detail:{action:'reset'}});render();return true;
+  dispatchEvent(new CustomEvent('stellarwarp:capture-change',{detail:{action:'reset'}}));render();return true;
 }
 async function count(){try{return(await all()).length}catch{return 0}}
 function stamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
@@ -87,7 +87,7 @@ function ensureStyle(){
 #gatewayRecords .captureGalleryInfo{padding:7px}.captureGalleryInfo b{display:block;font-size:8px}.captureGalleryMeta{margin-top:3px;font-size:6.5px;line-height:1.4;color:rgba(219,233,255,.55)}
 #gatewayRecords .captureGalleryActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}.captureGalleryActions button{min-height:44px;border:1px solid rgba(170,211,255,.17);border-radius:9px;background:rgba(110,172,255,.075);color:#eaf4ff;font-size:7px;font-weight:780}.captureGalleryActions .danger{background:rgba(255,124,124,.045);border-color:rgba(255,164,164,.12)}
 #gatewayRecords .captureGalleryEmpty{padding:10px;border-radius:10px;background:rgba(255,255,255,.025);font-size:7px;line-height:1.5;color:rgba(220,234,255,.48)}
-.captureGalleryViewer{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;gap:12px;padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:rgba(1,4,10,.96);backdrop-filter:blur(12px);overscroll-behavior:contain}
+.captureGalleryViewer{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;gap:12px;padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:rgba(1,4,10,.985);overscroll-behavior:contain}
 .captureGalleryViewer[hidden]{display:none}.captureGalleryViewerTop{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:10px;align-items:center}.captureGalleryViewerCopy{min-width:0}.captureGalleryViewerCopy strong{display:block;font-size:12px;color:#f0f6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.captureGalleryViewerMeta{margin-top:3px;font-size:9px;color:rgba(215,232,255,.6)}
 .captureGalleryViewerClose,.captureGalleryViewerActions button{min-height:44px;border:1px solid rgba(182,218,255,.18);border-radius:12px;background:rgba(116,173,240,.08);color:#eff7ff;font-weight:760}.captureGalleryViewerClose{min-width:44px;font-size:18px}.captureGalleryViewerStage{min-height:0;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:14px;background:#010309}.captureGalleryViewerImage{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.captureGalleryViewerActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.captureGalleryViewerActions .danger{background:rgba(255,124,124,.055);border-color:rgba(255,164,164,.14)}
 @media(max-width:360px){#gatewayRecords .captureGalleryGrid{grid-template-columns:1fr}.captureGalleryViewer{gap:9px;padding-left:10px;padding-right:10px}.captureGalleryViewerActions{gap:6px}}
