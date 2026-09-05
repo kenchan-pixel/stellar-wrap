@@ -14,6 +14,8 @@ const NEAR_MAST_SCALE=1.46;
 const FAR_MAST_SCALE=.72;
 const FRAME_START=-2.78;
 const FRAME_END=-.42;
+const NIGHT_EDGE_START=-.10;
+const NIGHT_EDGE_END=.18;
 const SOL_STAR_LOCAL=new THREE.Vector3(-78,38,-220);
 const PROFILE={
   earthCenter:new THREE.Vector3(14,-5,-80),earthRadius:18,
@@ -23,6 +25,7 @@ const PROFILE={
 };
 const approx=(a,b,t=.24)=>Math.abs(a-b)<=t;
 let earthRoot=null,earthSurface=null,moonRoot=null,objects=[],nightLayer=null,captureCount=0,lastState=null,frameDepthRange={min:0,max:0,span:0},mastScaleRange={min:0,max:0,ratio:0};
+let baseEarthEmission=null,nightPeakAlpha=0;
 const previousAdd=THREE.Object3D.prototype.add;
 const earthWorld=new THREE.Vector3(),sunWorld=new THREE.Vector3(),sunDirection=new THREE.Vector3(-1,0,0);
 
@@ -37,7 +40,32 @@ function geometryTriangles(object){
   return Math.round(base*(object.isInstancedMesh?object.count:1));
 }
 function measureTriangles(list=objects){return list.reduce((sum,object)=>sum+geometryTriangles(object),0)}
+function smoothstep(edge0,edge1,x){const t=Math.max(0,Math.min(1,(x-edge0)/(edge1-edge0)));return t*t*(3-2*t)}
+function nightMask(sunFacing){return 1-smoothstep(NIGHT_EDGE_START,NIGHT_EDGE_END,sunFacing)}
+function baseEmissionIntensity(){const value=earthSurface?.material?.emissiveIntensity;return Number.isFinite(value)?Number(value.toFixed(4)):null}
+function suppressBaseEarthEmission(){
+  const material=earthSurface?.material;
+  if(!material||!Number.isFinite(material.emissiveIntensity))return false;
+  if(baseEarthEmission?.material===material){material.emissiveIntensity=0;return true}
+  if(baseEarthEmission)restoreBaseEarthEmission();
+  baseEarthEmission={material,emissiveIntensity:material.emissiveIntensity};
+  material.emissiveIntensity=0;
+  return true;
+}
+function restoreBaseEarthEmission(){
+  if(!baseEarthEmission)return;
+  const {material,emissiveIntensity}=baseEarthEmission;
+  if(material&&Number.isFinite(emissiveIntensity))material.emissiveIntensity=emissiveIntensity;
+  baseEarthEmission=null;
+}
+function visibilitySamples(){
+  if(!nightLayer||nightPeakAlpha<=0)return null;
+  const opacity=nightLayer.material?.uniforms?.uOpacity?.value??1;
+  const sample=facing=>Number((nightPeakAlpha*nightMask(facing)*opacity).toFixed(4));
+  return{day:sample(1),terminator:sample(0),night:sample(-1),atlasPeak:Number(nightPeakAlpha.toFixed(4))};
+}
 function disposeOwn(){
+  restoreBaseEarthEmission();
   for(const object of objects){
     object.removeFromParent();object.geometry?.dispose?.();
     const materials=Array.isArray(object.material)?object.material:[object.material];
@@ -46,7 +74,7 @@ function disposeOwn(){
       material?.dispose?.();
     }
   }
-  objects=[];nightLayer=null;frameDepthRange={min:0,max:0,span:0};mastScaleRange={min:0,max:0,ratio:0};
+  objects=[];nightLayer=null;nightPeakAlpha=0;frameDepthRange={min:0,max:0,span:0};mastScaleRange={min:0,max:0,ratio:0};
 }
 function capture(object){
   const earth=planetSurface(object,PROFILE.earthCenter,PROFILE.earthRadius);
@@ -81,6 +109,9 @@ function earthNightTexture(){
       ctx.fillStyle=gradient;ctx.fillRect(px-r*3.4,py-r*3.4,r*6.8,r*6.8);
     }
   }
+  const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;let peak=0;
+  for(let i=3;i<pixels.length;i+=4)peak=Math.max(peak,pixels[i]);
+  nightPeakAlpha=peak/255;
   const texture=new THREE.CanvasTexture(canvas);texture.wrapS=THREE.RepeatWrapping;texture.wrapT=THREE.ClampToEdgeWrapping;texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;return texture;
 }
 function earthNightMaterial(){
@@ -160,6 +191,7 @@ function build(){
   braces.name=`${NAME}-perspective-chevron-braces`;braces.renderOrder=4;
   nightLayer=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),earthNightMaterial());
   nightLayer.name=`${NAME}-earth-night-terminator`;nightLayer.scale.setScalar(1.009);nightLayer.renderOrder=2;
+  if(!suppressBaseEarthEmission()){nightLayer.geometry.dispose();nightLayer.material.userData.ownedTextures?.forEach(texture=>texture.dispose?.());nightLayer.material.dispose();nightLayer=null;nightPeakAlpha=0;return}
   earthRoot.add(masts,braces,lights);earthSurface.add(nightLayer);objects=[masts,braces,lights,nightLayer];updateSunDirection();
 }
 function shouldRun(state){return !!state&&state.exploring&&!state.flying&&!state.contextLost&&state.qualityMode==='high'&&state.current==='SOL'}
@@ -172,13 +204,16 @@ function sync(){
 }
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===4;
+  const material=earthSurface?.material,baseEmissionSuppressed=!!(active&&baseEarthEmission?.material===material&&material?.emissiveIntensity===0);
   return{
     visualPass:VISUAL_PASS,gantryProfile:active?GANTRY_PROFILE:null,latticeProfile:active?LATTICE_PROFILE:null,nightProfile:active?NIGHT_PROFILE:null,
     target:'SOL',quality:state.qualityMode||null,active,captured:!!(earthRoot&&earthSurface&&moonRoot),captureCount,objects:objects.length,
     bays:active?BAY_COUNT:0,masts:active?MAST_COUNT:0,lights:active?LIGHT_COUNT:0,braceSegments:active?BRACE_SEGMENT_COUNT:0,nightLayer:active?1:0,
     drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,nightTriangles:active&&nightLayer?geometryTriangles(nightLayer):0,
     frameDepthSpan:active?Number(frameDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,mastScaleRatio:active?Number(mastScaleRange.ratio.toFixed(2)):0,
-    sunDirection:active?[sunDirection.x,sunDirection.y,sunDirection.z].map(v=>Number(v.toFixed(3))):null,nightTexture:active?PROFILE.nightTexture:null
+    sunDirection:active?[sunDirection.x,sunDirection.y,sunDirection.z].map(v=>Number(v.toFixed(3))):null,nightTexture:active?PROFILE.nightTexture:null,
+    baseEmissionSuppressed,baseEmissionIntensity:baseEmissionIntensity(),baseEmissionRestoreIntensity:active&&baseEarthEmission?Number(baseEarthEmission.emissiveIntensity.toFixed(4)):null,
+    cityVisibility:active?visibilitySamples():null
   };
 }
 const timer=setInterval(sync,SAMPLE_MS);
