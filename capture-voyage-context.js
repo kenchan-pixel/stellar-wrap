@@ -4,7 +4,6 @@ if(window.WarpCaptureVoyageContext)return;
 
 const SYSTEM_NAMES={SOL:'地球近軌',LUNA:'月環基地',VEGA:'織女星門',CYG:'天鵝航標',ORION:'獵戶前哨',TAU:'金牛塵海',SIRIUS:'天狼中繼站',PROX:'比鄰星港'};
 const MAX_MATCH_MS=12*60*60*1000;
-const CLOCK_SLOP_MS=2*60*1000;
 let records=[];
 let bootObserver=null,gridObserver=null,viewerObserver=null,grid=null,viewerPosition=null;
 let refreshBusy=false,refreshAgain=false;
@@ -14,9 +13,9 @@ function normaliseJourney(entry,record){
   if(!entry||!record||!SYSTEM_NAMES[record.system]||!Array.isArray(entry.route)||entry.route.length<2)return null;
   if(entry.route.some(id=>!SYSTEM_NAMES[id])||entry.route[entry.route.length-1]!==record.system)return null;
   const capturedAt=Number(record.createdAt),endedAt=Number(entry.endedAt);if(!Number.isFinite(capturedAt)||!Number.isFinite(endedAt))return null;
-  const age=capturedAt-endedAt;if(age<-CLOCK_SLOP_MS||age>MAX_MATCH_MS)return null;
+  const age=capturedAt-endedAt;if(age<0||age>MAX_MATCH_MS)return null;
   const distance=Number(entry.distance),seconds=Number(entry.seconds);
-  return{route:[...entry.route],endedAt,ageMs:Math.max(0,age),distance:Number.isFinite(distance)&&distance>0?Math.round(distance*10)/10:null,seconds:Number.isFinite(seconds)&&seconds>0?Math.round(seconds):null};
+  return{route:[...entry.route],endedAt,ageMs:age,distance:Number.isFinite(distance)&&distance>0?Math.round(distance*10)/10:null,seconds:Number.isFinite(seconds)&&seconds>0?Math.round(seconds):null};
 }
 function journeyFor(record){let best=null;for(const entry of journalEntries()){const candidate=normaliseJourney(entry,record);if(candidate&&(!best||candidate.ageMs<best.ageMs))best=candidate}return best}
 function journeyTextFrom(journey){if(!journey)return'';const parts=[journey.route.map(id=>SYSTEM_NAMES[id]||id).join(' → ')];if(Number.isFinite(journey.distance))parts.push(`${journey.distance.toFixed(1)} LY`);if(Number.isFinite(journey.seconds))parts.push(`${journey.seconds} 秒`);return parts.join(' · ')}
