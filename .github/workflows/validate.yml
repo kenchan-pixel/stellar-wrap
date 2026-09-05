@@ -40,5 +40,6 @@ jobs:
             artifacts/frontier-destination-handoff/
             artifacts/gallery-voyage-postcards/
             artifacts/capture-gallery/
+            artifacts/capture-gallery-swipe/
           if-no-files-found: ignore
           retention-days: 7
