@@ -84,7 +84,7 @@ function decorate(){
   return count;
 }
 function boot(){
-  if(decorate())return;
+  if(document.querySelector('#captureGalleryGrid')){decorate();return}
   bootObserver=new MutationObserver(()=>{if(document.querySelector('#captureGalleryGrid')){decorate();bootObserver?.disconnect();bootObserver=null}});
   bootObserver.observe(document.documentElement,{childList:true,subtree:true});
 }
