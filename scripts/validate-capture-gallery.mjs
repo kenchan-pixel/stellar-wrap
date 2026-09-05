@@ -67,8 +67,22 @@ async function inspect(chrome,base,width,height){
     const viewerLayout=await evalJs(cdp,`(()=>{const v=document.querySelector('#captureGalleryViewer'),r=v.getBoundingClientRect(),img=document.querySelector('#captureGalleryViewerImage').getBoundingClientRect(),stage=document.querySelector('.captureGalleryViewerStage').getBoundingClientRect(),buttons=[...v.querySelectorAll('button')].map(b=>b.getBoundingClientRect().height);return{left:r.left,top:r.top,right:r.right,bottom:r.bottom,imgLeft:img.left,imgTop:img.top,imgRight:img.right,imgBottom:img.bottom,stageLeft:stage.left,stageTop:stage.top,stageRight:stage.right,stageBottom:stage.bottom,buttons,title:document.querySelector('#captureGalleryViewerTitle')?.textContent||'',meta:document.querySelector('#captureGalleryViewerMeta')?.textContent||'',bodyOverflow:document.body.style.overflow,rootOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth}})()`);
     assert.ok(viewerLayout.left>=-1&&viewerLayout.top>=-1&&viewerLayout.right<=width+1&&viewerLayout.bottom<=height+1,'viewer must fill but not overflow mobile viewport');assert.ok(viewerLayout.imgLeft>=viewerLayout.stageLeft-1&&viewerLayout.imgRight<=viewerLayout.stageRight+1&&viewerLayout.imgTop>=viewerLayout.stageTop-1&&viewerLayout.imgBottom<=viewerLayout.stageBottom+1,'stored PNG must remain contained inside viewer stage');assert.ok(viewerLayout.buttons.every(value=>value>=44),'viewer actions must retain >=44px touch height');assert.equal(viewerLayout.title,'金牛塵海');assert.match(viewerLayout.meta,/1:1/);assert.equal(viewerLayout.bodyOverflow,'hidden');assert.ok(viewerLayout.rootOverflow<=1,'viewer must not create horizontal root overflow');
     const viewerBytes=await screenshot(cdp,`capture-gallery-viewer-${viewport}.png`);assert.ok(viewerBytes>15000,'full-screen viewer screenshot must contain rendered capture');
+
+    await evalJs(cdp,`(()=>{window.__captureOriginalAnchorClick=HTMLAnchorElement.prototype.click;window.__captureDownloadClicks=0;window.__captureDownloadName='';HTMLAnchorElement.prototype.click=function(){window.__captureDownloadClicks+=1;window.__captureDownloadName=this.download||''};document.querySelector('#captureGalleryViewer [data-viewer-action="download"]').click();return true})()`);
+    await waitUntil(()=>evalJs(cdp,'window.__captureDownloadClicks===1'),'viewer re-save action');
+    const resaveName=await evalJs(cdp,'window.__captureDownloadName');assert.match(resaveName,/stellar-wrap-tau-square/,'viewer re-save must target the open TAU square PNG');
+    await evalJs(cdp,`(()=>{HTMLAnchorElement.prototype.click=window.__captureOriginalAnchorClick;delete window.__captureOriginalAnchorClick;return true})()`);
+
     await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});
     await waitUntil(()=>evalJs(cdp,"document.querySelector('#captureGalleryViewer')?.hidden===true&&document.body.style.overflow!=='hidden'"),'viewer Escape close');
+
+    await evalJs(cdp,"document.querySelector('#captureGalleryGrid .captureGalleryImage').click();true");
+    await waitUntil(()=>evalJs(cdp,"!document.querySelector('#captureGalleryViewer')?.hidden"),'viewer reopen for delete');
+    await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"delete\"]').click();true");
+    await waitUntil(()=>evalJs(cdp,"WarpCaptureGallery.count().then(n=>n===0&&document.querySelector('#captureGalleryViewer')?.hidden===true&&document.body.style.overflow!=='hidden'&&document.querySelectorAll('#captureGalleryGrid .captureGalleryCard').length===0)",true),'viewer open-item delete action');
+
+    await evalJs(cdp,`(async()=>{const blob=await new Promise(resolve=>{const c=document.createElement('canvas');c.width=4;c.height=4;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,4,4);c.toBlob(resolve,'image/png')});return await WarpCaptureGallery.add({blob,system:'TAU',width:4,height:4,frame:'square',createdAt:Date.now()})})()`,true);
+    await waitUntil(()=>evalJs(cdp,'WarpCaptureGallery.count().then(n=>n===1)',true),'replacement capture for reload persistence');
 
     loaded=cdp.waitEvent('Page.loadEventFired',18000);await cdp.send('Page.reload',{ignoreCache:true});await loaded;
     await waitUntil(()=>evalJs(cdp,'!!window.WarpCaptureGallery&&WarpCaptureGallery.count().then(n=>n===1)',true),'IndexedDB capture survives page reload',35000);
@@ -76,8 +90,8 @@ async function inspect(chrome,base,width,height){
 
     await evalJs(cdp,`(async()=>{const makeBlob=()=>new Promise(resolve=>{const c=document.createElement('canvas');c.width=4;c.height=4;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,4,4);c.toBlob(resolve,'image/png')});const blob=await makeBlob();for(let i=0;i<6;i++)await WarpCaptureGallery.add({blob,system:'LUNA',width:4,height:4,frame:'full',createdAt:Date.now()+i+10});return await WarpCaptureGallery.count()})()`,true);
     assert.equal(await evalJs(cdp,'WarpCaptureGallery.count()',true),6,'archive must prune transactionally to six captures');
-    const ids=await evalJs(cdp,'WarpCaptureGallery.list().then(rows=>rows.map(row=>row.id))',true);assert.equal(ids.length,6);await evalJs(cdp,`WarpCaptureGallery.remove(${JSON.stringify(ids[0])})`,true);assert.equal(await evalJs(cdp,'WarpCaptureGallery.count()',true),5,'delete action must remove one local capture');
-    console.log(`Capture Gallery ${viewport}: real TAU square PNG ${record.width}x${record.height}, ${record.size} bytes; archive screenshot ${bytes} bytes, viewer screenshot ${viewerBytes} bytes; reload, immersive review, six-item bound and delete passed`);
+    const ids=await evalJs(cdp,'WarpCaptureGallery.list().then(rows=>rows.map(row=>row.id))',true);assert.equal(ids.length,6);await evalJs(cdp,`WarpCaptureGallery.remove(${JSON.stringify(ids[0])})`,true);assert.equal(await evalJs(cdp,'WarpCaptureGallery.count()',true),5,'delete API must remove one local capture');
+    console.log(`Capture Gallery ${viewport}: real TAU square PNG ${record.width}x${record.height}, ${record.size} bytes; archive screenshot ${bytes} bytes, viewer screenshot ${viewerBytes} bytes; viewer re-save/delete, Escape close, reload, six-item bound passed`);
   }catch(error){if(cdp)await screenshot(cdp,`capture-gallery-failure-${viewport}.png`).catch(()=>{});throw error}
   finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
