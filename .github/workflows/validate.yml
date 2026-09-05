@@ -31,6 +31,9 @@ jobs:
       - name: Validate Capture Gallery cinematic focus
         run: node scripts/validate-capture-gallery-focus.mjs
 
+      - name: Validate Capture Gallery focus swipe composition
+        run: node scripts/validate-capture-gallery-focus-swipe.mjs
+
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
