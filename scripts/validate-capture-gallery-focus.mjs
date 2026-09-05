@@ -13,7 +13,10 @@ assert.match(source,/focusMode/,'viewer must expose bounded focus-mode presentat
 assert.match(source,/aria-pressed/,'focus control must expose pressed state');
 assert.match(source,/Math\.abs\(dx\)<=12&&Math\.abs\(dy\)<=12/,'stationary image tap must toggle focus without colliding with swipe threshold');
 assert.match(source,/event\.key==='c'\|\|event\.key==='C'/,'keyboard must be able to toggle focus mode');
-assert.doesNotMatch(source,/WebGLRenderer|THREE\.|requestAnimationFrame\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'focus mode must not add renderer, render-loop or network authority');
+assert.doesNotMatch(source,/WebGLRenderer|THREE\.|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'focus mode must not add renderer or network authority');
+const rafCalls=source.match(/requestAnimationFrame\s*\(/g)||[];
+assert.equal(rafCalls.length,1,'focus review may use exactly one bounded one-shot presentation RAF');
+assert.match(source,/if\(direction\)requestAnimationFrame\(\(\)=>\{if\(viewerOpenId===String\(record\.id\)\)animateViewerArrival\(direction\)\}\)/,'focus review RAF must remain the direction-gated one-shot image arrival handoff');
 const syntax=spawnSync(process.execPath,['--check','capture-gallery.js'],{encoding:'utf8'});assert.equal(syntax.status,0,`capture-gallery.js syntax failed: ${syntax.stderr}`);
 console.log('Capture Gallery cinematic focus static contract passed');
 
