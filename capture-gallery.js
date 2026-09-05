@@ -87,7 +87,7 @@ async function download(id){
   }catch{return false}
 }
 function syncGatewayCopy(){
-  const gateway=document.querySelector('#gatewayGallery small');if(gateway){const text='重看最近航程、外站發現與本機高畫質留影；點按留影可全螢幕比較、返回景觀／再次前往、再次儲存或刪除。';if(gateway.textContent!==text)gateway.textContent=text}
+  const gateway=document.querySelector('#gatewayGallery small');if(gateway){const text='重看最近航程、外站發現與本機高畫質留影；點按留影可全螢幕重看、左右掃動比較、返回景觀／再次前往、再次儲存或刪除。';if(gateway.textContent!==text)gateway.textContent=text}
   const local=document.querySelector('#gatewayRecords .modeGatewayLocal');if(local){const text='高畫質留影只保存在此裝置，最多保留最近 6 張；全螢幕重看可左右掃動比較，並安全返回目前景觀或交接到既有 Real Space 航線規劃。再訪不會直接瞬移。';if(local.textContent!==text)local.textContent=text}
   const copy=document.querySelector('#modeGatewayCaptureCopy');if(copy){let state=null;try{state=window.WarpSim?.state?.()}catch{}const ready=!!(state&&!state.flying&&!state.contextLost&&state.exploring);const text=ready?'目前停泊點可直接進入既有高畫質 Photo Mode；成功留影會自動保留最近 6 張於本機 Gallery。':'Photo Mode 只會在安全的 Real Space 最終到站探索中啟用；成功留影會保存在本機 Gallery。';if(copy.textContent!==text)copy.textContent=text}
 }
