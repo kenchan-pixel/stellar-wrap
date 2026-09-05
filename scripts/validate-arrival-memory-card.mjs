@@ -36,6 +36,7 @@ async function inspect(chrome,base,width,height){
     cdp=new Cdp(target.webSocketDebuggerUrl);await cdp.connect();await cdp.send('Page.enable');await cdp.send('Runtime.enable');await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true,screenWidth:width,screenHeight:height});await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
     const loaded=cdp.waitEvent('Page.loadEventFired',18000);await cdp.send('Page.navigate',{url:base});await loaded;
     await waitUntil(()=>evalJs(cdp,'!!window.WarpSim&&!!window.WarpArrivalDebrief&&!!window.WarpPhotoMode'),'simulator arrival/photo APIs',38000);
+
     await evalJs(cdp,"WarpSim.jumpTo('TAU');true");await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpSim.state();return s.current==='TAU'&&s.exploring&&!s.flying&&!s.contextLost})()"),'safe TAU exploration');
     const shown=await evalJs(cdp,"WarpArrivalDebrief.show({route:['SOL','SIRIUS','TAU'],distance:11.4,seconds:42})");assert.equal(shown,true);
     const card=await waitUntil(()=>evalJs(cdp,`(()=>{const c=document.querySelector('#arrivalDebrief');if(!c?.classList.contains('show'))return null;const stops=[...c.querySelectorAll('.arrivalDebriefStop')],buttons=[...c.querySelectorAll('.arrivalDebriefActions button')],r=c.getBoundingClientRect();return{stops:stops.map(s=>s.dataset.system),destination:stops.at(-1)?.classList.contains('destination'),route:c.querySelector('#arrivalDebriefRoute')?.textContent||'',photo:c.querySelector('#arrivalDebriefPhoto')?.textContent||'',minButton:Math.min(...buttons.map(b=>b.getBoundingClientRect().height)),left:r.left,right:r.right,width:r.width,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth}})()`),'arrival memory card');
@@ -46,7 +47,14 @@ async function inspect(chrome,base,width,height){
     assert.equal(handoff.current,'TAU');assert.equal(handoff.exploring,true);assert.equal(handoff.flying,false);assert.equal(handoff.debrief,false);assert.equal(handoff.photoClass,true);assert.ok(handoff.overflow<=1);
     const photoBytes=await screenshot(cdp,`arrival-photo-handoff-${viewport}.png`);assert.ok(photoBytes>12000);
     await evalJs(cdp,'WarpPhotoMode.exit();true');
-    console.log(`Arrival Memory Card ${viewport}: route ribbon + 44px controls + safe Photo Mode handoff passed; screenshots ${cardBytes}/${photoBytes} bytes`);
+
+    await evalJs(cdp,"WarpSim.jumpTo('ORION');true");await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpSim.state();return s.current==='ORION'&&s.exploring&&!s.flying&&!s.contextLost})()"),'safe ORION exploration');
+    const orionShown=await evalJs(cdp,"WarpArrivalDebrief.show({route:['SOL','LUNA','VEGA','CYG','ORION'],distance:17.0,seconds:68})");assert.equal(orionShown,true);
+    const orion=await waitUntil(()=>evalJs(cdp,`(()=>{const c=document.querySelector('#arrivalDebrief');if(!c?.classList.contains('show'))return null;const ribbon=c.querySelector('#arrivalDebriefRibbon'),stops=[...c.querySelectorAll('.arrivalDebriefStop')],rr=ribbon.getBoundingClientRect(),cr=c.getBoundingClientRect(),stopRects=stops.map(s=>s.getBoundingClientRect());return{stops:stops.map(s=>s.dataset.system),destination:stops.at(-1)?.classList.contains('destination'),contained:stopRects.every(r=>r.left>=rr.left-1&&r.right<=rr.right+1),ribbonLeft:rr.left,ribbonRight:rr.right,cardLeft:cr.left,cardRight:cr.right,overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth}})()`),'five-stop ORION route ribbon');
+    assert.deepEqual(orion.stops,['SOL','LUNA','VEGA','CYG','ORION']);assert.equal(orion.destination,true);assert.equal(orion.contained,true,'all five route nodes must remain inside the ribbon');assert.ok(orion.ribbonLeft>=-1&&orion.ribbonRight<=width+1,'ORION ribbon must remain inside the viewport');assert.ok(orion.cardLeft>=-1&&orion.cardRight<=width+1,'ORION arrival card must remain inside the viewport');assert.ok(orion.overflow<=1,`ORION overflow ${orion.overflow}`);
+    const orionBytes=await screenshot(cdp,`arrival-memory-orion-${viewport}.png`);assert.ok(orionBytes>12000);
+    await evalJs(cdp,'WarpArrivalDebrief.hide();true');
+    console.log(`Arrival Memory Card ${viewport}: TAU ribbon + 44px controls + safe Photo Mode handoff + five-stop ORION ribbon passed; screenshots ${cardBytes}/${photoBytes}/${orionBytes} bytes`);
   }catch(error){if(cdp)await screenshot(cdp,`arrival-memory-failure-${viewport}.png`).catch(()=>{});throw error}
   finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
