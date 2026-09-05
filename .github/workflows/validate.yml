@@ -28,6 +28,9 @@ jobs:
       - name: Validate source, stable baseline and route graph
         run: npm run check
 
+      - name: Validate arrival memory card
+        run: node scripts/validate-arrival-memory-card.mjs
+
       - name: Validate Capture Gallery cinematic focus
         run: node scripts/validate-capture-gallery-focus.mjs
 
@@ -48,5 +51,6 @@ jobs:
             artifacts/capture-gallery/
             artifacts/capture-gallery-swipe/
             artifacts/capture-gallery-focus/
+            artifacts/arrival-memory-card/
           if-no-files-found: ignore
           retention-days: 7

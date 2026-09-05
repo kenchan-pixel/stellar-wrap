@@ -60,6 +60,21 @@ function explorationHandoff(destination){
   if(!config)return{target:null,label:'自由探索',discovery:''};
   return{...config,discovery:discoveryAt(destination)};
 }
+function renderRouteRibbon(routeIds){
+  const host=document.querySelector('#arrivalDebriefRibbon');
+  if(!host)return false;
+  const fragment=document.createDocumentFragment();
+  routeIds.forEach((id,index)=>{
+    if(index){const leg=document.createElement('span');leg.className='arrivalDebriefLeg';leg.setAttribute('aria-hidden','true');fragment.append(leg)}
+    const stop=document.createElement('span');stop.className='arrivalDebriefStop'+(index===routeIds.length-1?' destination':'');stop.dataset.system=id;
+    const dot=document.createElement('i');dot.setAttribute('aria-hidden','true');
+    const label=document.createElement('b');label.textContent=id;
+    stop.append(dot,label);fragment.append(stop);
+  });
+  host.replaceChildren(fragment);
+  host.setAttribute('aria-label','航程路線：'+routeIds.map(id=>SYSTEM_NAMES[id]).join(' 到 '));
+  return true;
+}
 function ensureUi(){
   if(uiReady&&document.querySelector('#arrivalDebrief')){placeCard();ensureOrderObserver();return true}
   const actions=document.querySelector('#exploreCard .exploreActions');
@@ -67,7 +82,7 @@ function ensureUi(){
   if(!document.querySelector('#arrivalDebriefStyle')){
     const style=document.createElement('style');
     style.id='arrivalDebriefStyle';
-    style.textContent='.arrivalDebrief{display:none;margin:8px 0 7px;padding:8px;border:1px solid rgba(105,238,210,.2);border-radius:12px;background:linear-gradient(180deg,rgba(79,191,166,.075),rgba(90,150,224,.04))}.arrivalDebrief.show{display:block}.arrivalDebriefTop{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.arrivalDebriefTitle{font-size:9px;font-weight:820;letter-spacing:.03em}.arrivalDebriefBadge{font-size:7px;color:#91f1dd;white-space:nowrap}.arrivalDebriefStats{margin-top:4px;font-size:8px;line-height:1.4;color:#dceaff}.arrivalDebriefRoute{margin-top:3px;font-size:7px;line-height:1.4;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.arrivalDebriefObjective{margin-top:7px;padding:6px 7px;border:1px solid rgba(141,211,196,.15);border-radius:8px;background:rgba(68,155,140,.055);font-size:8px;line-height:1.4;color:#dff9f3}.arrivalDebriefObjective.done{border-color:rgba(105,238,210,.25);color:#b9f4e6}.arrivalDebriefActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}.arrivalDebriefActions button{min-height:44px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.045);color:var(--text);font-size:8px;font-weight:760}.arrivalDebriefActions .arrivalExplore{border-color:rgba(115,229,205,.28);background:rgba(74,180,158,.08)}.arrivalDebriefActions .arrivalNext{border-color:rgba(166,211,255,.3);background:rgba(116,171,235,.09)}';
+    style.textContent='.arrivalDebrief{display:none;margin:8px 0 7px;padding:8px;border:1px solid rgba(105,238,210,.2);border-radius:12px;background:linear-gradient(180deg,rgba(79,191,166,.075),rgba(90,150,224,.04))}.arrivalDebrief.show{display:block}.arrivalDebriefTop{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.arrivalDebriefTitle{font-size:9px;font-weight:820;letter-spacing:.03em}.arrivalDebriefBadge{font-size:7px;color:#91f1dd;white-space:nowrap}.arrivalDebriefStats{margin-top:4px;font-size:8px;line-height:1.4;color:#dceaff}.arrivalDebriefRibbon{display:flex;align-items:flex-start;gap:3px;margin-top:7px;padding:7px 6px;border:1px solid rgba(157,207,255,.12);border-radius:9px;background:rgba(56,113,173,.045);overflow:hidden}.arrivalDebriefStop{flex:0 1 42px;min-width:0;text-align:center;color:rgba(213,231,250,.58)}.arrivalDebriefStop i{display:block;width:7px;height:7px;margin:0 auto 4px;border:1px solid rgba(169,214,255,.48);border-radius:50%;background:rgba(93,160,224,.18);box-shadow:0 0 10px rgba(95,180,232,.08)}.arrivalDebriefStop b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:6.5px;letter-spacing:.04em}.arrivalDebriefStop.destination{color:#dffbf4}.arrivalDebriefStop.destination i{border-color:rgba(116,238,210,.8);background:rgba(87,218,186,.5);box-shadow:0 0 12px rgba(88,224,193,.28)}.arrivalDebriefLeg{flex:1 1 14px;min-width:7px;height:1px;margin-top:3px;background:linear-gradient(90deg,rgba(126,190,239,.22),rgba(100,231,202,.42))}.arrivalDebriefRoute{margin-top:4px;font-size:7px;line-height:1.4;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.arrivalDebriefObjective{margin-top:7px;padding:6px 7px;border:1px solid rgba(141,211,196,.15);border-radius:8px;background:rgba(68,155,140,.055);font-size:8px;line-height:1.4;color:#dff9f3}.arrivalDebriefObjective.done{border-color:rgba(105,238,210,.25);color:#b9f4e6}.arrivalDebriefActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}.arrivalDebriefActions button{min-height:44px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.045);color:var(--text);font-size:8px;font-weight:760}.arrivalDebriefActions .arrivalPhoto{grid-column:1/-1;border-color:rgba(145,205,255,.34);background:linear-gradient(180deg,rgba(118,180,239,.13),rgba(79,128,193,.07))}.arrivalDebriefActions .arrivalExplore{border-color:rgba(115,229,205,.28);background:rgba(74,180,158,.08)}.arrivalDebriefActions .arrivalNext{border-color:rgba(166,211,255,.3);background:rgba(116,171,235,.09)}';
     document.head.append(style);
   }
   let card=document.querySelector('#arrivalDebrief');
@@ -78,8 +93,9 @@ function ensureUi(){
     card.setAttribute('role','status');
     card.setAttribute('aria-live','polite');
     card.setAttribute('aria-label','航程完成摘要');
-    card.innerHTML='<div class="arrivalDebriefTop"><strong id="arrivalDebriefTitle" class="arrivalDebriefTitle">航程完成</strong><span class="arrivalDebriefBadge">ARRIVAL LOG</span></div><div id="arrivalDebriefStats" class="arrivalDebriefStats"></div><div id="arrivalDebriefRoute" class="arrivalDebriefRoute"></div><div id="arrivalDebriefObjective" class="arrivalDebriefObjective"></div><div class="arrivalDebriefActions"><button id="arrivalDebriefExplore" class="arrivalExplore" type="button">繼續探索</button><button id="arrivalDebriefNext" class="arrivalNext" type="button">下一目的地</button></div>';
+    card.innerHTML='<div class="arrivalDebriefTop"><strong id="arrivalDebriefTitle" class="arrivalDebriefTitle">航程完成</strong><span class="arrivalDebriefBadge">ARRIVAL LOG</span></div><div id="arrivalDebriefStats" class="arrivalDebriefStats"></div><div id="arrivalDebriefRibbon" class="arrivalDebriefRibbon" aria-label="航程路線"></div><div id="arrivalDebriefRoute" class="arrivalDebriefRoute"></div><div id="arrivalDebriefObjective" class="arrivalDebriefObjective"></div><div class="arrivalDebriefActions"><button id="arrivalDebriefPhoto" class="arrivalPhoto" type="button">旅程留影</button><button id="arrivalDebriefExplore" class="arrivalExplore" type="button">繼續探索</button><button id="arrivalDebriefNext" class="arrivalNext" type="button">下一目的地</button></div>';
     actions.insertAdjacentElement('beforebegin',card);
+    card.querySelector('#arrivalDebriefPhoto').addEventListener('click',openPhotoMode);
     card.querySelector('#arrivalDebriefExplore').addEventListener('click',openExploration);
     card.querySelector('#arrivalDebriefNext').addEventListener('click',()=>{
       hide();
@@ -99,11 +115,13 @@ function render(entry){
   const route=document.querySelector('#arrivalDebriefRoute');
   const objective=document.querySelector('#arrivalDebriefObjective');
   const explore=document.querySelector('#arrivalDebriefExplore');
-  if(!title||!stats||!route||!objective||!explore)return false;
+  const photo=document.querySelector('#arrivalDebriefPhoto');
+  if(!title||!stats||!route||!objective||!explore||!photo||!renderRouteRibbon(entry.route))return false;
   title.textContent='航程完成 · '+SYSTEM_NAMES[destination];
   const distance=Number.isFinite(entry.distance)?entry.distance.toFixed(1)+' LY':'距離未記錄';
   stats.textContent=`${entry.route.length-1} 段 · ${distance} · ${entry.seconds} 秒活躍航行`;
   route.textContent=entry.route.map(id=>SYSTEM_NAMES[id]).join(' → ');
+  photo.textContent='旅程留影 · '+SYSTEM_NAMES[destination];
   const handoff=explorationHandoff(destination);
   objective.classList.toggle('done',!!handoff.discovery);
   if(!EXPLORATION[destination]){
@@ -131,6 +149,14 @@ function show(raw){
   const collapse=document.querySelector('#exploreCollapse');
   if(collapse)collapse.textContent='⌄';
   return true;
+}
+function openPhotoMode(){
+  if(!currentEntry||!safeArrival(currentEntry))return false;
+  const api=window.WarpPhotoMode;
+  if(typeof api?.enter!=='function')return false;
+  api.enter();
+  if(api.active?.()){hide();return true}
+  return false;
 }
 function openExploration(){
   const destination=currentEntry?.route?.[currentEntry.route.length-1];
