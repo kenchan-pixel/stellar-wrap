@@ -14,6 +14,9 @@ assert.match(source,/data-viewer-action=\"next\"/,'capture viewer must expose ne
 assert.match(source,/data-viewer-action=\"return\"/,'capture viewer must expose capture-to-world return action');
 assert.match(source,/WarpSim\.select\(system\)/,'capture return must reuse existing Real Space selection authority');
 assert.doesNotMatch(source,/\.jumpTo\s*\(/,'capture return must not instant-jump to a photographed destination');
+assert.match(source,/返回目前景觀/,'same-current capture must expose a direct return label');
+assert.match(source,/航行中/,'active flight must expose a disabled return label');
+assert.match(source,/圖像恢復中/,'WebGL recovery must expose a disabled return label');
 assert.match(source,/pointerdown/,'capture viewer must listen for touch/pointer swipe start');
 assert.match(source,/Math\.abs\(dx\)>=48/,'capture viewer must use a bounded swipe threshold');
 assert.match(source,/event\.key==='ArrowLeft'/,'capture viewer must support keyboard previous navigation');
@@ -55,7 +58,25 @@ async function inspect(chrome,base,width,height){
     await sleep(360);const routeBytes=await screenshot(cdp,`capture-gallery-return-route-${viewport}.png`);assert.ok(routeBytes>12000);
     const routeState=await evalJs(cdp,"(()=>{const s=WarpSim.state();return{current:s.current,selected:s.selected,flying:s.flying,panel:document.querySelector('#panel')?.classList.contains('open')}})()");assert.deepEqual(routeState,{current:'SOL',selected:'TAU',flying:false,panel:true},'capture return must plan rather than instant travel');
 
-    await evalJs(cdp,"document.querySelector('#panel')?.classList.remove('open');WarpModeGateway.openRecords();true");await waitUntil(()=>evalJs(cdp,"document.querySelectorAll('#captureGalleryGrid .captureGalleryCard').length===2"),'capture records reopened after route handoff');await evalJs(cdp,`WarpCaptureGallery.open(${JSON.stringify(firstId)})`,true);await waitUntil(()=>evalJs(cdp,"!document.querySelector('#captureGalleryViewer')?.hidden&&document.querySelector('#captureGalleryViewerTitle')?.textContent==='金牛塵海'"),'viewer reopened after route handoff');
+    await evalJs(cdp,"document.querySelector('#panel')?.classList.remove('open');WarpSim.jumpTo('TAU');true");await waitUntil(()=>evalJs(cdp,"(()=>{const s=WarpSim.state();return s.current==='TAU'&&s.exploring&&!s.flying&&!s.contextLost})()"),'safe TAU exploration setup');
+    const sameBefore=await evalJs(cdp,"(()=>{const s=WarpSim.state();return{current:s.current,selected:s.selected,route:s.route,flying:s.flying}})()");
+    await evalJs(cdp,'WarpModeGateway.openRecords();true');await waitUntil(()=>evalJs(cdp,"document.querySelectorAll('#captureGalleryGrid .captureGalleryCard').length===2"),'capture records open at photographed current world');await evalJs(cdp,`WarpCaptureGallery.open(${JSON.stringify(firstId)})`,true);
+    await waitUntil(()=>evalJs(cdp,"(()=>{const b=document.querySelector('#captureGalleryViewer [data-viewer-action=\"return\"]');return !document.querySelector('#captureGalleryViewer')?.hidden&&b&&!b.disabled&&b.textContent==='返回目前景觀'})()"),'same-current return state');
+    const sameBytes=await screenshot(cdp,`capture-gallery-return-current-${viewport}.png`);assert.ok(sameBytes>12000);
+    await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"return\"]').click();true");await waitUntil(()=>evalJs(cdp,"document.querySelector('#captureGalleryViewer')?.hidden===true&&WarpModeGateway.snapshot().visible===false"),'same-current return closes Gallery');
+    const sameAfter=await evalJs(cdp,"(()=>{const s=WarpSim.state();return{current:s.current,selected:s.selected,route:s.route,flying:s.flying}})()");assert.deepEqual(sameAfter,sameBefore,'same-current return must not mutate current/selected route state');
+
+    await evalJs(cdp,"WarpSim.select('SIRIUS');WarpSim.launch();true");await waitUntil(()=>evalJs(cdp,'WarpSim.state().flying===true'),'active-flight setup');await evalJs(cdp,`WarpCaptureGallery.open(${JSON.stringify(firstId)})`,true);
+    const flightReturn=await waitUntil(()=>evalJs(cdp,"(()=>{const b=document.querySelector('#captureGalleryViewer [data-viewer-action=\"return\"]');return !document.querySelector('#captureGalleryViewer')?.hidden&&b?.disabled&&b.textContent==='航行中'?{disabled:b.disabled,text:b.textContent}:null})()"),'flight-disabled return state');assert.deepEqual(flightReturn,{disabled:true,text:'航行中'});
+    WarpCaptureGalleryClose: await evalJs(cdp,'WarpCaptureGallery.close();true');
+    await evalJs(cdp,'WarpSim.abort();true');await waitUntil(()=>evalJs(cdp,'WarpSim.state().flying===false'),'flight abort after return-state check');
+
+    await evalJs(cdp,'WarpSim.loseContext();true');await waitUntil(()=>evalJs(cdp,'WarpSim.state().contextLost===true'),'WebGL context-loss setup');await evalJs(cdp,`WarpCaptureGallery.open(${JSON.stringify(firstId)})`,true);
+    const contextReturn=await waitUntil(()=>evalJs(cdp,"(()=>{const b=document.querySelector('#captureGalleryViewer [data-viewer-action=\"return\"]');return !document.querySelector('#captureGalleryViewer')?.hidden&&b?.disabled&&b.textContent==='圖像恢復中'?{disabled:b.disabled,text:b.textContent}:null})()"),'context-loss-disabled return state');assert.deepEqual(contextReturn,{disabled:true,text:'圖像恢復中'});
+    const unsafeBytes=await screenshot(cdp,`capture-gallery-return-disabled-${viewport}.png`);assert.ok(unsafeBytes>12000);
+    await evalJs(cdp,'WarpCaptureGallery.close();WarpSim.restoreContext();true');await waitUntil(()=>evalJs(cdp,'WarpSim.state().contextLost===false'),'WebGL context restored');
+
+    await evalJs(cdp,"WarpSim.jumpTo('SOL');document.querySelector('#panel')?.classList.remove('open');WarpModeGateway.openRecords();true");await waitUntil(()=>evalJs(cdp,"document.querySelectorAll('#captureGalleryGrid .captureGalleryCard').length===2"),'capture records reopened after return-state gates');await evalJs(cdp,`WarpCaptureGallery.open(${JSON.stringify(firstId)})`,true);await waitUntil(()=>evalJs(cdp,"!document.querySelector('#captureGalleryViewer')?.hidden&&document.querySelector('#captureGalleryViewerTitle')?.textContent==='金牛塵海'"),'viewer reopened after return-state gates');
 
     await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"next\"]').click();true");await waitUntil(()=>evalJs(cdp,"document.querySelector('#captureGalleryViewerTitle')?.textContent==='天狼中繼站'"),'next capture button');assert.match(await evalJs(cdp,"document.querySelector('#captureGalleryViewerPosition')?.textContent||''"),/2 \/ 2/);
     await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"prev\"]').click();true");await waitUntil(()=>evalJs(cdp,"document.querySelector('#captureGalleryViewerTitle')?.textContent==='金牛塵海'"),'previous capture button');
@@ -71,7 +92,7 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"WarpCaptureGallery.count().then(n=>n===1&&!document.querySelector('#captureGalleryViewer')?.hidden&&document.querySelector('#captureGalleryViewerTitle')?.textContent==='天狼中繼站')",true),'delete current while preserving viewer');assert.match(await evalJs(cdp,"document.querySelector('#captureGalleryViewerPosition')?.textContent||''"),/1 \/ 1/);
     const single=await evalJs(cdp,`(()=>{const v=document.querySelector('#captureGalleryViewer');return{prev:v.querySelector('[data-viewer-action="prev"]').disabled,next:v.querySelector('[data-viewer-action="next"]').disabled}})()`);assert.equal(single.prev,true);assert.equal(single.next,true);
     await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"delete\"]').click();true");await waitUntil(()=>evalJs(cdp,"WarpCaptureGallery.count().then(n=>n===0&&document.querySelector('#captureGalleryViewer')?.hidden===true&&document.body.style.overflow!=='hidden')",true),'last delete closes viewer');
-    console.log(`Capture Gallery ${viewport}: route handoff, prev/next, true touch swipe, keyboard navigation, in-viewer delete passed; screenshots ${initialBytes}/${routeBytes}/${swipeBytes} bytes`);
+    console.log(`Capture Gallery ${viewport}: route handoff, same-current return, flight/context guards, prev/next, true touch swipe, keyboard navigation, in-viewer delete passed; screenshots ${initialBytes}/${routeBytes}/${sameBytes}/${unsafeBytes}/${swipeBytes} bytes`);
   }catch(error){if(cdp)await screenshot(cdp,`capture-gallery-swipe-failure-${viewport}.png`).catch(()=>{});throw error}
   finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
