@@ -24,7 +24,7 @@ assert.ok(nativeAwait>0,'native share call must exist in the share action');
 assert.doesNotMatch(shareBody.slice(0,nativeAwait),/\bawait\b/,'no async IndexedDB/read step may consume transient user activation before navigator.share');
 assert.doesNotMatch(source,/THREE\.|WebGLRenderer|setInterval\s*\(|requestAnimationFrame\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon|localStorage|indexedDB\.open/,'native share must add no renderer, loop, network or persistence authority');
 assert.match(loader,/import\('\.\/capture-share\.js'\)/,'runtime bootstrap must load Capture Share');
-assert.ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v17`")&&sw.includes("'./capture-share.js'"),'prepared offline shell must include Capture Share v17');
+assert.ok(sw.includes("const CACHE_PREFIX='stellar-wrap-shell-'")&&/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`/.test(sw)&&sw.includes("'./capture-share.js'"),'prepared offline shell must remain explicitly versioned and include Capture Share');
 assert.ok(doc.includes('Capture Gallery v7')&&doc.includes('Native Share')&&doc.includes('latest **6** captures')&&doc.includes('do not create a second camera')&&doc.includes('full-screen viewer'),'Capture Gallery SOT must include the native-share slice while preserving the bounded archive/viewer contract');
 for(const file of ['capture-share.js','exploration-focus-tray.js']){const syntax=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});assert.equal(syntax.status,0,`${file} syntax failed: ${syntax.stderr}`)}
 console.log('Capture Gallery native share static contract passed');
