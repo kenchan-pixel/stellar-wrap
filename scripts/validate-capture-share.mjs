@@ -18,6 +18,10 @@ assert.match(source,/new File\(\[record\.blob\]/,'native share must wrap the alr
 assert.match(source,/files:\[file\]/,'share payload must contain the local PNG File');
 assert.match(source,/error\?\.name==='AbortError'/,'share-sheet cancellation must be a normal non-error outcome');
 assert.match(source,/captureGalleryShare/,'Gallery cards must expose a dedicated share action');
+const shareBody=source.slice(source.indexOf('async function share('),source.indexOf('function decorateCard('));
+const nativeAwait=shareBody.indexOf('await navigator.share');
+assert.ok(nativeAwait>0,'native share call must exist in the share action');
+assert.doesNotMatch(shareBody.slice(0,nativeAwait),/\bawait\b/,'no async IndexedDB/read step may consume transient user activation before navigator.share');
 assert.doesNotMatch(source,/THREE\.|WebGLRenderer|setInterval\s*\(|requestAnimationFrame\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon|localStorage|indexedDB\.open/,'native share must add no renderer, loop, network or persistence authority');
 assert.match(loader,/import\('\.\/capture-share\.js'\)/,'runtime bootstrap must load Capture Share');
 assert.ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v17`")&&sw.includes("'./capture-share.js'"),'prepared offline shell must include Capture Share v17');
