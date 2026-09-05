@@ -1,4 +1,4 @@
-# Capture Gallery｜Voyage Context v9
+# Capture Gallery｜Voyage Context v8
 
 Status: V5-candidate evolution on the persistent `autonomous-evolution` Draft PR. This slice extends the existing Capture Gallery presentation only; it does not change the V4.1 release baseline, renderer, camera, route planner, flight timing or capture authority.
 
@@ -6,7 +6,7 @@ Status: V5-candidate evolution on the persistent `autonomous-evolution` Draft PR
 
 A saved Real Space capture should read like a travel memory, not an isolated PNG. When Stellar Wrap can confidently associate a local capture with a recently completed journey to the same destination, the Gallery card and full-screen viewer show the actual arrival route, recorded distance and active travel seconds beside the image.
 
-Voyage Context v9 adds a compact visual route ribbon above that text: each actual journey stop becomes one node in order, connectors show the travelled sequence, and the photographed final destination is highlighted. This lets a user recognise a multi-leg trip at a glance without replacing the full route text.
+Voyage Context now adds a compact visual route ribbon above that text: each actual journey stop becomes one node in order, connectors show the travelled sequence, and the photographed final destination is highlighted. This lets a user recognise a multi-leg trip at a glance without replacing the full route text.
 
 Example: a TAU capture made shortly after `SOL → SIRIUS → TAU` shows a three-node ribbon plus `地球近軌 → 天狼中繼站 → 金牛塵海 · 11.4 LY · 37 秒`. If no trustworthy journey matches, the image remains unchanged and no route is invented.
 
