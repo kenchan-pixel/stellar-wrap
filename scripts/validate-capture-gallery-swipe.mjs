@@ -21,7 +21,10 @@ assert.match(source,/pointerdown/,'capture viewer must listen for touch/pointer 
 assert.match(source,/Math\.abs\(dx\)>=48/,'capture viewer must use a bounded swipe threshold');
 assert.match(source,/event\.key==='ArrowLeft'/,'capture viewer must support keyboard previous navigation');
 assert.match(source,/keepViewer:true/,'deleting one of several captures must preserve immersive review');
-assert.doesNotMatch(source,/THREE\.|WebGLRenderer|requestAnimationFrame\s*\(|setInterval\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'capture review must add no renderer, render-loop, polling or network authority');
+assert.doesNotMatch(source,/THREE\.|WebGLRenderer|setInterval\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'capture review must add no renderer, polling or network authority');
+const rafCalls=source.match(/requestAnimationFrame\s*\(/g)||[];
+assert.equal(rafCalls.length,1,'capture review may use exactly one bounded one-shot presentation RAF');
+assert.match(source,/if\(direction\)requestAnimationFrame\(\(\)=>\{if\(viewerOpenId===String\(record\.id\)\)animateViewerArrival\(direction\)\}\)/,'capture review RAF must remain the direction-gated one-shot image arrival handoff');
 const syntax=spawnSync(process.execPath,['--check','capture-gallery.js'],{encoding:'utf8'});assert.equal(syntax.status,0,`capture-gallery.js syntax failed: ${syntax.stderr}`);
 console.log('Capture Gallery swipe + return static contract passed');
 
@@ -87,7 +90,6 @@ async function inspect(chrome,base,width,height){
     const swipeBytes=await screenshot(cdp,`capture-gallery-swipe-next-${viewport}.png`);assert.ok(swipeBytes>12000);
 
     await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowLeft',code:'ArrowLeft',windowsVirtualKeyCode:37,nativeVirtualKeyCode:37});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowLeft',code:'ArrowLeft',windowsVirtualKeyCode:37,nativeVirtualKeyCode:37});await waitUntil(()=>evalJs(cdp,"document.querySelector('#captureGalleryViewerTitle')?.textContent==='金牛塵海'"),'keyboard previous capture');
-
     await evalJs(cdp,"document.querySelector('#captureGalleryViewer [data-viewer-action=\"delete\"]').click();true");
     await waitUntil(()=>evalJs(cdp,"WarpCaptureGallery.count().then(n=>n===1&&!document.querySelector('#captureGalleryViewer')?.hidden&&document.querySelector('#captureGalleryViewerTitle')?.textContent==='天狼中繼站')",true),'delete current while preserving viewer');assert.match(await evalJs(cdp,"document.querySelector('#captureGalleryViewerPosition')?.textContent||''"),/1 \/ 1/);
     const single=await evalJs(cdp,`(()=>{const v=document.querySelector('#captureGalleryViewer');return{prev:v.querySelector('[data-viewer-action="prev"]').disabled,next:v.querySelector('[data-viewer-action="next"]').disabled}})()`);assert.equal(single.prev,true);assert.equal(single.next,true);
