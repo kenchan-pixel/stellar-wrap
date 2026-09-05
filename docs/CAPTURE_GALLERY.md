@@ -1,10 +1,10 @@
-# Capture Gallery v2 — Local High-Quality Capture Archive + Immersive Review
+# Capture Gallery v3 — Local High-Quality Capture Archive + Swipe Compare
 
 Status: V5 candidate on the persistent autonomous-evolution Draft PR. This is not a V4.1 release-baseline change until the owner merges it.
 
 ## Goal / user outcome
 
-Turn `Gallery / Captures` into a real capture-and-review surface instead of a records-only shell. A successful Real Space high-quality Photo Mode capture should still download normally, remain visible on the same device, and be viewable at useful full-screen scale without leaving the simulator.
+Turn `Gallery / Captures` into a real capture-and-review surface instead of a records-only shell. A successful Real Space high-quality Photo Mode capture should still download normally, remain visible on the same device, and be reviewable as a small local photo set without repeatedly closing back to the Gallery grid.
 
 ## Scope
 
@@ -14,9 +14,10 @@ Turn `Gallery / Captures` into a real capture-and-review surface instead of a re
 - Keep the mobile-first `CAPTURE ARCHIVE｜本機留影` section inside the existing `Gallery / Captures` records view.
 - Show destination, capture time, pixel dimensions and frame format with a real thumbnail.
 - Let users tap or keyboard-activate a thumbnail to open an immersive local full-screen viewer using the stored PNG itself.
-- The viewer shows the destination and capture metadata, keeps the image contained within the portrait viewport, and provides 44 px minimum close, re-save and delete actions.
-- Closing with the close control or Escape must release the viewer object URL and restore page scrolling.
-- Allow `再次儲存` and `刪除` from the archive; the viewer reuses the same local-only download/delete authority.
+- The viewer shows destination/capture metadata plus the current image position, with explicit previous/next controls and horizontal swipe navigation. Arrow Left/Right provide the equivalent keyboard path.
+- Swipe navigation uses a bounded 48 px horizontal threshold and keeps vertical touch intent available; navigation changes only which existing local capture blob is shown.
+- Closing with the close control or Escape releases the viewer object URL and restores page scrolling.
+- Allow `再次儲存` and `刪除` from the archive. Deleting the current image keeps the immersive viewer open on the nearest remaining capture; deleting the last capture closes it safely.
 - Include the module in the prepared offline shell.
 
 ## Acceptance criteria
@@ -26,11 +27,13 @@ Turn `Gallery / Captures` into a real capture-and-review surface instead of a re
 3. Captures survive a fresh page reload in the same browser profile.
 4. The archive is strictly bounded to six records; the oldest record is pruned transactionally when a seventh is added.
 5. Gallery thumbnails fit 390×844 and 360×800 portrait viewports with no horizontal overflow; re-save and delete controls remain at least 44 px high.
-6. Tapping a stored thumbnail opens the actual stored PNG in a full-screen viewer at both mobile acceptance viewports; the image remains contained, metadata remains legible, and viewer close/re-save/delete controls remain at least 44 px high.
-7. Escape closes the viewer and the viewer releases its temporary object URL; deleting the open item safely closes the viewer before rerendering the archive.
-8. IndexedDB failure or quota failure must not break or block the existing PNG download.
-9. No new Three.js object, draw call, triangle, route authority, flight timing, camera state, backend or network request is added.
-10. Object URLs used for archive previews and full-screen review are revoked on rerender, viewer close or page exit.
+6. Tapping a stored thumbnail opens the actual stored PNG in a full-screen viewer at both mobile acceptance viewports; the image remains contained, metadata remains legible, and viewer close/re-save/delete/previous/next controls remain at least 44 px high.
+7. With two or more captures, explicit previous/next controls, real touch swipe, and Arrow Left/Right move through the same newest-first capture order without closing the viewer. End controls disable rather than wrap unexpectedly.
+8. Deleting one of several captures keeps the viewer open on the nearest remaining image and refreshes its position; deleting the last image closes the viewer and restores page scrolling.
+9. Escape closes the viewer and temporary viewer object URLs are revoked when the displayed image changes or the viewer closes.
+10. IndexedDB failure or quota failure must not break or block the existing PNG download.
+11. No new Three.js object, draw call, triangle, route authority, flight timing, camera state, backend or network request is added.
+12. Object URLs used for archive previews and full-screen review are revoked on rerender, image change, viewer close or page exit.
 
 ## Out of scope
 
@@ -41,16 +44,16 @@ Turn `Gallery / Captures` into a real capture-and-review surface instead of a re
 
 ## Persistence / privacy
 
-Capture Archive uses the existing IndexedDB database, `stellar-wrap-capture-gallery`, solely for the local PNG blob and minimal display metadata. It does not copy Travel Journal or Star Atlas authority and performs no network transmission. Storage remains bounded to six images to limit quota and mobile storage exposure. Full-screen review creates only a temporary object URL for the selected local blob and revokes it on close.
+Capture Archive uses the existing IndexedDB database, `stellar-wrap-capture-gallery`, solely for the local PNG blob and minimal display metadata. It does not copy Travel Journal or Star Atlas authority and performs no network transmission. Storage remains bounded to six images to limit quota and mobile storage exposure. Full-screen review creates only one temporary object URL for the currently displayed local blob and revokes it on image change or close.
 
 ## Validation
 
-`node scripts/validate-capture-gallery.mjs` provides static contract checks plus real production Chromium coverage at 390×844 and 360×800. The browser gate performs a real TAU Photo Mode capture, verifies quality restoration, framed PNG persistence, reload continuity, archive layout/touch targets, full-screen viewer layout and Escape close, six-item pruning and deletion, and writes archive + viewer screenshots to `artifacts/capture-gallery/`.
+`node scripts/validate-capture-gallery.mjs` retains the end-to-end production Photo Mode capture, persistence, reload, viewer, download/delete and six-item-bound coverage. `node scripts/validate-capture-gallery-swipe.mjs` adds focused real-Chromium coverage at 390×844 and 360×800 for two-image viewer layout, 44 px controls, explicit previous/next navigation, true emulated touch swipe, keyboard navigation, in-viewer deletion continuity, final-image close behavior and screenshot evidence under `artifacts/capture-gallery-swipe/`.
 
 ## Risks / supplementary manual checks
 
-Physical iPhone Safari checks remain useful for IndexedDB quota behaviour, long-session storage pressure, native download UX, safe-area feel and sustained thermal/frame pacing, but are supplementary evidence rather than the completion gate for this slice.
+Physical iPhone Safari checks remain useful for IndexedDB quota behaviour, long-session storage pressure, native download UX, safe-area feel, swipe feel and sustained thermal/frame pacing, but are supplementary evidence rather than the completion gate for this slice.
 
 ## Completion signal
 
-The slice is complete when exact-head CI passes, both mobile Chromium viewports produce valid archive and full-screen viewer screenshots, persistence/reload, viewer close and six-item bounds pass, the Draft PR receipt points at the exact validated SHA, and exact-head review has no unresolved P0/P1 finding.
+The slice is complete when exact-head CI passes, both mobile Chromium viewports produce valid swipe-review screenshots, previous/next + true touch swipe + keyboard navigation + in-viewer deletion pass, the Draft PR receipt points at the exact validated SHA, and exact-head review has no unresolved P0/P1 finding.

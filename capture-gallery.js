@@ -10,7 +10,7 @@ const SYSTEM_NAMES={SOL:'地球近軌',LUNA:'月環基地',VEGA:'織女星門',C
 const FRAMES=new Set(['full','portrait','square']);
 let dbPromise=null,section=null,bootObserver=null,captureObserver=null,copyObserver=null,renderGeneration=0;
 let previewUrls=[],captureCandidate=null,captureWasActive=false,originalToBlob=null;
-let viewer=null,viewerImage=null,viewerTitle=null,viewerMeta=null,viewerOpenId=null,viewerUrl=null,viewerBodyOverflow='';
+let viewer=null,viewerImage=null,viewerTitle=null,viewerMeta=null,viewerPosition=null,viewerOpenId=null,viewerUrl=null,viewerBodyOverflow='',viewerIds=[],viewerIndex=-1,viewerPointer=null;
 
 function available(){return typeof indexedDB!=='undefined'}
 function requestResult(request){return new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error('IndexedDB request failed'))})}
@@ -51,8 +51,8 @@ async function add(input){
   dispatchEvent(new CustomEvent('stellarwarp:capture-change',{detail:{action:'add',id:record.id,system:record.system}}));
   render();return true;
 }
-async function remove(id){
-  if(!id)return false;if(String(id)===viewerOpenId)closeViewer();const db=await openDb(),tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(String(id));await transactionDone(tx);
+async function remove(id,options={}){
+  if(!id)return false;if(String(id)===viewerOpenId&&!options.keepViewer)closeViewer();const db=await openDb(),tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(String(id));await transactionDone(tx);
   dispatchEvent(new CustomEvent('stellarwarp:capture-change',{detail:{action:'remove',id:String(id)}}));render();return true;
 }
 async function reset(){
@@ -63,6 +63,7 @@ async function count(){try{return(await all()).length}catch{return 0}}
 function stamp(ms){try{return new Intl.DateTimeFormat('zh-HK',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms))}catch{return''}}
 function frameLabel(frame){return frame==='portrait'?'9:16':frame==='square'?'1:1':'原幅'}
 function releasePreviews(){for(const url of previewUrls)try{URL.revokeObjectURL(url)}catch{}previewUrls=[]}
+function releaseViewerUrl(){if(viewerUrl){try{URL.revokeObjectURL(viewerUrl)}catch{}viewerUrl=null}}
 async function download(id){
   try{
     const record=await recordById(id);if(!record?.blob)return false;
@@ -70,8 +71,8 @@ async function download(id){
   }catch{return false}
 }
 function syncGatewayCopy(){
-  const gateway=document.querySelector('#gatewayGallery small');if(gateway){const text='重看最近航程、外站發現與本機高畫質留影；點按留影可全螢幕重看、再次儲存或刪除。';if(gateway.textContent!==text)gateway.textContent=text}
-  const local=document.querySelector('#gatewayRecords .modeGatewayLocal');if(local){const text='高畫質留影只保存在此裝置，最多保留最近 6 張；點按圖片可全螢幕重看。航程再訪仍只會預選目的地並打開既有 Real Space 航線面板。';if(local.textContent!==text)local.textContent=text}
+  const gateway=document.querySelector('#gatewayGallery small');if(gateway){const text='重看最近航程、外站發現與本機高畫質留影；點按留影可全螢幕重看、左右掃動比較、再次儲存或刪除。';if(gateway.textContent!==text)gateway.textContent=text}
+  const local=document.querySelector('#gatewayRecords .modeGatewayLocal');if(local){const text='高畫質留影只保存在此裝置，最多保留最近 6 張；點按圖片可全螢幕重看，並左右掃動比較。航程再訪仍只會預選目的地並打開既有 Real Space 航線面板。';if(local.textContent!==text)local.textContent=text}
   const copy=document.querySelector('#modeGatewayCaptureCopy');if(copy){let state=null;try{state=window.WarpSim?.state?.()}catch{}const ready=!!(state&&!state.flying&&!state.contextLost&&state.exploring);const text=ready?'目前停泊點可直接進入既有高畫質 Photo Mode；成功留影會自動保留最近 6 張於本機 Gallery。':'Photo Mode 只會在安全的 Real Space 最終到站探索中啟用；成功留影會保存在本機 Gallery。';if(copy.textContent!==text)copy.textContent=text}
 }
 function ensureStyle(){
@@ -87,25 +88,38 @@ function ensureStyle(){
 #gatewayRecords .captureGalleryInfo{padding:7px}.captureGalleryInfo b{display:block;font-size:8px}.captureGalleryMeta{margin-top:3px;font-size:6.5px;line-height:1.4;color:rgba(219,233,255,.55)}
 #gatewayRecords .captureGalleryActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}.captureGalleryActions button{min-height:44px;border:1px solid rgba(170,211,255,.17);border-radius:9px;background:rgba(110,172,255,.075);color:#eaf4ff;font-size:7px;font-weight:780}.captureGalleryActions .danger{background:rgba(255,124,124,.045);border-color:rgba(255,164,164,.12)}
 #gatewayRecords .captureGalleryEmpty{padding:10px;border-radius:10px;background:rgba(255,255,255,.025);font-size:7px;line-height:1.5;color:rgba(220,234,255,.48)}
-.captureGalleryViewer{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;gap:12px;padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:rgba(1,4,10,.985);overscroll-behavior:contain}
+.captureGalleryViewer{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;gap:10px;padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:rgba(1,4,10,.985);overscroll-behavior:contain}
 .captureGalleryViewer[hidden]{display:none}.captureGalleryViewerTop{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:10px;align-items:center}.captureGalleryViewerCopy{min-width:0}.captureGalleryViewerCopy strong{display:block;font-size:12px;color:#f0f6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.captureGalleryViewerMeta{margin-top:3px;font-size:9px;color:rgba(215,232,255,.6)}
-.captureGalleryViewerClose,.captureGalleryViewerActions button{min-height:44px;border:1px solid rgba(182,218,255,.18);border-radius:12px;background:rgba(116,173,240,.08);color:#eff7ff;font-weight:760}.captureGalleryViewerClose{min-width:44px;font-size:18px}.captureGalleryViewerStage{min-height:0;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:14px;background:#010309}.captureGalleryViewerImage{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.captureGalleryViewerActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.captureGalleryViewerActions .danger{background:rgba(255,124,124,.055);border-color:rgba(255,164,164,.14)}
-@media(max-width:360px){#gatewayRecords .captureGalleryGrid{grid-template-columns:1fr}.captureGalleryViewer{gap:9px;padding-left:10px;padding-right:10px}.captureGalleryViewerActions{gap:6px}}
+.captureGalleryViewerClose,.captureGalleryViewerActions button,.captureGalleryViewerPager button{min-height:44px;border:1px solid rgba(182,218,255,.18);border-radius:12px;background:rgba(116,173,240,.08);color:#eff7ff;font-weight:760}.captureGalleryViewerClose{min-width:44px;font-size:18px}.captureGalleryViewerStage{min-height:0;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:14px;background:#010309;touch-action:pan-y}.captureGalleryViewerImage{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.captureGalleryViewerPager{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;gap:8px;align-items:center}.captureGalleryViewerPager button{min-width:44px;font-size:20px}.captureGalleryViewerPager button:disabled{opacity:.28}.captureGalleryViewerPosition{text-align:center;font-size:8px;line-height:1.25;color:rgba(215,232,255,.62)}.captureGalleryViewerActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.captureGalleryViewerActions .danger{background:rgba(255,124,124,.055);border-color:rgba(255,164,164,.14)}
+@media(max-width:360px){#gatewayRecords .captureGalleryGrid{grid-template-columns:1fr}.captureGalleryViewer{gap:8px;padding-left:10px;padding-right:10px}.captureGalleryViewerPager,.captureGalleryViewerActions{gap:6px}}
 `;
   document.head.append(style);
 }
+function syncViewerControls(){
+  if(!viewer)return;const prev=viewer.querySelector('[data-viewer-action="prev"]'),next=viewer.querySelector('[data-viewer-action="next"]');if(prev)prev.disabled=viewerIndex<=0;if(next)next.disabled=viewerIndex<0||viewerIndex>=viewerIds.length-1;if(viewerPosition)viewerPosition.textContent=viewerIds.length?`${viewerIndex+1} / ${viewerIds.length} · 左右掃動比較`:'';
+}
+function applyViewerRecord(record,index){
+  if(!record?.blob)return false;releaseViewerUrl();viewerIndex=index;viewerOpenId=String(record.id);viewerUrl=URL.createObjectURL(record.blob);viewerImage.src=viewerUrl;viewerImage.alt=`${SYSTEM_NAMES[record.system]||record.system} 留影大圖`;viewerTitle.textContent=SYSTEM_NAMES[record.system]||record.system;viewerMeta.textContent=`${stamp(Number(record.createdAt))} · ${record.width}×${record.height} · ${frameLabel(record.frame)}`;syncViewerControls();return true;
+}
+async function stepViewer(delta){
+  if(!viewer||viewer.hidden||!viewerIds.length)return false;const target=Math.max(0,Math.min(viewerIds.length-1,viewerIndex+delta));if(target===viewerIndex)return false;try{const record=await recordById(viewerIds[target]);return applyViewerRecord(record,target)}catch{return false}
+}
+async function deleteViewerCurrent(){
+  if(!viewerOpenId)return false;const id=viewerOpenId,index=viewerIndex;try{await remove(id,{keepViewer:true});viewerIds=viewerIds.filter(value=>value!==id);if(!viewerIds.length){closeViewer();return true}const target=Math.min(index,viewerIds.length-1),record=await recordById(viewerIds[target]);if(!applyViewerRecord(record,target)){closeViewer();return false}return true}catch{return false}
+}
 function ensureViewer(){
-  if(viewer?.isConnected)return viewer;ensureStyle();viewer=document.createElement('aside');viewer.id='captureGalleryViewer';viewer.className='captureGalleryViewer';viewer.hidden=true;viewer.setAttribute('role','dialog');viewer.setAttribute('aria-modal','true');viewer.setAttribute('aria-label','留影全螢幕重看');viewer.innerHTML='<div class="captureGalleryViewerTop"><div class="captureGalleryViewerCopy"><strong id="captureGalleryViewerTitle">留影</strong><div id="captureGalleryViewerMeta" class="captureGalleryViewerMeta"></div></div><button type="button" class="captureGalleryViewerClose" data-viewer-action="close" aria-label="關閉留影">×</button></div><div class="captureGalleryViewerStage"><img id="captureGalleryViewerImage" class="captureGalleryViewerImage" alt=""></div><div class="captureGalleryViewerActions"><button type="button" data-viewer-action="download">再次儲存</button><button type="button" data-viewer-action="delete" class="danger">刪除留影</button></div>';
-  document.body.append(viewer);viewerImage=viewer.querySelector('#captureGalleryViewerImage');viewerTitle=viewer.querySelector('#captureGalleryViewerTitle');viewerMeta=viewer.querySelector('#captureGalleryViewerMeta');
-  viewer.addEventListener('click',async event=>{const action=event.target.closest('[data-viewer-action]')?.dataset.viewerAction;if(action==='close'){closeViewer();return}if(action==='download'&&viewerOpenId){await download(viewerOpenId);return}if(action==='delete'&&viewerOpenId){const id=viewerOpenId;closeViewer();await remove(id)}});
-  addEventListener('keydown',event=>{if(event.key==='Escape'&&!viewer?.hidden)closeViewer()});return viewer;
+  if(viewer?.isConnected)return viewer;ensureStyle();viewer=document.createElement('aside');viewer.id='captureGalleryViewer';viewer.className='captureGalleryViewer';viewer.hidden=true;viewer.setAttribute('role','dialog');viewer.setAttribute('aria-modal','true');viewer.setAttribute('aria-label','留影全螢幕重看');viewer.innerHTML='<div class="captureGalleryViewerTop"><div class="captureGalleryViewerCopy"><strong id="captureGalleryViewerTitle">留影</strong><div id="captureGalleryViewerMeta" class="captureGalleryViewerMeta"></div></div><button type="button" class="captureGalleryViewerClose" data-viewer-action="close" aria-label="關閉留影">×</button></div><div class="captureGalleryViewerStage"><img id="captureGalleryViewerImage" class="captureGalleryViewerImage" alt=""></div><div class="captureGalleryViewerPager"><button type="button" data-viewer-action="prev" aria-label="上一張留影">‹</button><span id="captureGalleryViewerPosition" class="captureGalleryViewerPosition" aria-live="polite"></span><button type="button" data-viewer-action="next" aria-label="下一張留影">›</button></div><div class="captureGalleryViewerActions"><button type="button" data-viewer-action="download">再次儲存</button><button type="button" data-viewer-action="delete" class="danger">刪除留影</button></div>';
+  document.body.append(viewer);viewerImage=viewer.querySelector('#captureGalleryViewerImage');viewerTitle=viewer.querySelector('#captureGalleryViewerTitle');viewerMeta=viewer.querySelector('#captureGalleryViewerMeta');viewerPosition=viewer.querySelector('#captureGalleryViewerPosition');
+  viewer.addEventListener('click',async event=>{const action=event.target.closest('[data-viewer-action]')?.dataset.viewerAction;if(action==='close'){closeViewer();return}if(action==='prev'){await stepViewer(-1);return}if(action==='next'){await stepViewer(1);return}if(action==='download'&&viewerOpenId){await download(viewerOpenId);return}if(action==='delete'&&viewerOpenId)await deleteViewerCurrent()});
+  const stage=viewer.querySelector('.captureGalleryViewerStage');stage?.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'&&event.button!==0)return;viewerPointer={id:event.pointerId,x:event.clientX,y:event.clientY};try{stage.setPointerCapture(event.pointerId)}catch{}});stage?.addEventListener('pointerup',event=>{if(!viewerPointer||viewerPointer.id!==event.pointerId)return;const dx=event.clientX-viewerPointer.x,dy=event.clientY-viewerPointer.y;viewerPointer=null;if(Math.abs(dx)>=48&&Math.abs(dx)>Math.abs(dy)*1.15)stepViewer(dx<0?1:-1)});stage?.addEventListener('pointercancel',()=>{viewerPointer=null});
+  addEventListener('keydown',event=>{if(viewer?.hidden)return;if(event.key==='Escape'){closeViewer();return}if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();stepViewer(event.key==='ArrowLeft'?-1:1)}});return viewer;
 }
 function closeViewer(){
-  if(viewerUrl){try{URL.revokeObjectURL(viewerUrl)}catch{}viewerUrl=null}if(viewerImage){viewerImage.removeAttribute('src');viewerImage.alt=''}if(viewer)viewer.hidden=true;viewerOpenId=null;if(document.body&&document.body.style.overflow==='hidden')document.body.style.overflow=viewerBodyOverflow;
+  releaseViewerUrl();if(viewerImage){viewerImage.removeAttribute('src');viewerImage.alt=''}if(viewer)viewer.hidden=true;viewerOpenId=null;viewerIds=[];viewerIndex=-1;viewerPointer=null;syncViewerControls();if(document.body&&document.body.style.overflow==='hidden')document.body.style.overflow=viewerBodyOverflow;
 }
 async function openViewer(id){
   try{
-    const record=await recordById(id);if(!record?.blob)return false;ensureViewer();closeViewer();viewerOpenId=String(record.id);viewerUrl=URL.createObjectURL(record.blob);viewerImage.src=viewerUrl;viewerImage.alt=`${SYSTEM_NAMES[record.system]||record.system} 留影大圖`;viewerTitle.textContent=SYSTEM_NAMES[record.system]||record.system;viewerMeta.textContent=`${stamp(Number(record.createdAt))} · ${record.width}×${record.height} · ${frameLabel(record.frame)}`;viewerBodyOverflow=document.body.style.overflow;document.body.style.overflow='hidden';viewer.hidden=false;viewer.querySelector('.captureGalleryViewerClose')?.focus({preventScroll:true});return true;
+    const rows=await all(),index=rows.findIndex(record=>String(record.id)===String(id));if(index<0||!rows[index]?.blob)return false;ensureViewer();closeViewer();viewerIds=rows.map(record=>String(record.id));viewerBodyOverflow=document.body.style.overflow;document.body.style.overflow='hidden';viewer.hidden=false;if(!applyViewerRecord(rows[index],index)){closeViewer();return false}viewer.querySelector('.captureGalleryViewerClose')?.focus({preventScroll:true});return true;
   }catch{return false}
 }
 function ensureUi(){
