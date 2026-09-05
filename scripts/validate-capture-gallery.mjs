@@ -20,7 +20,9 @@ assert.match(source,/captureGalleryViewer/,'capture archive must expose the imme
 assert.match(source,/role','dialog/,'capture viewer must expose dialog semantics');
 assert.match(source,/event\.key==='Escape'/,'capture viewer must provide keyboard close');
 assert.match(source,/URL\.revokeObjectURL/,'preview/viewer/download object URLs must be revoked');
-assert.doesNotMatch(source,/THREE\.|WebGLRenderer|requestAnimationFrame\s*\(|setInterval\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'capture archive adds no renderer, render-loop, polling or network authority');
+assert.doesNotMatch(source,/THREE\.|WebGLRenderer|setInterval\s*\(|\bfetch\s*\(|XMLHttpRequest|sendBeacon/,'capture archive adds no renderer, polling or network authority');
+assert.equal((source.match(/requestAnimationFrame\s*\(/g)||[]).length,1,'capture viewer must keep requestAnimationFrame to one bounded arrival frame');
+assert.ok(source.includes("if(direction)requestAnimationFrame(()=>{if(viewerOpenId===String(record.id))animateViewerArrival(direction)})"),'the single RAF must remain direction-gated one-shot arrival presentation, not a render loop');
 assert.match(journal,/import\('\.\/capture-gallery\.js'\)/,'runtime bootstrap must load Capture Gallery');
 assert.ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v16`")&&sw.includes("'./capture-gallery.js'"),'prepared offline shell must include Capture Gallery v16');
 assert.ok(doc.includes('latest **6** captures')&&doc.includes('do not create a second camera')&&doc.includes('full-screen viewer'),'Capture Gallery SOT must state bound, single-capture authority and immersive review');
