@@ -52,4 +52,5 @@ import('./cinematic-quality.js').then(()=>import('./sol-orbital-frame.js')).then
 import('./route-scenic-preview.js').catch(()=>{});
 import('./mode-gateway-cinematic.js').catch(()=>{});
 import('./capture-share.js').catch(()=>{});
+import('./capture-voyage-context.js').catch(()=>{});
 })();
