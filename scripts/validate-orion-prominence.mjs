@@ -48,7 +48,7 @@ check(/__stellarOrionProminenceAddHook/.test(source)&&/THREE\.Object3D\.prototyp
 check(/window\.WarpOrionProminenceQuality=/.test(source),'ORION diagnostic API exposes autonomous validation state');
 check(doc.includes('3,264')&&doc.includes('3 draw calls')&&doc.includes('16 observatory masts')&&doc.includes('Standard／Low'),'ORION v3 SOT records the bounded High cost and zero-cost lower tiers');
 check(doc.includes('foreground outpost')&&doc.includes('active red giant')&&doc.includes('390×844 and 360×800'),'ORION v3 SOT records the intended near/far player-visible outcome and both mobile gates');
-check(doc.includes('braided-prominence-weave-v1')&&doc.includes('three interlaced emissive strands')&&doc.includes('wider asymmetric crown silhouette'),'ORION SOT retains the braided crown treatment and zero-budget composition outcome');
+check(doc.includes('braided-prominence-weave-v1')&&doc.includes('three interlaced emissive strands')&&doc.includes('accepted asymmetric arc rotations/scales'),'ORION SOT retains the braided crown treatment and zero-budget composition outcome');
 check(doc.includes('front-back-coronal-depth-v1')&&doc.includes('foreground-scale-gradient-v1')&&doc.includes('0.26 local units'),'ORION v3 SOT records the new crown depth and mast perspective hierarchy');
 
 const browser=spawnSync(process.execPath,['scripts/validate-orion-prominence-browser.mjs'],{encoding:'utf8',timeout:180000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
