@@ -48,6 +48,17 @@ function placeCard(){
   if(actions){actions.insertAdjacentElement('beforebegin',card);return true}
   return false;
 }
+function revealArrivalSurface(card){
+  try{
+    const hub=window.WarpExploreHub;
+    if(hub?.active?.()&&typeof hub.open==='function'){
+      hub.open('overview');
+      card?.scrollIntoView?.({block:'nearest'});
+      return true;
+    }
+  }catch{}
+  return false;
+}
 function ensureOrderObserver(){
   if(orderObserver||typeof MutationObserver!=='function')return;
   const parent=document.querySelector('#exploreDesc')?.parentElement;
@@ -145,6 +156,7 @@ function show(raw){
   card?.classList.add('show');
   const exploreCard=document.querySelector('#exploreCard');
   exploreCard?.classList.remove('collapsed');
+  revealArrivalSurface(card);
   const collapse=document.querySelector('#exploreCollapse');
   if(collapse)collapse.textContent='⌄';
   return true;
