@@ -42,7 +42,7 @@ ok(!/localStorage|sessionStorage|fetch\(|XMLHttpRequest|WebSocket|requestAnimati
 ok(!/Dijkstra|MAX_LEG|\bp:\s*\[|route graph|new THREE/.test(source),'journey atmosphere does not duplicate coordinates, route topology authority or Three.js scene authority');
 ok(!/filter\s*:|backdrop-filter/.test(source),'journey scenery avoids blur/filter effects that would add mobile compositing cost');
 ok(responsive.includes("import('./journey-atmosphere.js').catch(()=>{})"),'existing presentation bootstrap loads journey atmosphere');
-ok(sw.includes("const CACHE_NAME=`${CACHE_PREFIX}v15`"),'offline shell reflects the current exploration constellation cache generation');
+ok(sw.includes("const CACHE_PREFIX='stellar-wrap-shell-'")&&/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`/.test(sw),'offline shell remains explicitly versioned');
 ok(sw.includes("'./journey-atmosphere.js'"),'prepared offline shell includes journey atmosphere');
 ok(pkg.scripts?.check?.includes('node scripts/validate-journey-atmosphere.mjs'),'npm run check includes focused journey atmosphere validation');
 ok(doc.includes('Journey Atmosphere')&&doc.includes('Transit Corridor Vistas')&&doc.includes('Approach Vista'),'journey atmosphere SOT records both in-warp corridor scenery and destination approach vistas');

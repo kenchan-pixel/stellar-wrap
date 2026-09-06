@@ -2,16 +2,22 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 
 const NAME='stellar-luna-earthrise-depth';
 const VISUAL_PASS='earthrise-parallax-v1';
+const STRUCTURE_PROFILE='orbital-mast-perspective-v3';
 const SAMPLE_MS=250;
 const BEACON_COUNT=18;
+const GANTRY_BEAM_COUNT=12;
+const GANTRY_FRONT_Z=5.2;
+const MAST_NEAR_SCALE=6.4;
+const MAST_FAR_SCALE=2.4;
 const PROFILE={
   moonCenter:new THREE.Vector3(13,-7,-70),moonRadius:21,
   earthCenter:new THREE.Vector3(-35,17,-146),earthRadius:12,
   ringCenter:new THREE.Vector3(13,-7,-70),ringRadius:26,
-  triangles:2704,drawCalls:4,beacons:BEACON_COUNT,depthSpan:3.8
+  triangles:2704,drawCalls:4,beacons:BEACON_COUNT,gantryBeams:GANTRY_BEAM_COUNT,depthSpan:3.8,foregroundDepthLead:7.4,mastScaleRatio:2.8
 };
 const approx=(a,b,t=.24)=>Math.abs(a-b)<=t;
-let moonRoot=null,earthRoot=null,ring=null,objects=[],captureCount=0,lastState=null,beaconDepthRange={min:0,max:0,span:0};
+let moonRoot=null,earthRoot=null,ring=null,objects=[],captureCount=0,lastState=null;
+let beaconDepthRange={min:0,max:0,span:0},foregroundDepthLead=0,mastScaleRange={min:0,max:0,ratio:0};
 const previousAdd=THREE.Object3D.prototype.add;
 
 function planetCandidate(object,center,radius){
@@ -36,7 +42,7 @@ function disposeOwn(){
     const materials=Array.isArray(object.material)?object.material:[object.material];
     for(const material of materials)material?.dispose?.();
   }
-  objects=[];beaconDepthRange={min:0,max:0,span:0};
+  objects=[];beaconDepthRange={min:0,max:0,span:0};foregroundDepthLead=0;mastScaleRange={min:0,max:0,ratio:0};
 }
 function capture(object){
   if(planetCandidate(object,PROFILE.moonCenter,PROFILE.moonRadius)&&object!==moonRoot){disposeOwn();moonRoot=object;captureCount++}
@@ -85,18 +91,19 @@ function earthriseMaterial(){
 }
 function beaconLattice(){
   const geometry=new THREE.OctahedronGeometry(.2,0);
-  const material=new THREE.MeshBasicMaterial({color:'#dff8ff',transparent:true,opacity:.86,depthWrite:false,blending:THREE.AdditiveBlending});
+  const material=new THREE.MeshBasicMaterial({color:'#dff8ff',transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending});
   material.forceSinglePass=true;
-  const beacons=new THREE.InstancedMesh(geometry,material,BEACON_COUNT);beacons.name=`${NAME}-orbital-beacons`;
-  const dummy=new THREE.Object3D(),near=new THREE.Color('#f5fdff'),far=new THREE.Color('#86cdf8');
-  let minZ=Infinity,maxZ=-Infinity;
+  const beacons=new THREE.InstancedMesh(geometry,material,BEACON_COUNT);beacons.name=`${NAME}-orbital-mast-beacons`;
+  const dummy=new THREE.Object3D(),near=new THREE.Color('#f9fdff'),far=new THREE.Color('#73bde9');
+  let minZ=Infinity,maxZ=-Infinity,minScale=Infinity,maxScale=-Infinity;
   for(let i=0;i<BEACON_COUNT;i++){
     const a=i/BEACON_COUNT*Math.PI*2,lane=i%2===0?1:-1,r=lane>0?26.45:25.75,z=lane*1.55+Math.sin(a*2)*.32;
-    dummy.position.set(Math.cos(a)*r,Math.sin(a)*r,z);dummy.rotation.set(a*.08,-a*.05,a);dummy.scale.setScalar(i%6===0?1.65:i%3===0?1.28:.9);dummy.updateMatrix();
-    beacons.setMatrixAt(i,dummy.matrix);beacons.setColorAt(i,lane>0?near:far);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
+    const mastScale=lane>0?MAST_NEAR_SCALE-(i%3)*.18:MAST_FAR_SCALE+(i%3)*.09,crossScale=lane>0?1.15:.82;
+    dummy.position.set(Math.cos(a)*r,Math.sin(a)*r,z);dummy.rotation.set(lane*.07,-a*.03,a-Math.PI/2);dummy.scale.set(crossScale,mastScale,crossScale);dummy.updateMatrix();
+    beacons.setMatrixAt(i,dummy.matrix);beacons.setColorAt(i,lane>0?near:far);minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);minScale=Math.min(minScale,mastScale);maxScale=Math.max(maxScale,mastScale);
   }
   beacons.instanceMatrix.needsUpdate=true;if(beacons.instanceColor)beacons.instanceColor.needsUpdate=true;
-  beaconDepthRange={min:minZ,max:maxZ,span:maxZ-minZ};return beacons;
+  beaconDepthRange={min:minZ,max:maxZ,span:maxZ-minZ};mastScaleRange={min:minScale,max:maxScale,ratio:maxScale/minScale};return beacons;
 }
 function railGeometry(){
   const segments=28,positions=[];
@@ -107,6 +114,16 @@ function railGeometry(){
       positions.push(Math.cos(a)*radius,Math.sin(a)*radius,z+Math.sin(a*2)*.28,Math.cos(b)*radius,Math.sin(b)*radius,z+Math.sin(b*2)*.28);
     }
   }
+  const beams=[
+    [-14,-26.8,GANTRY_FRONT_Z,14,-26.8,GANTRY_FRONT_Z],[-14,-21.2,4.05,14,-21.2,4.05],
+    [-14,-26.8,GANTRY_FRONT_Z,-14,-21.2,4.05],[-7,-26.8,GANTRY_FRONT_Z,-7,-21.2,4.05],
+    [0,-26.8,GANTRY_FRONT_Z,0,-21.2,4.05],[7,-26.8,GANTRY_FRONT_Z,7,-21.2,4.05],
+    [14,-26.8,GANTRY_FRONT_Z,14,-21.2,4.05],[-14,-26.8,GANTRY_FRONT_Z,-7,-21.2,4.05],
+    [-7,-21.2,4.05,0,-26.8,GANTRY_FRONT_Z],[0,-26.8,GANTRY_FRONT_Z,7,-21.2,4.05],
+    [7,-21.2,4.05,14,-26.8,GANTRY_FRONT_Z],[-7,-26.8,GANTRY_FRONT_Z,7,-21.2,4.05]
+  ];
+  for(const beam of beams)positions.push(...beam);
+  foregroundDepthLead=Math.max(0,GANTRY_FRONT_Z-beaconDepthRange.min);
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));return geometry;
 }
 function build(){
@@ -116,8 +133,8 @@ function build(){
   const earthrise=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),earthriseMaterial());
   earthrise.name=`${NAME}-earthrise-crescent`;earthrise.scale.setScalar(PROFILE.earthRadius*1.13);earthrise.renderOrder=2;
   const beacons=beaconLattice();beacons.renderOrder=4;
-  const rails=new THREE.LineSegments(railGeometry(),new THREE.LineBasicMaterial({color:'#8ddcff',transparent:true,opacity:.28,depthWrite:false,blending:THREE.AdditiveBlending}));
-  rails.name=`${NAME}-dual-orbital-rails`;rails.renderOrder=3;
+  const rails=new THREE.LineSegments(railGeometry(),new THREE.LineBasicMaterial({color:'#c4eeff',transparent:true,opacity:.52,depthWrite:false,blending:THREE.AdditiveBlending}));
+  rails.name=`${NAME}-dual-orbital-rails-and-foreground-gantry`;rails.renderOrder=5;
   moonRoot.add(horizon);earthRoot.add(earthrise);ring.add(beacons,rails);objects=[horizon,earthrise,beacons,rails];
 }
 function shouldRun(state){return !!state&&state.exploring&&!state.flying&&!state.contextLost&&state.qualityMode==='high'&&state.current==='LUNA'}
@@ -127,7 +144,7 @@ function sync(){
 }
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===4;
-  return{visualPass:VISUAL_PASS,target:'LUNA',quality:state.qualityMode||null,active,captured:!!(moonRoot&&earthRoot&&ring),captureCount,objects:objects.length,beacons:active?BEACON_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beaconDepthSpan:active?Number(beaconDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan};
+  return{visualPass:VISUAL_PASS,structureProfile:active?STRUCTURE_PROFILE:null,target:'LUNA',quality:state.qualityMode||null,active,captured:!!(moonRoot&&earthRoot&&ring),captureCount,objects:objects.length,beacons:active?BEACON_COUNT:0,gantryBeams:active?GANTRY_BEAM_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beaconDepthSpan:active?Number(beaconDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,foregroundDepthLead:active?Number(foregroundDepthLead.toFixed(2)):0,budgetForegroundDepthLead:PROFILE.foregroundDepthLead,mastScaleMin:active?Number(mastScaleRange.min.toFixed(2)):0,mastScaleMax:active?Number(mastScaleRange.max.toFixed(2)):0,mastScaleRatio:active?Number(mastScaleRange.ratio.toFixed(2)):0,budgetMastScaleRatio:PROFILE.mastScaleRatio};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');const qualityObserver=canvas?new MutationObserver(sync):null;

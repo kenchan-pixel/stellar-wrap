@@ -39,6 +39,29 @@ async function waitHttp(url){return waitUntil(async()=>{const response=await fet
 class Cdp{constructor(url){this.url=url;this.id=0;this.pending=new Map();this.events=new Map()}async connect(){this.ws=new WebSocket(this.url);await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('CDP connect timeout')),8000);this.ws.addEventListener('open',()=>{clearTimeout(timer);resolve()},{once:true});this.ws.addEventListener('error',event=>{clearTimeout(timer);reject(event.error||new Error('CDP error'))},{once:true})});this.ws.addEventListener('message',event=>{const message=JSON.parse(String(event.data));if(!message.id){const queue=this.events.get(message.method)||[];this.events.delete(message.method);queue.forEach(waiter=>{clearTimeout(waiter.timer);waiter.resolve(message.params||{})});return}const pending=this.pending.get(message.id);if(!pending)return;this.pending.delete(message.id);clearTimeout(pending.timer);message.error?pending.reject(new Error(message.error.message)):pending.resolve(message.result||{})})}send(method,params={},timeout=12000){const id=++this.id;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error(`CDP timeout ${method}`))},timeout);this.pending.set(id,{resolve,reject,timer});this.ws.send(JSON.stringify({id,method,params}))})}waitEvent(method,timeout=12000){return new Promise((resolve,reject)=>{const waiter={resolve,reject,timer:setTimeout(()=>reject(new Error(`event timeout ${method}`)),timeout)};const queue=this.events.get(method)||[];queue.push(waiter);this.events.set(method,queue)})}close(){try{this.ws?.close()}catch{}}}
 async function evalJs(cdp,expression,awaitPromise=false){const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result?.value}
 async function screenshot(cdp,name){mkdirSync(EVIDENCE_DIR,{recursive:true});const result=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});const data=Buffer.from(result.data,'base64');writeFileSync(join(EVIDENCE_DIR,name),data);return data.length}
+function assertAureliaV3Live(state,label){
+  const detail=state?.habitatDetail;
+  assert.ok(detail,`${label} must expose live AURELIA habitat detail diagnostics`);
+  assert.equal(detail.profile,'AURELIA_HABITAT_V3',`${label} must keep the live AURELIA v3 profile`);
+  assert.equal(detail.skylineTowers,32,`${label} must keep 32 live skyline tower instances`);
+  assert.equal(detail.solarVanes,12,`${label} must keep 12 live solar-vane instances`);
+  assert.equal(detail.objects,5,`${label} must keep the five-object AURELIA detail layer`);
+  assert.equal(detail.detailTriangles,2832,`${label} must keep the 2,832-triangle AURELIA detail budget`);
+  assert.ok(state.drawCalls>=17,`${label} must keep the v3 detail layers live in the renderer, got ${state.drawCalls} draws`);
+  assert.ok(state.triangles>=13396,`${label} must keep the v3 detail layers live in the renderer, got ${state.triangles} triangles`);
+}
+function assertVesperV3Live(state,label){
+  const detail=state?.harvestDetails;
+  assert.ok(detail,`${label} must expose live VESPER harvest diagnostics`);
+  assert.equal(state.visualProfile,'VESPER_HARVEST_V3',`${label} must keep the live VESPER v3 profile`);
+  assert.equal(detail.harvestBooms,12,`${label} must keep 12 live radial harvest-boom instances`);
+  assert.equal(detail.condenserVanes,12,`${label} must keep 12 live condenser-vane instances`);
+  assert.equal(detail.detailObjects,2,`${label} must keep the two-object VESPER v3 depth layer`);
+  assert.equal(detail.detailTriangles,288,`${label} must keep the 288-triangle VESPER v3 detail budget`);
+  assert.ok(detail.depthSpan>=6.79&&detail.depthSpan<=6.81,`${label} must keep the bounded 6.8-unit VESPER depth span`);
+  assert.ok(state.drawCalls>=17,`${label} must keep the v3 harvest depth layers live in the renderer, got ${state.drawCalls} draws`);
+  assert.ok(state.triangles>=14352,`${label} must keep the v3 harvest depth layers live in the renderer, got ${state.triangles} triangles`);
+}
 
 async function inspect(chrome,base,width,height){
   const viewport=`${width}x${height}`,profile=mkdtempSync(join(tmpdir(),`stellar-frontier-backends-${width}-`));let browser,cdp,stderr='';
@@ -61,6 +84,8 @@ async function inspect(chrome,base,width,height){
       assert.ok(before.child.drawCalls>0&&before.child.drawCalls<=18,`${id} draw calls must remain bounded, got ${before.child.drawCalls}`);
       assert.ok(before.child.triangles>0&&before.child.triangles<=24000,`${id} triangles must remain bounded, got ${before.child.triangles}`);
       assert.ok(before.child.pixelRatio<=1.25+.001,`${id} normal DPR must remain <= 1.25, got ${before.child.pixelRatio}`);
+      if(id==='AURELIA')assertAureliaV3Live(before.child,`${id} ${viewport} before capture`);
+      if(id==='VESPER')assertVesperV3Live(before.child,`${id} ${viewport} before capture`);
       const normal={w:before.child.backingWidth,h:before.child.backingHeight,dpr:before.child.pixelRatio,draws:before.child.drawCalls,triangles:before.child.triangles};
       const capture=await evalJs(cdp,'WarpFrontierScenic.capture(false)',true);
       assert.ok(capture&&capture.width>normal.w&&capture.height>normal.h,`${id} shell capture must raise the real backing buffer`);
@@ -68,8 +93,10 @@ async function inspect(chrome,base,width,height){
       const restored=await evalJs(cdp,'WarpFrontierScenic.state().child');
       assert.equal(restored.autoOrbit,false,`${id} capture must preserve fixed scenic camera authority`);assert.equal(restored.vista,'overview',`${id} capture must preserve overview vista`);
       assert.ok(restored.drawCalls>0&&restored.drawCalls<=18,`${id} draw calls must stay bounded after capture`);assert.ok(restored.triangles>0&&restored.triangles<=24000,`${id} triangles must stay bounded after capture`);
+      if(id==='AURELIA')assertAureliaV3Live(restored,`${id} ${viewport} after capture restore`);
+      if(id==='VESPER')assertVesperV3Live(restored,`${id} ${viewport} after capture restore`);
       const bytes=await screenshot(cdp,`frontier-backend-${id.toLowerCase()}-${viewport}.png`);assert.ok(bytes>8000,`${id} restored scenic screenshot must contain rendered content`);
-      evidence[id]={capture:`${capture.width}x${capture.height}`,normal:`${normal.w}x${normal.h}`,dpr:normal.dpr,draws:normal.draws,triangles:normal.triangles};
+      evidence[id]={capture:`${capture.width}x${capture.height}`,normal:`${normal.w}x${normal.h}`,dpr:normal.dpr,draws:normal.draws,triangles:normal.triangles,...(id==='AURELIA'?{aureliaProfile:restored.habitatDetail.profile,skylineTowers:restored.habitatDetail.skylineTowers,solarVanes:restored.habitatDetail.solarVanes,detailObjects:restored.habitatDetail.objects,detailTriangles:restored.habitatDetail.detailTriangles}:{}),...(id==='VESPER'?{vesperProfile:restored.visualProfile,harvestBooms:restored.harvestDetails.harvestBooms,condenserVanes:restored.harvestDetails.condenserVanes,harvestDepthSpan:restored.harvestDetails.depthSpan,harvestDetailTriangles:restored.harvestDetails.detailTriangles}:{})};
     }
     assert.equal(Object.keys(evidence).length,4);
     console.log(`Frontier renderer backends ${viewport}: ${JSON.stringify(evidence)}`);

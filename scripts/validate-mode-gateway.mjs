@@ -42,7 +42,7 @@ assert.equal((scenic.match(/vista:'overview'/g)||[]).length,4,'all four Frontier
 for(const control of['模式選擇','>科幻目的地</button>','Real Space','高畫質留影'])assert.ok(scenic.includes(control),`missing unified scenic control: ${control}`);
 assert.doesNotMatch(scenic,/localStorage|sessionStorage|indexedDB|XMLHttpRequest|sendBeacon/,'scenic shell must remain stateless');
 assert.ok(sw.includes("'./frontier-scenic.html'"),'offline CORE must include unified scenic shell');
-assert.match(sw,/CACHE_NAME=`\$\{CACHE_PREFIX\}v15`/,'existing offline cache generation must remain v15');
+assert.match(sw,/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`;/,'offline shell must keep an explicit versioned cache generation; validate-offline owns the current generation number');
 console.log('Mode Gateway + Frontier Scenic selection/confirm static contract passed');
 
 function commandPath(name){if(!name)return'';if(name.includes('/')&&existsSync(name))return name;const p=spawnSync('which',[name],{encoding:'utf8'});return p.status===0?p.stdout.trim():''}

@@ -15,7 +15,7 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -28,6 +28,15 @@ jobs:
       - name: Validate source, stable baseline and route graph
         run: npm run check
 
+      - name: Validate arrival memory card
+        run: node scripts/validate-arrival-memory-card.mjs
+
+      - name: Validate Capture Gallery cinematic focus
+        run: node scripts/validate-capture-gallery-focus.mjs
+
+      - name: Validate Capture Gallery focus swipe composition
+        run: node scripts/validate-capture-gallery-focus-swipe.mjs
+
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -38,5 +47,10 @@ jobs:
             artifacts/photo-mode-browser/
             artifacts/mode-gateway-browser/
             artifacts/frontier-destination-handoff/
+            artifacts/gallery-voyage-postcards/
+            artifacts/capture-gallery/
+            artifacts/capture-gallery-swipe/
+            artifacts/capture-gallery-focus/
+            artifacts/arrival-memory-card/
           if-no-files-found: ignore
           retention-days: 7

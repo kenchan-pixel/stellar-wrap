@@ -47,6 +47,11 @@ function active(){
 
 window.WarpExplorationFocusTray={active};
 import('./atlas-constellation.js').catch(()=>{});
-import('./cinematic-quality.js').then(()=>import('./luna-earthrise-depth.js')).then(()=>import('./tau-ring-depth.js')).then(()=>import('./vega-gate-depth.js')).then(()=>import('./cyg-cinematic-quality.js')).then(()=>import('./orion-prominence-quality.js')).then(()=>import('./sirius-phase-aperture.js')).then(()=>import('./prox-starport-transit.js')).catch(()=>{});
+import('./journey-corridor-depth.js').catch(()=>{});
+import('./warp-velocity-aperture.js').catch(()=>{});
+import('./cinematic-quality.js').then(()=>import('./sol-orbital-frame.js')).then(()=>import('./luna-earthrise-depth.js')).then(()=>import('./tau-ring-depth.js')).then(()=>import('./vega-gate-depth.js')).then(()=>import('./cyg-cinematic-quality.js')).then(()=>import('./orion-prominence-quality.js')).then(()=>import('./sirius-phase-aperture.js')).then(()=>import('./prox-starport-transit.js')).catch(()=>{});
 import('./route-scenic-preview.js').catch(()=>{});
+import('./mode-gateway-cinematic.js').catch(()=>{});
+import('./capture-share.js').catch(()=>{});
+import('./capture-voyage-context.js').catch(()=>{});
 })();

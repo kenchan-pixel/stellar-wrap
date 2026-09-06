@@ -21,7 +21,7 @@ ok(source.includes('--atlas-visit-progress')&&source.includes('.atlasConstellati
 ok(source.includes("observer.disconnect()"),'one-shot mutation observer disconnects after mount');
 ok(!/setInterval|setTimeout|requestAnimationFrame|localStorage|sessionStorage|fetch\s*\(/.test(source),'adds no polling, render-loop, storage or network work');
 ok(tray.includes("import('./atlas-constellation.js').catch(()=>{});"),'loaded through existing exploration presentation bootstrap');
-ok(sw.includes("`${CACHE_PREFIX}v15`")&&sw.includes("'./atlas-constellation.js'"),'prepared offline shell includes constellation module');
+ok(/const CACHE_NAME=`\$\{CACHE_PREFIX\}v\d+`;/.test(sw)&&sw.includes("'./atlas-constellation.js'"),'prepared versioned offline shell includes constellation module');
 
 class ClassList{
   constructor(el){this.el=el;this.set=new Set()}

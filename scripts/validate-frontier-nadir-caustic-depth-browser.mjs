@@ -36,21 +36,21 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"WarpFrontierNadir.state().phase==='explore'"),'fixed final scenic phase');
     await sleep(180);
     const before=await evalJs(cdp,`(()=>{const s=WarpFrontierNadir.state(),c=document.querySelector('#nadirSpace'),r=c.getBoundingClientRect();return{...s,cssWidth:r.width,cssHeight:r.height,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight}})()`);
-    assert.equal(before.visualId,'NADIR_FIXED_LENSING_V4');assert.equal(before.qualityId,'NADIR_CAUSTIC_DEPTH_V2');assert.equal(before.fixed,true);assert.equal(before.autoOrbit,false);assert.equal(before.vista,'overview');assert.equal(before.portalRing,false);assert.equal(before.jets,false);assert.equal(before.causticSheet,true);assert.equal(before.lensedStreaks,true);assert.equal(before.depthBeacons,true);assert.equal(before.eventHorizon,true);assert.equal(before.lensingCrown,true);assert.ok(before.pixelRatio<=1.251,'normal DPR must stay <=1.25');assert.equal(Math.round(before.cssWidth),width);assert.equal(Math.round(before.cssHeight),height);assert.ok(before.scrollWidth<=width+1&&before.scrollHeight<=height+1,'fixed scene must not create viewport overflow');assert.ok(before.drawCalls>0&&before.drawCalls<=20,`bounded draw calls expected, got ${before.drawCalls}`);assert.ok(before.triangles>0&&before.triangles<=20000,`bounded triangles expected, got ${before.triangles}`);
-    await screenshot(cdp,`nadir-caustic-depth-${viewport}.png`);
+    assert.equal(before.visualId,'NADIR_FIXED_LENSING_V4');assert.equal(before.qualityId,'NADIR_OBSERVATORY_DEPTH_V3');assert.equal(before.observatoryProfile,'NADIR_INTERFEROMETER_FRAME_V1');assert.equal(before.fixed,true);assert.equal(before.autoOrbit,false);assert.equal(before.vista,'overview');assert.equal(before.portalRing,false);assert.equal(before.jets,false);assert.equal(before.causticSheet,true);assert.equal(before.lensedStreaks,true);assert.equal(before.observatoryFrame,true);assert.equal(before.collectorRings,3);assert.equal(before.trussBeams,12);assert.equal(before.receiverPods,12);assert.equal(before.depthBeacons,10);assert.equal(before.eventHorizon,true);assert.equal(before.lensingCrown,true);assert.ok(before.pixelRatio<=1.251,'normal DPR must stay <=1.25');assert.equal(Math.round(before.cssWidth),width);assert.equal(Math.round(before.cssHeight),height);assert.ok(before.scrollWidth<=width+1&&before.scrollHeight<=height+1,'fixed scene must not create viewport overflow');assert.ok(before.drawCalls>0&&before.drawCalls<=20,`bounded draw calls expected, got ${before.drawCalls}`);assert.ok(before.triangles>0&&before.triangles<=20000,`bounded triangles expected, got ${before.triangles}`);
+    await screenshot(cdp,`nadir-observatory-depth-${viewport}.png`);
     const captured=await evalJs(cdp,"WarpFrontierNadir.capture(false)",true);
     assert.ok(captured?.blobSize>0,'capture must return a non-empty PNG');assert.ok(captured.width>=before.backingWidth*1.2,`capture width ${captured.width} must materially exceed normal ${before.backingWidth}`);assert.ok(captured.height>=before.backingHeight*1.2,`capture height ${captured.height} must materially exceed normal ${before.backingHeight}`);
     await waitUntil(()=>evalJs(cdp,`(()=>{const s=WarpFrontierNadir.state();return !s.capturing&&Math.abs(s.pixelRatio-${Number(before.pixelRatio)})<.01&&s.backingWidth===${Number(before.backingWidth)}&&s.backingHeight===${Number(before.backingHeight)}})()`),'capture DPR and backing-buffer restore',5000);
     const after=await evalJs(cdp,'WarpFrontierNadir.state()');
-    assert.equal(after.qualityId,'NADIR_CAUSTIC_DEPTH_V2');assert.equal(after.backingWidth,before.backingWidth);assert.equal(after.backingHeight,before.backingHeight);
-    console.log(`NADIR Caustic Depth real browser ${viewport}: ${before.drawCalls} draws / ${before.triangles} triangles; capture ${captured.width}×${captured.height} → restored DPR ${after.pixelRatio}`);
-  }catch(e){if(cdp)await screenshot(cdp,`nadir-caustic-depth-failure-${viewport}.png`).catch(()=>{});throw e}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
+    assert.equal(after.qualityId,'NADIR_OBSERVATORY_DEPTH_V3');assert.equal(after.observatoryProfile,'NADIR_INTERFEROMETER_FRAME_V1');assert.equal(after.observatoryFrame,true);assert.equal(after.collectorRings,3);assert.equal(after.trussBeams,12);assert.equal(after.receiverPods,12);assert.equal(after.depthBeacons,10);assert.equal(after.backingWidth,before.backingWidth);assert.equal(after.backingHeight,before.backingHeight);
+    console.log(`NADIR Observatory Depth v3 real browser ${viewport}: ${before.drawCalls} draws / ${before.triangles} triangles / 3 collectors / 12 truss beams / 12 receivers / 10 depth beacons; capture ${captured.width}×${captured.height} → restored DPR ${after.pixelRatio}`);
+  }catch(e){if(cdp)await screenshot(cdp,`nadir-observatory-depth-failure-${viewport}.png`).catch(()=>{});throw e}finally{cdp?.close();await stop(browser);try{rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:80})}catch{}}
 }
 
 const chrome=findChrome();
 if(!chrome){
-  if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for NADIR caustic-depth browser validation');
-  console.log('NADIR Caustic Depth browser validation skipped: Chrome/Chromium not available');
+  if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for NADIR observatory-depth browser validation');
+  console.log('NADIR Observatory Depth browser validation skipped: Chrome/Chromium not available');
   process.exit(0);
 }
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`;
@@ -59,7 +59,7 @@ try{
   await waitHttp(base);
   await inspect(chrome,base,390,844);
   await inspect(chrome,base,360,800);
-  console.log('NADIR Caustic Depth + Capture Boost browser validation: passed at 390×844 and 360×800');
+  console.log('NADIR Observatory Depth v3 + Capture Boost browser validation: passed at 390×844 and 360×800');
 }finally{
   await stop(server);
 }

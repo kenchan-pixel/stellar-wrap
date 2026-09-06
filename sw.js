@@ -1,5 +1,5 @@
 const CACHE_PREFIX='stellar-wrap-shell-';
-const CACHE_NAME=`${CACHE_PREFIX}v15`;
+const CACHE_NAME=`${CACHE_PREFIX}v19`;
 const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 const CORE=[
   './',
@@ -7,12 +7,15 @@ const CORE=[
   './travel-journal.js',
   './responsive-ui.js',
   './mode-gateway.js',
+  './mode-gateway-cinematic.js',
   './frontier-scenic.html',
   './frontier.html',
   './frontier-nadir.html',
   './frontier-vesper.html',
   './frontier-eidolon.html',
   './journey-atmosphere.js',
+  './journey-corridor-depth.js',
+  './warp-velocity-aperture.js',
   './route-scenic-preview.js',
   './exploration-survey.js',
   './star-atlas.js',
@@ -22,6 +25,9 @@ const CORE=[
   './tau-ring-profiler.js',
   './sirius-relay-calibration.js',
   './prox-starport-alignment.js',
+  './capture-gallery.js',
+  './capture-share.js',
+  './capture-voyage-context.js',
   './photo-mode.js',
   './arrival-debrief.js',
   './discovery-debrief.js',
@@ -30,6 +36,7 @@ const CORE=[
   './exploration-focus-tray.js',
   './atlas-constellation.js',
   './cinematic-quality.js',
+  './sol-orbital-frame.js',
   './luna-earthrise-depth.js',
   './tau-ring-depth.js',
   './vega-gate-depth.js',
