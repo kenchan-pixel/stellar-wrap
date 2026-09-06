@@ -4,6 +4,7 @@
 const STYLE_ID='warpVelocityApertureStyle';
 const ROOT_ID='warpVelocityAperture';
 const ARCHITECTURE='velocity-aperture-v5';
+const MOTION_TREATMENT='velocity-aperture-expansion-v6';
 const ACTIVE_PHASES=new Set(['warpEntry','warp','warpExit']);
 let mountObserver=null;
 
@@ -18,25 +19,28 @@ function ensureStyle(){
 }
 #journeyTransit{z-index:5}
 #warpVelocityAperture::before,#warpVelocityAperture::after{
-  content:"";position:absolute;inset:-2%;pointer-events:none
+  content:"";position:absolute;inset:-2%;pointer-events:none;transform-origin:50% 50%;
+  transition:opacity .16s ease,transform .46s cubic-bezier(.2,.72,.18,1)
 }
 #warpVelocityAperture::before{
   opacity:0;
-  background:radial-gradient(ellipse 48% 34% at 50% 50%,rgba(1,3,9,.68) 0 8%,rgba(2,6,15,.50) 30%,rgba(4,9,20,.22) 56%,transparent 79%)
+  background:radial-gradient(ellipse 48% 34% at 50% 50%,rgba(1,3,9,.68) 0 8%,rgba(2,6,15,.50) 30%,rgba(4,9,20,.22) 56%,transparent 79%);
+  transform:translate3d(0,0,0) scale(.82,.74)
 }
 #warpVelocityAperture::after{
   opacity:0;
-  background:radial-gradient(ellipse 72% 56% at 50% 50%,transparent 0 48%,rgba(var(--journey-alt-rgb),.028) 56%,transparent 66%),linear-gradient(90deg,rgba(var(--journey-rgb),.060),transparent 18% 82%,rgba(var(--journey-alt-rgb),.055))
+  background:radial-gradient(ellipse 72% 56% at 50% 50%,transparent 0 48%,rgba(var(--journey-alt-rgb),.028) 56%,transparent 66%),linear-gradient(90deg,rgba(var(--journey-rgb),.060),transparent 18% 82%,rgba(var(--journey-alt-rgb),.055));
+  transform:translate3d(0,0,0) scale(.88,.82)
 }
 #journeyAtmosphere[data-phase="warpEntry"] #warpVelocityAperture{opacity:.45}
-#journeyAtmosphere[data-phase="warpEntry"] #warpVelocityAperture::before{opacity:.55}
-#journeyAtmosphere[data-phase="warpEntry"] #warpVelocityAperture::after{opacity:.35}
+#journeyAtmosphere[data-phase="warpEntry"] #warpVelocityAperture::before{opacity:.55;transform:translate3d(0,0,0) scale(.88,.80)}
+#journeyAtmosphere[data-phase="warpEntry"] #warpVelocityAperture::after{opacity:.35;transform:translate3d(0,0,0) scale(.92,.86)}
 #journeyAtmosphere[data-phase="warp"] #warpVelocityAperture{opacity:1}
-#journeyAtmosphere[data-phase="warp"] #warpVelocityAperture::before{opacity:.62}
-#journeyAtmosphere[data-phase="warp"] #warpVelocityAperture::after{opacity:.65}
+#journeyAtmosphere[data-phase="warp"] #warpVelocityAperture::before{opacity:.62;transform:translate3d(0,0,0) scale(1,.94)}
+#journeyAtmosphere[data-phase="warp"] #warpVelocityAperture::after{opacity:.65;transform:translate3d(0,0,0) scale(1.04,1)}
 #journeyAtmosphere[data-phase="warpExit"] #warpVelocityAperture{opacity:.55}
-#journeyAtmosphere[data-phase="warpExit"] #warpVelocityAperture::before{opacity:.42}
-#journeyAtmosphere[data-phase="warpExit"] #warpVelocityAperture::after{opacity:.25}
+#journeyAtmosphere[data-phase="warpExit"] #warpVelocityAperture::before{opacity:.42;transform:translate3d(0,0,0) scale(1.16,1.08)}
+#journeyAtmosphere[data-phase="warpExit"] #warpVelocityAperture::after{opacity:.25;transform:translate3d(0,0,0) scale(1.20,1.12)}
 #journeyAtmosphere[data-phase="decelerate"] #warpVelocityAperture,
 #journeyAtmosphere[data-phase="approach"] #warpVelocityAperture,
 #journeyAtmosphere[data-phase="observe"] #warpVelocityAperture{opacity:0}
@@ -45,7 +49,9 @@ function ensureStyle(){
     background:radial-gradient(ellipse 50% 35% at 50% 50%,rgba(1,3,9,.68) 0 8%,rgba(2,6,15,.50) 30%,rgba(4,9,20,.22) 56%,transparent 79%)
   }
 }
-@media(prefers-reduced-motion:reduce){#warpVelocityAperture{transition:none}}
+@media(prefers-reduced-motion:reduce){
+  #warpVelocityAperture,#warpVelocityAperture::before,#warpVelocityAperture::after{transition:none}
+}
 `;
   document.head.append(style);
 }
@@ -73,7 +79,8 @@ function snapshot(){
     elements:root?.children?.length||0,
     phase,
     active:!!root&&ACTIVE_PHASES.has(phase),
-    architecture:ARCHITECTURE
+    architecture:ARCHITECTURE,
+    motionTreatment:MOTION_TREATMENT
   };
 }
 
