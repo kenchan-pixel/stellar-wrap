@@ -16,6 +16,7 @@ function ensureStyle(){
   position:absolute;z-index:4;inset:0;overflow:hidden;pointer-events:none;opacity:0;
   transition:opacity .16s ease;contain:paint
 }
+#journeyTransit{z-index:5}
 #warpVelocityAperture::before,#warpVelocityAperture::after{
   content:"";position:absolute;inset:-2%;pointer-events:none
 }

@@ -19,6 +19,8 @@ const parsed=spawnSync(process.execPath,['--check',resolve(root,'warp-velocity-a
 ok(parsed.status===0,`warp velocity aperture parses${parsed.stderr?`: ${parsed.stderr.trim()}`:''}`);
 ok(source.includes("const ARCHITECTURE='velocity-aperture-v5'"),'v5 velocity-aperture architecture is explicit');
 ok(source.includes("new Set(['warpEntry','warp','warpExit'])"),'aperture is limited to warp entry/cruise/exit phases');
+ok(source.includes('position:absolute;z-index:4;inset:0'),'aperture keeps an explicit presentation-layer z-index');
+ok(source.includes('#journeyTransit{z-index:5}'),'corridor/transit presentation layer is explicitly above the aperture');
 ok(source.includes('ellipse 48% 34% at 50% 50%')&&source.includes('rgba(1,3,9,.68)'),'desktop aperture has a bounded central attenuation field');
 ok(source.includes('ellipse 50% 35% at 50% 50%'),'phone aperture keeps a portrait-specific bounded attenuation field');
 ok(source.includes('ellipse 72% 56% at 50% 50%')&&source.includes('linear-gradient(90deg'),'outer rim adds a low-cost peripheral depth grade');
@@ -36,6 +38,7 @@ ok(!/backdrop-filter|\bfilter\s*:/.test(source),'aperture avoids filter/backdrop
 ok(loader.includes("import('./warp-velocity-aperture.js').catch(()=>{})"),'production focus-tray loader mounts the aperture module');
 ok(sw.includes("'./warp-velocity-aperture.js'"),'prepared offline shell contains the aperture module');
 ok(doc.includes('Velocity Aperture')&&doc.includes('velocity-aperture-v5'),'Warp Corridor SOT records the v5 aperture contract');
+ok(doc.includes('z-index 4')&&doc.includes('z-index 5'),'Warp Corridor SOT records the aperture/corridor stacking contract');
 ok(pkg.scripts?.check?.includes('node scripts/validate-warp-velocity-aperture.mjs'),'npm run check includes focused aperture validation');
 
 if(failures.length){

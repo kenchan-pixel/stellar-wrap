@@ -12,6 +12,7 @@ v5 保留 v4 Warp Corridor Perspective Depth、Peripheral Starflow、三層 Appr
 - Runtime 只 mount 1 個 `#warpVelocityAperture`，exactly 0 child；兩層效果只用 `::before / ::after`。
 - `::before` 係 bounded 中央／中景 attenuation field：desktop `48% × 34%` ellipse；≤520 px portrait `50% × 35%` ellipse；最深色值固定 `rgba(1,3,9,.68)`，不使用 filter 或 backdrop-filter。
 - `::after` 係低亮度周邊 depth rim：`72% × 56%` ellipse 加左右 route-colour edge tint，保留近景速度線閱讀，而唔新增線條。
+- Layer contract 明確固定：Velocity Aperture 使用 `z-index 4`；既有 `#journeyTransit`（內含 `#journeyCorridorDepth` horizon／rails／rungs）使用 `z-index 5`。兩者共享 `#journeyAtmosphere` stacking context，確保 attenuation 只壓低底層 WebGL 星流，不會再壓暗 corridor cues。
 - Phase contract：`warpEntry` 弱淡入；`warp` full root opacity，中央 attenuation pseudo opacity `.62`、周邊 rim `.65`；`warpExit` 收弱；`decelerate / approach / observe` 完全透明，交返畫面權威畀 Shockfront、Approach Vista 同真正 3D destination。
 - 不使用 animation loop、timer、network、storage、新 dependency、Three.js geometry、post-processing 或第二個 canvas。
 - Prepared offline shell 升級至 v19，包含新 module；離線就緒仍要求完整現行 `CORE` + 固定 Three.js。
@@ -22,6 +23,7 @@ v5 保留 v4 Warp Corridor Perspective Depth、Peripheral Starflow、三層 Appr
 - [ ] `warpEntry / warp / warpExit` 係唯一 active phases；`decelerate / approach / observe` 必須 opacity 0。
 - [ ] Warp cruise 中央 attenuation field 保持 bounded：desktop `48% × 34%`、portrait `50% × 35%`；pseudo opacity `.62`。
 - [ ] Warp cruise peripheral rim 保持 bounded：`72% × 56%`；pseudo opacity `.65`；不遮住中央 vanishing-point horizon／rails／rungs。
+- [ ] Production browser 必須證明 `#warpVelocityAperture` 與 `#journeyTransit` 共享同一 `#journeyAtmosphere` parent、實際 viewport bounds 重疊、computed stack 為 `4 < 5`，而 live corridor horizon／rail／rungs 在 warp cruise 保持可見。
 - [ ] 現有 v4 Peripheral Starflow 左右兩層仍保留 route-specific tilt/skew、不同 parallax rate；v5 不增加 DOM child。
 - [ ] 現有 Shockfront／Approach depth phase handoff 不變：`warpExit → decelerate → approach`，`observe` 前退場。
 - [ ] `SOL → LUNA` production Chromium 390×844、360×800 仍要實際完成 route／flight state transitions，同一 Warp Starflow screenshot 應見中央／中景亮度被分級、周邊近景速度線保留、無水平 overflow。
@@ -39,7 +41,7 @@ v5 保留 v4 Warp Corridor Perspective Depth、Peripheral Starflow、三層 Appr
 
 ## Validation evidence
 
-Exact-head acceptance 由完整 GitHub Actions、focused `validate-warp-velocity-aperture.mjs`、既有 Warp Corridor／Warp Starflow production Chromium gates、390×844／360×800 exact-run Warp Starflow screenshots、offline manifest validation、PR exact-head review receipt共同證明。
+Exact-head acceptance 由完整 GitHub Actions、focused `validate-warp-velocity-aperture.mjs`、既有 Warp Corridor／Warp Starflow production Chromium gates、390×844／360×800 exact-run Warp Starflow screenshots、offline manifest validation、PR exact-head review receipt共同證明。Velocity Aperture browser gate 另外讀取真 production runtime 的 parent relationship、computed `z-index`、實際重疊 bounds 及 live corridor cue opacity，證明 corridor cues 的 compositing layer 高於 attenuation，而唔只係比對 source 字串。
 
 視覺驗收重點：中央消失點附近唔應該再同大量高亮中景線條讀成同一平面；中景會被低成本深色光圈稍為壓低，而畫面周邊仍保留高速近景線，形成「遠景消失點 → 中景 corridor → 近景 starflow」三級閱讀。去到 `warpExit` 後，Velocity Aperture 必須收走，讓 Shockfront 同真正 destination 接手。
 
@@ -53,4 +55,4 @@ Exact-head acceptance 由完整 GitHub Actions、focused `validate-warp-velocity
 
 ## Completion Signal
 
-玩家進入 warp cruise 後，既有真 WebGL 星流仍提供高速穿越感，但畫面會由 v5 Velocity Aperture 將中央／中景亮度壓成較安靜嘅遠景層，周邊星流保持最強近景速度感，原有 horizon／rails／rungs 因而更易讀。到 `warpExit` 光圈退場，再由既有 Shockfront → Approach Depth → 真 3D destination 連續接手。整個 v5 增加零 Three.js draw／triangle／particle／canvas，亦不改航行、相機、路線、DPR、持久化或網絡權威。
+玩家進入 warp cruise 後，既有真 WebGL 星流仍提供高速穿越感，但畫面會由 v5 Velocity Aperture 將中央／中景亮度壓成較安靜嘅遠景層；`#journeyTransit`／Corridor Depth 明確處於更高 stacking layer，因此 horizon／rails／rungs 保持清晰，不會再被 attenuation 二次壓暗。周邊星流保持最強近景速度感。到 `warpExit` 光圈退場，再由既有 Shockfront → Approach Depth → 真 3D destination 連續接手。整個 v5 增加零 Three.js draw／triangle／particle／canvas，亦不改航行、相機、路線、DPR、持久化或網絡權威。

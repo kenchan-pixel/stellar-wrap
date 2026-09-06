@@ -101,13 +101,29 @@ async function screenshot(cdp,name){
 
 const SAMPLE=`(()=>{
   const root=document.querySelector('#warpVelocityAperture'),atmosphere=document.querySelector('#journeyAtmosphere');
+  const transit=document.querySelector('#journeyTransit'),corridor=document.querySelector('#journeyCorridorDepth');
+  const horizon=corridor?.querySelector('.corridorDepthHorizon'),rail=corridor?.querySelector('.corridorDepthRailLeft'),rungs=corridor?.querySelector('.corridorDepthRungs');
   if(!root||!window.WarpWarpVelocityAperture)return null;
   const styles=getComputedStyle(root),before=getComputedStyle(root,'::before'),after=getComputedStyle(root,'::after');
+  const transitStyles=transit?getComputedStyle(transit):null,corridorStyles=corridor?getComputedStyle(corridor):null;
+  const rootRect=root.getBoundingClientRect(),transitRect=transit?.getBoundingClientRect();
+  const overlap=!!transitRect&&Math.min(rootRect.right,transitRect.right)>Math.max(rootRect.left,transitRect.left)&&Math.min(rootRect.bottom,transitRect.bottom)>Math.max(rootRect.top,transitRect.top);
   return{
     state:WarpSim.state(),phase:atmosphere?.getAttribute('data-phase')||'',snapshot:WarpWarpVelocityAperture.snapshot(),
     root:{opacity:Number(styles.opacity),pointerEvents:styles.pointerEvents,children:root.children.length,ariaHidden:root.getAttribute('aria-hidden')},
     before:{opacity:Number(before.opacity),backgroundImage:before.backgroundImage},
     after:{opacity:Number(after.opacity),backgroundImage:after.backgroundImage},
+    stack:{
+      sameParent:!!transit&&root.parentElement===transit.parentElement,
+      apertureZ:Number(styles.zIndex),transitZ:transitStyles?Number(transitStyles.zIndex):null,
+      transitOpacity:transitStyles?Number(transitStyles.opacity):0,
+      corridorInsideTransit:!!transit&&!!corridor&&transit.contains(corridor),corridorElements:corridor?.children?.length||0,
+      corridorOpacity:corridorStyles?Number(corridorStyles.opacity):0,
+      horizonOpacity:horizon?Number(getComputedStyle(horizon).opacity):0,
+      railOpacity:rail?Number(getComputedStyle(rail).opacity):0,
+      rungsOpacity:rungs?Number(getComputedStyle(rungs).opacity):0,
+      overlap
+    },
     canvasCount:document.querySelectorAll('canvas').length,ownedCanvasCount:root.querySelectorAll('canvas').length,
     scrollWidth:document.documentElement.scrollWidth,innerWidth
   };
@@ -136,6 +152,18 @@ function assertCruise(sample,label,baselineCanvas){
   assert.ok(sample.before.backgroundImage.includes('50% 35%'),`${label} phone attenuation field must stay 50% × 35%`);
   assert.ok(sample.after.backgroundImage.includes('72% 56%'),`${label} peripheral rim must stay 72% × 56%`);
   assert.ok(sample.after.backgroundImage.includes('linear-gradient'),`${label} route-colour side rim must remain present`);
+  assert.equal(sample.stack.sameParent,true,`${label} transit and aperture must share the Journey Atmosphere stacking context`);
+  assert.equal(sample.stack.apertureZ,4,`${label} aperture must remain on presentation layer 4`);
+  assert.equal(sample.stack.transitZ,5,`${label} transit/corridor layer must be explicitly above the aperture`);
+  assert.ok(sample.stack.transitZ>sample.stack.apertureZ,`${label} corridor cues must composite above attenuation`);
+  assert.equal(sample.stack.corridorInsideTransit,true,`${label} corridor depth must remain inside the raised transit layer`);
+  assert.equal(sample.stack.corridorElements,5,`${label} live corridor must retain horizon, rails, rungs and near frame`);
+  assert.ok(sample.stack.transitOpacity>=.74,`${label} live transit layer must be visibly active`);
+  assert.ok(sample.stack.corridorOpacity>=.68,`${label} live corridor root must be visibly active`);
+  assert.ok(sample.stack.horizonOpacity>=.30,`${label} vanishing-point horizon must remain visible above attenuation`);
+  assert.ok(sample.stack.railOpacity>=.55,`${label} corridor rail must remain visible above attenuation`);
+  assert.ok(sample.stack.rungsOpacity>=.60,`${label} corridor rungs must remain visible above attenuation`);
+  assert.equal(sample.stack.overlap,true,`${label} stacking assertion must cover overlapping full-frame layers`);
   assert.equal(sample.canvasCount,baselineCanvas,`${label} aperture must not add a renderer/canvas`);
 }
 
@@ -159,7 +187,7 @@ async function inspect(chrome,base,width,height){
     const baselineCanvas=initial.canvasCount;
 
     await evalJs(cdp,"(()=>{const warp=document.querySelector('#warp');if(warp){warp.value='1.8';warp.dispatchEvent(new Event('input',{bubbles:true}))}WarpSim.select('LUNA');WarpSim.launch();return true})()");
-    await waitUntil(()=>evalJs(cdp,"(()=>{const r=document.querySelector('#warpVelocityAperture');return WarpSim.state().phase==='warp'&&WarpWarpVelocityAperture.snapshot().active===true&&r&&Number(getComputedStyle(r).opacity)>.98&&Number(getComputedStyle(r,'::before').opacity)>.60&&Number(getComputedStyle(r,'::after').opacity)>.63})()"),`velocity aperture cruise ${viewport}`,45000);
+    await waitUntil(()=>evalJs(cdp,"(()=>{const r=document.querySelector('#warpVelocityAperture'),t=document.querySelector('#journeyTransit'),c=document.querySelector('#journeyCorridorDepth');return WarpSim.state().phase==='warp'&&WarpWarpVelocityAperture.snapshot().active===true&&r&&t&&c&&Number(getComputedStyle(r).opacity)>.98&&Number(getComputedStyle(r,'::before').opacity)>.60&&Number(getComputedStyle(r,'::after').opacity)>.63&&Number(getComputedStyle(t).zIndex)>Number(getComputedStyle(r).zIndex)&&Number(getComputedStyle(c).opacity)>.68})()"),`velocity aperture cruise ${viewport}`,45000);
     const cruise=await evalJs(cdp,SAMPLE);assertCruise(cruise,`${viewport} cruise`,baselineCanvas);
     const bytes=await screenshot(cdp,`warp-velocity-aperture-${viewport}.png`);assert.ok(bytes>9000,`${viewport} screenshot must contain rendered runtime evidence`);
 
@@ -172,7 +200,7 @@ async function inspect(chrome,base,width,height){
     await waitUntil(()=>evalJs(cdp,"WarpSim.state().phase==='observe'&&WarpWarpVelocityAperture.snapshot().active===false"),`velocity aperture observation ${viewport}`,30000);
     const observed=await evalJs(cdp,SAMPLE);assert.equal(observed.state.phase,'observe');assert.ok(observed.root.opacity<=.01);
     await evalJs(cdp,"WarpSim.abort();true");
-    console.log(`${viewport}: aperture=${cruise.before.opacity.toFixed(2)}/${cruise.after.opacity.toFixed(2)}, exit=${exit.root.opacity.toFixed(2)}, screenshot=${bytes} bytes`);
+    console.log(`${viewport}: aperture=${cruise.before.opacity.toFixed(2)}/${cruise.after.opacity.toFixed(2)}, stack=${cruise.stack.apertureZ}<${cruise.stack.transitZ}, corridor=${cruise.stack.corridorOpacity.toFixed(2)}, exit=${exit.root.opacity.toFixed(2)}, screenshot=${bytes} bytes`);
   }finally{cdp?.close();await stop(browser);await cleanupProfile(profile)}
 }
 
