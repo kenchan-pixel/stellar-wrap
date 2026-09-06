@@ -108,11 +108,16 @@ const SAMPLE=`(()=>{
   const transitStyles=transit?getComputedStyle(transit):null,corridorStyles=corridor?getComputedStyle(corridor):null;
   const rootRect=root.getBoundingClientRect(),transitRect=transit?.getBoundingClientRect();
   const overlap=!!transitRect&&Math.min(rootRect.right,transitRect.right)>Math.max(rootRect.left,transitRect.left)&&Math.min(rootRect.bottom,transitRect.bottom)>Math.max(rootRect.top,transitRect.top);
+  const scale=transform=>{
+    if(!transform||transform==='none')return{x:1,y:1};
+    const matrix=new DOMMatrixReadOnly(transform);
+    return{x:Math.hypot(matrix.a,matrix.b),y:Math.hypot(matrix.c,matrix.d)};
+  };
   return{
     state:WarpSim.state(),phase:atmosphere?.getAttribute('data-phase')||'',snapshot:WarpWarpVelocityAperture.snapshot(),
     root:{opacity:Number(styles.opacity),pointerEvents:styles.pointerEvents,children:root.children.length,ariaHidden:root.getAttribute('aria-hidden')},
-    before:{opacity:Number(before.opacity),backgroundImage:before.backgroundImage},
-    after:{opacity:Number(after.opacity),backgroundImage:after.backgroundImage},
+    before:{opacity:Number(before.opacity),backgroundImage:before.backgroundImage,transform:before.transform,scale:scale(before.transform)},
+    after:{opacity:Number(after.opacity),backgroundImage:after.backgroundImage,transform:after.transform,scale:scale(after.transform)},
     stack:{
       sameParent:!!transit&&root.parentElement===transit.parentElement,
       apertureZ:Number(styles.zIndex),transitZ:transitStyles?Number(transitStyles.zIndex):null,
@@ -129,16 +134,35 @@ const SAMPLE=`(()=>{
   };
 })()`;
 
+function near(actual,expected,tolerance=.025){return Math.abs(actual-expected)<=tolerance}
+function assertScale(sample,expectedBefore,expectedAfter,label){
+  assert.ok(near(sample.before.scale.x,expectedBefore.x),`${label} central scaleX ${sample.before.scale.x.toFixed(3)} must be near ${expectedBefore.x}`);
+  assert.ok(near(sample.before.scale.y,expectedBefore.y),`${label} central scaleY ${sample.before.scale.y.toFixed(3)} must be near ${expectedBefore.y}`);
+  assert.ok(near(sample.after.scale.x,expectedAfter.x),`${label} rim scaleX ${sample.after.scale.x.toFixed(3)} must be near ${expectedAfter.x}`);
+  assert.ok(near(sample.after.scale.y,expectedAfter.y),`${label} rim scaleY ${sample.after.scale.y.toFixed(3)} must be near ${expectedAfter.y}`);
+}
 function assertMounted(sample,label){
   assert.ok(sample,`${label} aperture runtime must exist`);
   assert.equal(sample.snapshot.mounted,true,`${label} aperture must be mounted`);
   assert.equal(sample.snapshot.elements,0,`${label} aperture must keep the zero-child budget`);
   assert.equal(sample.snapshot.architecture,'velocity-aperture-v5',`${label} runtime must expose v5 architecture`);
+  assert.equal(sample.snapshot.motionTreatment,'velocity-aperture-expansion-v6',`${label} runtime must expose v6 phase expansion`);
   assert.equal(sample.root.children,0,`${label} root must have no child nodes`);
   assert.equal(sample.root.ariaHidden,'true',`${label} root must remain presentation-only`);
   assert.equal(sample.root.pointerEvents,'none',`${label} root must stay pointer-transparent`);
   assert.equal(sample.ownedCanvasCount,0,`${label} aperture must not create a canvas`);
   assert.ok(sample.scrollWidth<=sample.innerWidth+1,`${label} aperture must not create horizontal overflow`);
+}
+function assertEntry(sample,label,baselineCanvas){
+  assertMounted(sample,label);
+  assert.equal(sample.state.phase,'warpEntry',`${label} must inspect real warp entry`);
+  assert.equal(sample.phase,'warpEntry',`${label} Journey Atmosphere must match warp entry`);
+  assert.equal(sample.snapshot.active,true);
+  assert.ok(sample.root.opacity>=.43&&sample.root.opacity<=.47,`${label} root must settle near .45`);
+  assert.ok(sample.before.opacity>=.53&&sample.before.opacity<=.57,`${label} central attenuation must settle near .55`);
+  assert.ok(sample.after.opacity>=.33&&sample.after.opacity<=.37,`${label} rim must settle near .35`);
+  assertScale(sample,{x:.88,y:.80},{x:.92,y:.86},label);
+  assert.equal(sample.canvasCount,baselineCanvas,`${label} aperture must not add a renderer/canvas`);
 }
 function assertCruise(sample,label,baselineCanvas){
   assertMounted(sample,label);
@@ -148,6 +172,7 @@ function assertCruise(sample,label,baselineCanvas){
   assert.ok(sample.root.opacity>=.98,`${label} root must reach full cruise opacity`);
   assert.ok(sample.before.opacity>=.60&&sample.before.opacity<=.64,`${label} central attenuation must keep the .62 cruise bound`);
   assert.ok(sample.after.opacity>=.63&&sample.after.opacity<=.67,`${label} peripheral rim must keep the .65 cruise bound`);
+  assertScale(sample,{x:1,y:.94},{x:1.04,y:1},label);
   assert.ok(sample.before.backgroundImage.includes('radial-gradient'),`${label} central attenuation must be a radial gradient`);
   assert.ok(sample.before.backgroundImage.includes('50% 35%'),`${label} phone attenuation field must stay 50% × 35%`);
   assert.ok(sample.after.backgroundImage.includes('72% 56%'),`${label} peripheral rim must stay 72% × 56%`);
@@ -166,6 +191,29 @@ function assertCruise(sample,label,baselineCanvas){
   assert.equal(sample.stack.overlap,true,`${label} stacking assertion must cover overlapping full-frame layers`);
   assert.equal(sample.canvasCount,baselineCanvas,`${label} aperture must not add a renderer/canvas`);
 }
+function assertExit(sample,label,baselineCanvas){
+  assertMounted(sample,label);
+  assert.equal(sample.state.phase,'warpExit',`${label} must inspect real warp exit`);
+  assert.equal(sample.phase,'warpExit',`${label} Journey Atmosphere must match warp exit`);
+  assert.equal(sample.snapshot.active,true);
+  assert.ok(sample.root.opacity>=.53&&sample.root.opacity<=.57,`${label} root must settle near .55`);
+  assert.ok(sample.before.opacity>=.40&&sample.before.opacity<=.44,`${label} central attenuation must settle near .42`);
+  assert.ok(sample.after.opacity>=.23&&sample.after.opacity<=.27,`${label} rim must settle near .25`);
+  assertScale(sample,{x:1.16,y:1.08},{x:1.20,y:1.12},label);
+  assert.equal(sample.canvasCount,baselineCanvas,`${label} aperture must not add a renderer/canvas`);
+}
+
+const SETTLED_PHASE=`(()=>{
+  const phase=WarpSim.state().phase,r=document.querySelector('#warpVelocityAperture');
+  if(!r)return false;
+  const before=getComputedStyle(r,'::before'),after=getComputedStyle(r,'::after');
+  const scale=transform=>{const m=new DOMMatrixReadOnly(transform);return{x:Math.hypot(m.a,m.b),y:Math.hypot(m.c,m.d)}};
+  const b=scale(before.transform),a=scale(after.transform),close=(x,y)=>Math.abs(x-y)<=.025;
+  if(phase==='warpEntry')return close(b.x,.88)&&close(b.y,.80)&&close(a.x,.92)&&close(a.y,.86)&&Number(before.opacity)>=.53&&Number(after.opacity)>=.33;
+  if(phase==='warp')return close(b.x,1)&&close(b.y,.94)&&close(a.x,1.04)&&close(a.y,1)&&Number(before.opacity)>=.60&&Number(after.opacity)>=.63;
+  if(phase==='warpExit')return close(b.x,1.16)&&close(b.y,1.08)&&close(a.x,1.20)&&close(a.y,1.12)&&Number(before.opacity)>=.40&&Number(after.opacity)>=.23;
+  return false;
+})()`;
 
 async function inspect(chrome,base,width,height){
   const viewport=`${width}x${height}`,profile=mkdtempSync(join(tmpdir(),`stellar-aperture-${width}-`));
@@ -187,20 +235,27 @@ async function inspect(chrome,base,width,height){
     const baselineCanvas=initial.canvasCount;
 
     await evalJs(cdp,"(()=>{const warp=document.querySelector('#warp');if(warp){warp.value='1.8';warp.dispatchEvent(new Event('input',{bubbles:true}))}WarpSim.select('LUNA');WarpSim.launch();return true})()");
-    await waitUntil(()=>evalJs(cdp,"(()=>{const r=document.querySelector('#warpVelocityAperture'),t=document.querySelector('#journeyTransit'),c=document.querySelector('#journeyCorridorDepth');return WarpSim.state().phase==='warp'&&WarpWarpVelocityAperture.snapshot().active===true&&r&&t&&c&&Number(getComputedStyle(r).opacity)>.98&&Number(getComputedStyle(r,'::before').opacity)>.60&&Number(getComputedStyle(r,'::after').opacity)>.63&&Number(getComputedStyle(t).zIndex)>Number(getComputedStyle(r).zIndex)&&Number(getComputedStyle(c).opacity)>.68})()"),`velocity aperture cruise ${viewport}`,45000);
-    const cruise=await evalJs(cdp,SAMPLE);assertCruise(cruise,`${viewport} cruise`,baselineCanvas);
-    const bytes=await screenshot(cdp,`warp-velocity-aperture-${viewport}.png`);assert.ok(bytes>9000,`${viewport} screenshot must contain rendered runtime evidence`);
 
-    await waitUntil(()=>evalJs(cdp,"(()=>{const r=document.querySelector('#warpVelocityAperture');if(WarpSim.state().phase!=='warpExit'||WarpWarpVelocityAperture.snapshot().active!==true||!r)return false;const root=Number(getComputedStyle(r).opacity),before=Number(getComputedStyle(r,'::before').opacity),after=Number(getComputedStyle(r,'::after').opacity);return root>=.53&&root<=.57&&before>=.40&&before<=.44&&after>=.23&&after<=.27})()"),`settled velocity aperture exit ${viewport}`,20000);
-    const exit=await evalJs(cdp,SAMPLE);assertMounted(exit,`${viewport} exit`);assert.equal(exit.snapshot.active,true);assert.equal(exit.snapshot.phase,'warpExit');
-    assert.ok(exit.root.opacity>=.50&&exit.root.opacity<=.57);assert.ok(exit.before.opacity>=.40&&exit.before.opacity<=.44);assert.ok(exit.after.opacity>=.23&&exit.after.opacity<=.27);
+    await waitUntil(()=>evalJs(cdp,`WarpSim.state().phase==='warpEntry'&&WarpWarpVelocityAperture.snapshot().active===true&&${SETTLED_PHASE}`),`settled velocity aperture entry ${viewport}`,30000);
+    const entry=await evalJs(cdp,SAMPLE);assertEntry(entry,`${viewport} entry`,baselineCanvas);
+    const entryBytes=await screenshot(cdp,`warp-velocity-aperture-entry-${viewport}.png`);assert.ok(entryBytes>9000,`${viewport} entry screenshot must contain rendered runtime evidence`);
+
+    await waitUntil(()=>evalJs(cdp,`WarpSim.state().phase==='warp'&&WarpWarpVelocityAperture.snapshot().active===true&&${SETTLED_PHASE}`),`settled velocity aperture cruise ${viewport}`,30000);
+    const cruise=await evalJs(cdp,SAMPLE);assertCruise(cruise,`${viewport} cruise`,baselineCanvas);
+    const cruiseBytes=await screenshot(cdp,`warp-velocity-aperture-cruise-${viewport}.png`);assert.ok(cruiseBytes>9000,`${viewport} cruise screenshot must contain rendered runtime evidence`);
+
+    await waitUntil(()=>evalJs(cdp,`WarpSim.state().phase==='warpExit'&&WarpWarpVelocityAperture.snapshot().active===true&&${SETTLED_PHASE}`),`settled velocity aperture exit ${viewport}`,30000);
+    const exit=await evalJs(cdp,SAMPLE);assertExit(exit,`${viewport} exit`,baselineCanvas);
+    assert.ok(exit.before.scale.x>cruise.before.scale.x&&exit.before.scale.y>cruise.before.scale.y,`${viewport} exit central aperture must expand beyond cruise`);
+    assert.ok(exit.after.scale.x>cruise.after.scale.x&&exit.after.scale.y>cruise.after.scale.y,`${viewport} exit rim must expand beyond cruise`);
+    const exitBytes=await screenshot(cdp,`warp-velocity-aperture-exit-${viewport}.png`);assert.ok(exitBytes>9000,`${viewport} exit screenshot must contain rendered runtime evidence`);
 
     await waitUntil(()=>evalJs(cdp,"(()=>{const r=document.querySelector('#warpVelocityAperture'),p=WarpSim.state().phase;return ['decelerate','approach','observe'].includes(p)&&WarpWarpVelocityAperture.snapshot().active===false&&r&&Number(getComputedStyle(r).opacity)<=.01})()"),`velocity aperture clear ${viewport}`,35000);
     const cleared=await evalJs(cdp,SAMPLE);assertMounted(cleared,`${viewport} clear`);assert.equal(cleared.snapshot.active,false);assert.ok(cleared.root.opacity<=.01);assert.equal(cleared.canvasCount,baselineCanvas);
     await waitUntil(()=>evalJs(cdp,"WarpSim.state().phase==='observe'&&WarpWarpVelocityAperture.snapshot().active===false"),`velocity aperture observation ${viewport}`,30000);
     const observed=await evalJs(cdp,SAMPLE);assert.equal(observed.state.phase,'observe');assert.ok(observed.root.opacity<=.01);
     await evalJs(cdp,"WarpSim.abort();true");
-    console.log(`${viewport}: aperture=${cruise.before.opacity.toFixed(2)}/${cruise.after.opacity.toFixed(2)}, stack=${cruise.stack.apertureZ}<${cruise.stack.transitZ}, corridor=${cruise.stack.corridorOpacity.toFixed(2)}, exit=${exit.root.opacity.toFixed(2)}, screenshot=${bytes} bytes`);
+    console.log(`${viewport}: entry=${entry.before.scale.x.toFixed(2)}x${entry.before.scale.y.toFixed(2)}, cruise=${cruise.before.scale.x.toFixed(2)}x${cruise.before.scale.y.toFixed(2)}, exit=${exit.before.scale.x.toFixed(2)}x${exit.before.scale.y.toFixed(2)}, stack=${cruise.stack.apertureZ}<${cruise.stack.transitZ}, screenshots=${entryBytes}/${cruiseBytes}/${exitBytes} bytes`);
   }finally{cdp?.close();await stop(browser);await cleanupProfile(profile)}
 }
 
@@ -210,5 +265,5 @@ const serverPort=await freePort(),server=spawn(process.execPath,['scripts/serve.
 try{
   const base=`http://127.0.0.1:${serverPort}/`;await waitHttp(base);
   await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);
-  console.log('Warp Velocity Aperture browser: 2/2 phone viewports passed');
+  console.log('Warp Velocity Aperture expansion browser: 2/2 phone viewports passed');
 }finally{await stop(server)}
