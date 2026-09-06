@@ -44,7 +44,7 @@ Inherited baseline：**Tangent Parallax Bands（Vertical Slice v6）**、Periphe
 
 Focused `validate-warp-velocity-aperture.mjs` 鎖定 v5 architecture、v6 motion treatment、三段 bounded scales、opacity、stacking、零 child／零 canvas、reduced-motion，以及無 timer／render-loop／network／storage／Three.js／filter authority。
 
-現有 production browser gates 繼續以 390×844、360×800 真 Chromium／WebGL 跑完整 `SOL → LUNA`。`validate-warp-velocity-aperture-browser.mjs` 驗證 cruise aperture、真 WebGL canvas 數量、`z-index 4 < 5`、corridor 可讀性、warpExit opacity 同 deceleration 清場；`validate-warp-corridor-depth-browser.mjs` 同一航程再捕捉 Warp、Warp Exit Shockfront、Approach Tangent Parallax 及 Observe handoff screenshots，作今輪實際視覺核對。
+Production browser gates 以 390×844、360×800 真 Chromium／WebGL 跑完整 `SOL → LUNA`。`validate-warp-velocity-aperture-browser.mjs` 會在真 `warpEntry`、`warp`、`warpExit` 三段等待 transition settle，讀取兩個 pseudo-elements 的 computed transform matrix，分別鎖定 `0.88×0.80 → 1.00×0.94 → 1.16×1.08` 中央尺度及 `0.92×0.86 → 1.04×1.00 → 1.20×1.12` 外圍尺度；同時逐段輸出 Entry／Cruise／Exit screenshot，驗證零 canvas 增量、`z-index 4 < 5`、corridor 可讀性及 deceleration 清場。`validate-warp-corridor-depth-browser.mjs` 同一航程再捕捉 Warp Exit Shockfront、Approach Tangent Parallax 及 Observe handoff screenshots，作完整交接核對。
 
 ## Risks / manual checks
 
