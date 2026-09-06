@@ -97,6 +97,7 @@ function ensureStyle(){
   position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:0;
   contain:layout paint style;
   --approach-x:72%;--approach-y:42%;--approach-tilt:0deg;--approach-mid-tilt:0deg;--approach-near-tilt:0deg;--approach-skew:0deg;
+  --approach-tangent-a:24%;--approach-tangent-b:76%;
   transition:opacity .32s ease
 }
 #journeyApproachDepth span{
@@ -122,36 +123,45 @@ function ensureStyle(){
 }
 #journeyApproachDepth .approachDepthFar{
   width:clamp(150px,48vw,390px);height:clamp(112px,36vw,292px);
-  border:1px solid rgba(var(--journey-alt-rgb),.24);border-left-color:rgba(var(--journey-alt-rgb),.07);
-  border-bottom-color:transparent;opacity:.34;
-  background:radial-gradient(ellipse at 50% 50%,rgba(var(--journey-rgb),.035),transparent 67%);
+  border:1px solid rgba(var(--journey-alt-rgb),.26);border-left-color:rgba(var(--journey-alt-rgb),.07);
+  border-bottom-color:transparent;opacity:.38;
+  background:
+    radial-gradient(ellipse at var(--approach-tangent-a) 52%,transparent 44%,rgba(var(--journey-alt-rgb),.16) 46%,transparent 50%),
+    linear-gradient(108deg,transparent 18%,rgba(var(--journey-rgb),.055) 47%,transparent 72%),
+    radial-gradient(ellipse at 50% 50%,rgba(var(--journey-rgb),.035),transparent 67%);
   transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(.72)
 }
 #journeyApproachDepth .approachDepthMid{
   width:clamp(112px,34vw,278px);height:clamp(82px,25vw,205px);
-  border:1px solid rgba(var(--journey-rgb),.34);border-right-color:transparent;
-  border-top-color:rgba(var(--journey-alt-rgb),.12);opacity:.42;
+  border:1px solid rgba(var(--journey-rgb),.38);border-right-color:transparent;
+  border-top-color:rgba(var(--journey-alt-rgb),.12);opacity:.48;
+  background:
+    radial-gradient(ellipse at var(--approach-tangent-b) 48%,transparent 42%,rgba(var(--journey-rgb),.19) 44%,transparent 49%),
+    linear-gradient(72deg,transparent 24%,rgba(var(--journey-alt-rgb),.07) 49%,transparent 68%);
   transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(.56)
 }
 #journeyApproachDepth .approachDepthNear{
   width:clamp(76px,23vw,188px);height:clamp(56px,17vw,140px);
-  border:1px solid rgba(var(--journey-alt-rgb),.46);border-left-color:transparent;
-  border-bottom-color:rgba(var(--journey-rgb),.14);opacity:.5;
+  border:1px solid rgba(var(--journey-alt-rgb),.5);border-left-color:transparent;
+  border-bottom-color:rgba(var(--journey-rgb),.16);opacity:.56;
+  background:
+    radial-gradient(ellipse at var(--approach-tangent-a) 54%,transparent 39%,rgba(var(--journey-alt-rgb),.23) 42%,transparent 48%),
+    linear-gradient(116deg,transparent 31%,rgba(var(--journey-rgb),.09) 50%,transparent 65%);
   transform:translate(-50%,-50%) rotate(var(--approach-near-tilt)) scale(.4)
 }
-#journeyAtmosphere[data-system="SOL"] #journeyApproachDepth{--approach-x:72%;--approach-y:40%;--approach-tilt:6deg;--approach-mid-tilt:-3deg;--approach-near-tilt:3deg;--approach-skew:2deg}
-#journeyAtmosphere[data-system="LUNA"] #journeyApproachDepth{--approach-x:29%;--approach-y:42%;--approach-tilt:-8deg;--approach-mid-tilt:4deg;--approach-near-tilt:-4deg;--approach-skew:-3deg}
-#journeyAtmosphere[data-system="VEGA"] #journeyApproachDepth{--approach-x:72%;--approach-y:39%;--approach-tilt:12deg;--approach-mid-tilt:-6deg;--approach-near-tilt:5deg;--approach-skew:4deg}
-#journeyAtmosphere[data-system="CYG"] #journeyApproachDepth{--approach-x:31%;--approach-y:41%;--approach-tilt:-5deg;--approach-mid-tilt:3deg;--approach-near-tilt:-2deg;--approach-skew:-2deg}
-#journeyAtmosphere[data-system="ORION"] #journeyApproachDepth{--approach-x:71%;--approach-y:39%;--approach-tilt:9deg;--approach-mid-tilt:-5deg;--approach-near-tilt:4deg;--approach-skew:5deg}
-#journeyAtmosphere[data-system="TAU"] #journeyApproachDepth{--approach-x:31%;--approach-y:40%;--approach-tilt:-13deg;--approach-mid-tilt:7deg;--approach-near-tilt:-6deg;--approach-skew:-5deg}
-#journeyAtmosphere[data-system="SIRIUS"] #journeyApproachDepth{--approach-x:71%;--approach-y:41%;--approach-tilt:5deg;--approach-mid-tilt:-3deg;--approach-near-tilt:2deg;--approach-skew:3deg}
-#journeyAtmosphere[data-system="PROX"] #journeyApproachDepth{--approach-x:30%;--approach-y:40%;--approach-tilt:-7deg;--approach-mid-tilt:4deg;--approach-near-tilt:-3deg;--approach-skew:-4deg}
+#journeyAtmosphere[data-system="SOL"] #journeyApproachDepth{--approach-x:72%;--approach-y:40%;--approach-tilt:6deg;--approach-mid-tilt:-3deg;--approach-near-tilt:3deg;--approach-skew:2deg;--approach-tangent-a:21%;--approach-tangent-b:77%}
+#journeyAtmosphere[data-system="LUNA"] #journeyApproachDepth{--approach-x:29%;--approach-y:42%;--approach-tilt:-8deg;--approach-mid-tilt:4deg;--approach-near-tilt:-4deg;--approach-skew:-3deg;--approach-tangent-a:79%;--approach-tangent-b:23%}
+#journeyAtmosphere[data-system="VEGA"] #journeyApproachDepth{--approach-x:72%;--approach-y:39%;--approach-tilt:12deg;--approach-mid-tilt:-6deg;--approach-near-tilt:5deg;--approach-skew:4deg;--approach-tangent-a:19%;--approach-tangent-b:75%}
+#journeyAtmosphere[data-system="CYG"] #journeyApproachDepth{--approach-x:31%;--approach-y:41%;--approach-tilt:-5deg;--approach-mid-tilt:3deg;--approach-near-tilt:-2deg;--approach-skew:-2deg;--approach-tangent-a:77%;--approach-tangent-b:21%}
+#journeyAtmosphere[data-system="ORION"] #journeyApproachDepth{--approach-x:71%;--approach-y:39%;--approach-tilt:9deg;--approach-mid-tilt:-5deg;--approach-near-tilt:4deg;--approach-skew:5deg;--approach-tangent-a:22%;--approach-tangent-b:80%}
+#journeyAtmosphere[data-system="TAU"] #journeyApproachDepth{--approach-x:31%;--approach-y:40%;--approach-tilt:-13deg;--approach-mid-tilt:7deg;--approach-near-tilt:-6deg;--approach-skew:-5deg;--approach-tangent-a:81%;--approach-tangent-b:25%}
+#journeyAtmosphere[data-system="SIRIUS"] #journeyApproachDepth{--approach-x:71%;--approach-y:41%;--approach-tilt:5deg;--approach-mid-tilt:-3deg;--approach-near-tilt:2deg;--approach-skew:3deg;--approach-tangent-a:24%;--approach-tangent-b:78%}
+#journeyAtmosphere[data-system="PROX"] #journeyApproachDepth{--approach-x:30%;--approach-y:40%;--approach-tilt:-7deg;--approach-mid-tilt:4deg;--approach-near-tilt:-3deg;--approach-skew:-4deg;--approach-tangent-a:76%;--approach-tangent-b:20%}
 #journeyAtmosphere[data-phase="warpEntry"] #journeyApproachDepth,
 #journeyAtmosphere[data-phase="warp"] #journeyApproachDepth{opacity:0}
 #journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth{opacity:.16}
 #journeyAtmosphere[data-phase="decelerate"] #journeyApproachDepth{opacity:.34}
-#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.58}
+#journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.64}
 #journeyAtmosphere[data-phase="observe"] #journeyApproachDepth{opacity:0}
 #journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth::before{opacity:.46;transform:translate(-50%,-50%) rotate(var(--approach-tilt)) skewX(var(--approach-skew)) scale(.5)}
 #journeyAtmosphere[data-phase="warpExit"] #journeyApproachDepth::after{opacity:.34;transform:translate(-50%,-50%) rotate(var(--approach-mid-tilt)) scale(.34)}
@@ -189,7 +199,7 @@ function ensureStyle(){
   #journeyCorridorDepth,#journeyCorridorDepth::before,#journeyCorridorDepth::after,#journeyCorridorDepth span,#journeyApproachDepth,#journeyApproachDepth span,#journeyApproachDepth::before,#journeyApproachDepth::after{animation:none!important;transition:none!important}
   #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth{opacity:.54;transform:scale(1)}
   #journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::before,#journeyAtmosphere[data-phase="warp"] #journeyCorridorDepth::after{opacity:.18}
-  #journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.48}
+  #journeyAtmosphere[data-phase="approach"] #journeyApproachDepth{opacity:.54}
 }
 `;
   document.head.append(style);
