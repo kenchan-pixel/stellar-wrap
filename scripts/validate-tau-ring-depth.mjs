@@ -4,6 +4,7 @@ import {spawnSync} from 'node:child_process';
 
 const source=fs.readFileSync(new URL('../tau-ring-depth.js',import.meta.url),'utf8');
 const browserSource=fs.readFileSync(new URL('./validate-tau-ring-depth-browser.mjs',import.meta.url),'utf8');
+const bandBrowserSource=fs.readFileSync(new URL('./validate-tau-resonance-gap-browser.mjs',import.meta.url),'utf8');
 const focus=fs.readFileSync(new URL('../exploration-focus-tray.js',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const doc=fs.readFileSync(new URL('../docs/TAU_RING_SHADOW_DEPTH.md',import.meta.url),'utf8');
@@ -46,10 +47,16 @@ check(/window\.WarpTauRingDepth=/.test(source)&&/architecture:ARCHITECTURE_PASS/
 check(/#perfHud/.test(browserSource)&&/highFrameCalls-standardFrameCalls,8/.test(browserSource),'production-browser gate measures the actual combined shared + TAU DRAW delta');
 check(/WarpPhotoMode\.capture/.test(browserSource)&&/__tauRingCaptureProbe/.test(browserSource),'production-browser gate verifies one-shot Photo Capture includes the High TAU ring-depth layer');
 check(/390,844/.test(browserSource)&&/360,800/.test(browserSource)&&/tau-ring-shadow-depth-/.test(browserSource),'both required phone viewports emit visual evidence');
+check(/ringBandPass/.test(bandBrowserSource)&&/ringGapBands/.test(bandBrowserSource)&&/resonance-gap-banding-v1/.test(bandBrowserSource),'focused live browser gate proves the v3 resonance-band diagnostics rather than source text alone');
+check(/__tauBandCaptureProbe/.test(bandBrowserSource)&&/WarpPhotoMode\.capture/.test(bandBrowserSource),'focused v3 browser gate proves direct Photo Capture activates the resonance gaps');
+check(/390,844/.test(bandBrowserSource)&&/360,800/.test(bandBrowserSource),'focused v3 diagnostics execute at both required phone viewports');
 check(doc.includes('Resonance Gap Banding')&&doc.includes('3 條')&&doc.includes('2,912')&&doc.includes('4 draw calls')&&doc.includes('零新增 draw call'),'SOT records the resonance-band outcome and unchanged bounded performance');
 check(doc.includes('Photo Capture')&&doc.includes('Standard／Low')&&doc.includes('390×844')&&doc.includes('360×800'),'SOT records capture synchronization, lower-tier zero cost and both phone gates');
 
 const browser=spawnSync(process.execPath,['scripts/validate-tau-ring-depth-browser.mjs'],{encoding:'utf8',timeout:140000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
 if(browser.stdout)process.stdout.write(browser.stdout);if(browser.stderr)process.stderr.write(browser.stderr);
 check(browser.status===0,'real production WebGL TAU ring depth passes capture, measured renderer budget, lifecycle and both phone viewport gates');
+const bandBrowser=spawnSync(process.execPath,['scripts/validate-tau-resonance-gap-browser.mjs'],{encoding:'utf8',timeout:120000,env:{...process.env,STELLAR_BROWSER_REQUIRED:process.env.CI?'1':'0'}});
+if(bandBrowser.stdout)process.stdout.write(bandBrowser.stdout);if(bandBrowser.stderr)process.stderr.write(bandBrowser.stderr);
+check(bandBrowser.status===0,'live production WebGL resonance-gap diagnostics pass capture, disposal/rebuild/revisit and both phone viewports');
 console.log(`TAU Resonance Gap Banding validation: ${passed}/${passed} checks passed plus focused real-browser evidence`);
