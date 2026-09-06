@@ -3,12 +3,13 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 const NAME='stellar-tau-ring-depth';
 const VISUAL_PASS='ring-shadow-parallax-v1';
 const ARCHITECTURE_PASS='shepherd-arc-v2';
+const RING_BAND_PASS='resonance-gap-banding-v1';
 const SAMPLE_MS=250;
 const SHEPHERD_COUNT=16;
 const RING_ROTATION=new THREE.Euler(1.18,.2,.25);
 const PROFILE={
   center:new THREE.Vector3(15,-5,-86),radius:23,
-  triangles:2912,drawCalls:4,shepherds:SHEPHERD_COUNT,depthSpan:5.2,scaleMax:4.6
+  triangles:2912,drawCalls:4,shepherds:SHEPHERD_COUNT,depthSpan:5.2,scaleMax:4.6,resonanceGaps:3
 };
 const approx=(a,b,t=.24)=>Math.abs(a-b)<=t;
 let tauRoot=null,objects=[],captureCount=0,lastState=null,shepherdDepthRange={min:0,max:0,span:0},shepherdScaleRange={min:0,max:0,span:0};
@@ -67,16 +68,23 @@ function ringScatterMaterial(nearSide){
     uniforms:{
       uInner:{value:new THREE.Color(nearSide?'#ffd6ee':'#b56cc8')},
       uOuter:{value:new THREE.Color(nearSide?'#ff9fd4':'#7b4b9f')},
-      uOpacity:{value:nearSide?.34:.19}
+      uOpacity:{value:nearSide?.34:.19},
+      uPhase:{value:nearSide?.58:-2.08}
     },
     vertexShader:'varying float vR;varying float vA;void main(){vR=length(position.xy);vA=atan(position.y,position.x);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-    fragmentShader:`varying float vR;varying float vA;uniform vec3 uInner;uniform vec3 uOuter;uniform float uOpacity;void main(){
+    fragmentShader:`varying float vR;varying float vA;uniform vec3 uInner;uniform vec3 uOuter;uniform float uOpacity;uniform float uPhase;void main(){
       float radial=.5+.5*sin(vR*2.45+sin(vA*3.0)*.9);
       float fine=.5+.5*sin(vR*9.8-vA*2.0);
-      float gaps=smoothstep(.24,.76,radial*.76+fine*.24);
+      float textureBands=smoothstep(.24,.76,radial*.76+fine*.24);
+      float gapA=smoothstep(.28,.92,abs(vR-36.8));
+      float gapB=smoothstep(.34,1.08,abs(vR-43.4));
+      float gapC=smoothstep(.3,.96,abs(vR-50.1));
+      float resonanceGaps=min(gapA,min(gapB,gapC));
+      float forwardScatter=.56+.44*pow(.5+.5*cos(vA-uPhase),3.0);
       float edge=smoothstep(29.9,32.0,vR)*(1.0-smoothstep(53.2,55.5,vR));
-      vec3 color=mix(uOuter,uInner,clamp(.18+.82*gaps,0.0,1.0));
-      gl_FragColor=vec4(color,edge*uOpacity*(.26+.74*gaps));
+      float bandEnergy=(.22+.78*textureBands)*(.38+.62*resonanceGaps)*forwardScatter;
+      vec3 color=mix(uOuter,uInner,clamp(.12+.88*textureBands*forwardScatter,0.0,1.0));
+      gl_FragColor=vec4(color,edge*uOpacity*bandEnergy);
     }`
   });
   material.forceSinglePass=true;return material;
@@ -126,7 +134,7 @@ function sync(){
 }
 function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{},active=shouldRun(state)&&objects.length===4;
-  return{visualPass:VISUAL_PASS,architecture:ARCHITECTURE_PASS,target:'TAU',quality:state.qualityMode||null,active,captured:!!tauRoot,captureCount,objects:objects.length,shepherds:active?SHEPHERD_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,shepherdDepthSpan:active?Number(shepherdDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,shepherdScaleMin:active?Number(shepherdScaleRange.min.toFixed(2)):0,shepherdScaleMax:active?Number(shepherdScaleRange.max.toFixed(2)):0,budgetScaleMax:PROFILE.scaleMax};
+  return{visualPass:VISUAL_PASS,architecture:ARCHITECTURE_PASS,ringBandPass:RING_BAND_PASS,target:'TAU',quality:state.qualityMode||null,active,captured:!!tauRoot,captureCount,objects:objects.length,shepherds:active?SHEPHERD_COUNT:0,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,ringGapBands:active?PROFILE.resonanceGaps:0,shepherdDepthSpan:active?Number(shepherdDepthRange.span.toFixed(2)):0,budgetDepthSpan:PROFILE.depthSpan,shepherdScaleMin:active?Number(shepherdScaleRange.min.toFixed(2)):0,shepherdScaleMax:active?Number(shepherdScaleRange.max.toFixed(2)):0,budgetScaleMax:PROFILE.scaleMax};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');const qualityObserver=canvas?new MutationObserver(sync):null;
