@@ -4,7 +4,7 @@
 
 令完整旅程由「進入曲速 → 曲速巡航 → 脫離 → 減速 → 接近目的地」有更清楚嘅前中後景層次。現有真 Three.js 星流喺手機直向畫面會形成大量由消失點向外延伸嘅高亮長線；速度感強，但中景同中央航向有機會同近景線條黏埋一層。v5 加入 **Velocity Aperture｜速度景深光圈**：在不改粒子、draw call、DPR 或模擬時間下，壓低中央／中景星流亮度、保留周邊近景速度線，令消失點、Corridor rails/rungs 同周邊 Starflow 分成更清楚嘅三層。
 
-v5 保留 v4 Warp Corridor Perspective Depth、Peripheral Starflow、三層 Approach Depth 同 Warp Exit Shockfront。新 `velocity-aperture-v5` 只係一個零-child presentation root；視覺全部由兩個 pseudo-element 完成，直接覆蓋既有 WebGL 星流而不建立第二個 renderer 或粒子系統。
+v5 保留 v4 Warp Corridor Perspective Depth、Peripheral Starflow、三層 Approach Depth 同 Warp Exit Shockfront。既有 **Peripheral Starflow｜Vertical Slice v4** acceptance baseline 維持不變；新 `velocity-aperture-v5` 只係一個零-child presentation root，視覺全部由兩個 pseudo-element 完成，直接覆蓋既有 WebGL 星流而不建立第二個 renderer 或粒子系統。
 
 ## Scope
 
