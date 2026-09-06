@@ -163,7 +163,7 @@ async function inspect(chrome,base,width,height){
     const cruise=await evalJs(cdp,SAMPLE);assertCruise(cruise,`${viewport} cruise`,baselineCanvas);
     const bytes=await screenshot(cdp,`warp-velocity-aperture-${viewport}.png`);assert.ok(bytes>9000,`${viewport} screenshot must contain rendered runtime evidence`);
 
-    await waitUntil(()=>evalJs(cdp,"(()=>{const r=document.querySelector('#warpVelocityAperture');return WarpSim.state().phase==='warpExit'&&WarpWarpVelocityAperture.snapshot().active===true&&r&&Number(getComputedStyle(r).opacity)>.50&&Number(getComputedStyle(r,'::before').opacity)>.40&&Number(getComputedStyle(r,'::after').opacity)>.23})()"),`velocity aperture exit ${viewport}`,20000);
+    await waitUntil(()=>evalJs(cdp,"(()=>{const r=document.querySelector('#warpVelocityAperture');if(WarpSim.state().phase!=='warpExit'||WarpWarpVelocityAperture.snapshot().active!==true||!r)return false;const root=Number(getComputedStyle(r).opacity),before=Number(getComputedStyle(r,'::before').opacity),after=Number(getComputedStyle(r,'::after').opacity);return root>=.53&&root<=.57&&before>=.40&&before<=.44&&after>=.23&&after<=.27})()"),`settled velocity aperture exit ${viewport}`,20000);
     const exit=await evalJs(cdp,SAMPLE);assertMounted(exit,`${viewport} exit`);assert.equal(exit.snapshot.active,true);assert.equal(exit.snapshot.phase,'warpExit');
     assert.ok(exit.root.opacity>=.50&&exit.root.opacity<=.57);assert.ok(exit.before.opacity>=.40&&exit.before.opacity<=.44);assert.ok(exit.after.opacity>=.23&&exit.after.opacity<=.27);
 
