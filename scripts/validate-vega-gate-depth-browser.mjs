@@ -24,7 +24,8 @@ function assertV3(snapshot,label){
   assert.equal(snapshot.nodes,24,`${label}: existing 24-node instanced budget must remain`);
   assert.equal(snapshot.thresholds,8,`${label}: exactly eight threshold spokes must be active`);
   assert.ok(snapshot.nodeDepthSpan>=4.8&&snapshot.nodeDepthSpan<=snapshot.budgetDepthSpan,`${label}: original collar centre depth remains bounded`);
-  assert.ok(snapshot.thresholdDepthSpan>=9.7&&snapshot.thresholdDepthSpan<=snapshot.budgetThresholdDepthSpan,`${label}: real scaled threshold depth ${snapshot.thresholdDepthSpan} must remain within ${snapshot.budgetThresholdDepthSpan}`);
+  assert.ok(snapshot.thresholdSpokeAxialExtent>=4.79&&snapshot.thresholdSpokeAxialExtent<=4.81,`${label}: each authored spoke axial extent ${snapshot.thresholdSpokeAxialExtent} must remain approximately 4.8 local units`);
+  assert.ok(snapshot.thresholdEnvelopeDepth>=9.7&&snapshot.thresholdEnvelopeDepth<=snapshot.budgetThresholdEnvelopeDepth,`${label}: aggregate gate-local threshold envelope ${snapshot.thresholdEnvelopeDepth} must remain within ${snapshot.budgetThresholdEnvelopeDepth}`);
 }
 
 async function exercise(cdp,width,height){
@@ -34,7 +35,7 @@ async function exercise(cdp,width,height){
   await evalJs(cdp,"(()=>{const hud=document.querySelector('#perfHud');if(hud&&!hud.classList.contains('show'))document.querySelector('#diagnosticsToggle')?.click();return true})()");
   const standardFrameCalls=await waitDrawCalls(cdp);
   const standard=await evalJs(cdp,'WarpVegaGateDepth.snapshot()');
-  assert.equal(standard.active,false);assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);assert.equal(standard.triangles,0);assert.equal(standard.nodes,0);assert.equal(standard.thresholds,0);assert.equal(standard.thresholdDepthSpan,0);
+  assert.equal(standard.active,false);assert.equal(standard.objects,0);assert.equal(standard.drawCalls,0);assert.equal(standard.triangles,0);assert.equal(standard.nodes,0);assert.equal(standard.thresholds,0);assert.equal(standard.thresholdSpokeAxialExtent,0);assert.equal(standard.thresholdEnvelopeDepth,0);
   const standardShot=await screenshot(cdp,`vega-gate-parallax-${viewport}-standard.png`);
 
   await evalJs(cdp,"(()=>{WarpPhotoMode.enter();const c=document.querySelector('#space'),original=c.toBlob.bind(c);window.__vegaGateCaptureProbe=[];c.toBlob=function(cb,type,...args){const x=WarpVegaGateDepth.snapshot(),s=WarpCinematicQuality.snapshot();window.__vegaGateCaptureProbe.push({...x,sharedActive:s.active,sharedObjects:s.objects,sharedTriangles:s.triangles,quality:WarpSim.state().qualityMode,width:c.width,height:c.height});return original(cb,type,...args)};return WarpPhotoMode.active()})()");
@@ -48,7 +49,7 @@ async function exercise(cdp,width,height){
   await evalJs(cdp,'WarpPhotoMode.exit();true');
 
   await evalJs(cdp,"WarpSim.setQuality('high');true");
-  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot(),s=WarpCinematicQuality.snapshot();return x.active===true&&x.objects===4&&x.triangles===2560&&x.nodes===24&&x.thresholds===8&&x.thresholdDepthSpan>=9.7&&s.active===true&&s.objects===4&&s.triangles===12992})()"),'VEGA phase threshold v3 + shared cinematic High active',7000);
+  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot(),s=WarpCinematicQuality.snapshot();return x.active===true&&x.objects===4&&x.triangles===2560&&x.nodes===24&&x.thresholds===8&&x.thresholdSpokeAxialExtent>=4.79&&x.thresholdEnvelopeDepth>=9.7&&s.active===true&&s.objects===4&&s.triangles===12992})()"),'VEGA phase threshold v3 + shared cinematic High active',7000);
   const highFrameCalls=await waitDrawCalls(cdp,standardFrameCalls+8);assert.equal(highFrameCalls-standardFrameCalls,8,'renderer DRAW delta remains shared High 4 + VEGA 4 calls');
   const high=await evalJs(cdp,'WarpVegaGateDepth.snapshot()');assert.equal(high.visualPass,'parallax-aperture-v1');assert.equal(high.objects,4);assert.equal(high.drawCalls,4);assert.equal(high.triangles,2560);assert.equal(high.budgetTriangles,2560);assertV3(high,'normal High exploration');
   const highShot=await screenshot(cdp,`vega-gate-parallax-${viewport}-high.png`);assert.notEqual(highShot.hash,standardShot.hash,'VEGA Standard and v3 High screenshots differ');assert.ok(highShot.bytes>10000,'VEGA v3 High screenshot contains rendered evidence');
@@ -56,16 +57,16 @@ async function exercise(cdp,width,height){
   assert.equal(Math.round(viewportState.cssWidth),width);assert.equal(Math.round(viewportState.cssHeight),height);assert.equal(viewportState.phase,'explore');assert.ok(viewportState.bodyWidth<=width+1,'VEGA v3 must not create horizontal overflow');
 
   await evalJs(cdp,"WarpSim.setQuality('low');true");
-  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot();return x.active===false&&x.objects===0&&x.drawCalls===0&&x.triangles===0&&x.thresholds===0&&x.thresholdDepthSpan===0})()"),'VEGA v3 High to Low disposal');
+  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot();return x.active===false&&x.objects===0&&x.drawCalls===0&&x.triangles===0&&x.thresholds===0&&x.thresholdSpokeAxialExtent===0&&x.thresholdEnvelopeDepth===0})()"),'VEGA v3 High to Low disposal');
   const lowFrameCalls=await waitDrawCalls(cdp,standardFrameCalls);assert.equal(lowFrameCalls,standardFrameCalls,'renderer DRAW returns to lower-tier baseline after disposal');
   await evalJs(cdp,"WarpSim.setQuality('high');true");
-  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot();return x.active===true&&x.objects===4&&x.thresholds===8&&x.thresholdDepthSpan>=9.7})()"),'VEGA v3 High rebuild after Low');
+  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot();return x.active===true&&x.objects===4&&x.thresholds===8&&x.thresholdSpokeAxialExtent>=4.79&&x.thresholdEnvelopeDepth>=9.7})()"),'VEGA v3 High rebuild after Low');
   assertV3(await evalJs(cdp,'WarpVegaGateDepth.snapshot()'),'High rebuild after Low');
   await evalJs(cdp,"WarpSim.jumpTo('SOL');true");await waitUntil(()=>evalJs(cdp,'WarpVegaGateDepth.snapshot().objects===0'),'VEGA v3 departure disposal');
   await evalJs(cdp,"WarpSim.jumpTo('VEGA');WarpSim.setQuality('high');true");
-  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot();return x.active===true&&x.objects===4&&x.thresholds===8&&x.thresholdDepthSpan>=9.7})()"),'VEGA v3 revisit rebuild',8000);
+  await waitUntil(()=>evalJs(cdp,"(()=>{const x=WarpVegaGateDepth.snapshot();return x.active===true&&x.objects===4&&x.thresholds===8&&x.thresholdSpokeAxialExtent>=4.79&&x.thresholdEnvelopeDepth>=9.7})()"),'VEGA v3 revisit rebuild',8000);
   const revisit=await evalJs(cdp,'WarpVegaGateDepth.snapshot()');assert.ok(revisit.captureCount>=2,'VEGA revisit recaptures rebuilt core gate anchor');assertV3(revisit,'VEGA revisit');
-  console.log(`VEGA Gate v3 real browser ${viewport}: DRAW ${standardFrameCalls}→${highFrameCalls} (+${highFrameCalls-standardFrameCalls})→${lowFrameCalls}; 4 objects / 24 instanced pylons / 8 threshold spokes / 2,560 tris / 4 VEGA draws; collar depth ${high.nodeDepthSpan}/${high.budgetDepthSpan}; threshold depth ${high.thresholdDepthSpan}/${high.budgetThresholdDepthSpan}; capture ${captureProbe.width}×${captureProbe.height}; screenshot ${highShot.bytes} bytes sha256 ${highShot.hash.slice(0,16)}…`);
+  console.log(`VEGA Gate v3 real browser ${viewport}: DRAW ${standardFrameCalls}→${highFrameCalls} (+${highFrameCalls-standardFrameCalls})→${lowFrameCalls}; 4 objects / 24 instanced pylons / 8 threshold spokes / 2,560 tris / 4 VEGA draws; collar depth ${high.nodeDepthSpan}/${high.budgetDepthSpan}; spoke axial extent ${high.thresholdSpokeAxialExtent}; aggregate threshold envelope ${high.thresholdEnvelopeDepth}/${high.budgetThresholdEnvelopeDepth}; capture ${captureProbe.width}×${captureProbe.height}; screenshot ${highShot.bytes} bytes sha256 ${highShot.hash.slice(0,16)}…`);
 }
 
 async function inspect(chrome,base,width,height){
@@ -83,4 +84,4 @@ async function inspect(chrome,base,width,height){
 
 const chrome=findChrome();if(!chrome){if(process.env.CI||process.env.STELLAR_BROWSER_REQUIRED==='1')throw new Error('Chrome/Chromium is required for VEGA gate-depth browser validation');console.log('VEGA gate-depth browser validation skipped: Chrome/Chromium not available');process.exit(0)}
 const serverPort=await freePort(),base=`http://127.0.0.1:${serverPort}/`;const server=spawn(process.execPath,['scripts/serve.mjs'],{env:{...process.env,HOST:'127.0.0.1',PORT:String(serverPort)},stdio:['ignore','ignore','pipe']});
-try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('VEGA Gate v3 browser validation: Photo Capture + measured renderer budget + lifecycle passed at 390×844 and 360×800')}finally{await stop(server)}
+try{await waitHttp(base);await inspect(chrome,base,390,844);await inspect(chrome,base,360,800);console.log('VEGA Gate v3 browser validation: Photo Capture + measured renderer budget + clarified depth diagnostics + lifecycle passed at 390×844 and 360×800')}finally{await stop(server)}

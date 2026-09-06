@@ -10,19 +10,22 @@
 - 重用現有 VEGA 星門 `(17,-1,-82), radius 24` 作唯一場景 anchor，不建立第二個 destination/camera authority。
 - 保留既有 luminous aperture membrane、近／遠 partial phase rail 及 24 個 instanced phase pylons。
 - **相位門檻柱 v3** 不新增 geometry object：24 個既有 Octahedron instances 中固定 8 個以 `i % 3 === 0` 轉為 axial threshold spokes；其餘 16 個保留 v2 的 radial／tangential collar。
-- 8 個門檻柱沿 local-Z 拉伸至 `10.0×`，並按環上角度作約 `0.31 rad` radial cant；live geometry depth 約 10.0 local units，budget 上限 10.2。原有 pylon centre depth span 仍維持在 5.8 內。
+- 每條 threshold spoke 使用半徑 `0.24` 的既有 Octahedron，local-Z scale 固定為 `10.0×`，所以單條 spoke 的 authored local-axis 幾何全長約 **4.8 local units**；這個數值不是 10-unit 單柱長度。
+- 8 條 threshold spokes 分布在既有 near／far lanes，並作約 `0.31 rad` radial cant；把 8 條 spoke 的 gate-local 中心分層加上各自 2.4-unit 半深度計算，整組 **authored threshold depth envelope 約 10.0 local units**，budget 上限 10.2。這是整組近／遠構圖 envelope 指標，不等同任何單一 spoke 的 world-space AABB 或物理長度。
+- 原有 pylon centre depth span 仍維持在 5.8 內。
 - 24-instance count、4-object lifecycle、2,560-triangle budget、4 draw calls 完全保留；v3 只改 instance transforms，同一 instanced draw 內完成，**零新增 draw call／triangle／object**。
 - Photo Capture Boost 由 Standard 切到 High 時同步建立；PNG 完成後跟隨既有畫質恢復而釋放。
-- `WarpVegaGateDepth.snapshot()` 暴露 `architecture: phase-threshold-spokes-v3`、`thresholds`、`thresholdDepthSpan` 只供驗收診斷，不成為航線、相機或持久化 authority。
+- `WarpVegaGateDepth.snapshot()` 暴露 `architecture: phase-threshold-spokes-v3`、`thresholds`、`thresholdSpokeAxialExtent`、`thresholdEnvelopeDepth` 只供驗收診斷，不成為航線、相機或持久化 authority。
 
 ## Acceptance Criteria
 
 - VEGA High 額外固定維持 **4 objects / 4 draw calls / 2,560 triangles / 24 instanced pylons**；v3 不准用增加 object／draw／triangle 數量換深度。
-- 其中固定 **8 條 threshold spokes**；live scaled geometry depth 至少 9.7 且不超過 **10.2** budget，原有 pylon centre depth span仍至少 4.8 且不超過 5.8。
+- 固定 **8 條 threshold spokes**，每條 authored local-axis 幾何全長必須維持約 **4.8 local units**，對應既有 `0.24` 半徑 geometry × `10.0×` local-Z scale。
+- 8 條 threshold spokes 的 **aggregate gate-local depth envelope** 必須至少 9.7 且不超過 **10.2**；此數值明確包含 near／far lane 中心分離，不能再標示為單條 spoke 的「真 geometry depth」。原有 pylon centre depth span仍至少 4.8 且不超過 5.8。
 - 8 條 threshold spokes 必須有 radial cant，避免由 curated arrival camera 看起來只係正對鏡頭的點；中央 aperture 仍保持可讀，不可被柱體封死。
-- Standard／Low 額外成本為 0；High → Low、離站、重訪都能 dispose／rebuild，Draw Call 回到原 baseline。
+- Standard／Low 額外成本為 0；High → Low、離站、重訪都能 dispose／rebuild，Draw Call 回到原 baseline；inactive snapshot 的 spoke extent／envelope diagnostics 必須清零。
 - 由 Standard 直接按 Photo Capture，PNG extraction 時 VEGA v3 layer 及 shared cinematic layer 必須已在 High 真正建立；capture 完成後恢復原畫質。
-- 真 production Chromium 必須在 **390×844** 及 **360×800** 驗證：High 與 Standard 畫面不同、無水平 overflow、探索 phase 保持、renderer 實測 draw delta 正確，並由 runtime snapshot 證明 8 條門檻柱同約 10-unit 真 geometry depth。
+- 真 production Chromium 必須在 **390×844** 及 **360×800** 驗證：High 與 Standard 畫面不同、無水平 overflow、探索 phase 保持、renderer 實測 draw delta 正確，並由 runtime snapshot 分開證明 **8 條門檻柱、約 4.8-unit 單柱 authored axial extent、約 10-unit aggregate threshold envelope**。
 - exact-run High 截圖需確認星門入口比 v2 更有近／遠穿透感、工程尺度更清晰，而中央孔徑仍是主要視覺焦點。
 - 不改 flight timing、route authority、camera control、DPR 上限、Three.js 版本或 V4.1 travel flow。
 
@@ -41,16 +44,17 @@ Focused validator 會檢查：
 - Three.js 維持 `0.185.1`；
 - VEGA gate anchor 仍來自現有 `(17,-1,-82), radius 24`；
 - 24 個既有 instances 中只有 8 個變成 axial threshold spokes，其餘 16 個保留 v2 collar；
-- threshold spoke axial scale `10.0×`、radial cant 約 `0.31 rad`，runtime 以實際 scaled geometry extents 計算 `thresholdDepthSpan`，而唔只量 instance centre；
+- threshold spoke 使用既有半徑 `0.24` geometry、axial scale `10.0×`、radial cant 約 `0.31 rad`；runtime 將 **單條 authored axial extent（4.8）** 與 **整組 near／far threshold envelope（約 10.0）** 分成兩個 diagnostics，避免把 lane separation 誤稱為單柱 geometry length；
 - 幾何／instancing budget、single-pass transparency、High-only gate、4 Hz fallback、Photo backing-size observer；
 - 無額外 render loop、persistence、network／analytics；
 - 390×844 及 360×800 真 Chromium：Standard → direct Photo Capture → High → Low → rebuild → departure → revisit；
-- `#perfHud` 實測 shared High 4 draws + 本切片 4 draws；runtime 必須量到 24 pylons／8 threshold spokes／至少 9.7 local-unit threshold geometry depth。
+- `#perfHud` 實測 shared High 4 draws + 本切片 4 draws；runtime 必須量到 24 pylons／8 threshold spokes／約 4.8 local-unit spoke axial extent／9.7–10.2 aggregate threshold envelope。
 
 ## Risks / manual checks
 
 - 軸向柱在 Safari／不同 GPU 的 additive blending 可能較 Chromium 更亮；iPhone 長時間熱力、frame pacing 同門檻柱亮度屬補充證據，不阻塞自主演進。
 - v3 深度主要靠同一 instanced mesh 的 transform，GPU geometry 成本不變，但前景重疊面積可能令局部 overdraw 稍增；如實機見到掉幀，先收窄 axial scale／opacity，唔應增加新 renderer 或改航行 timing。
+- `thresholdEnvelopeDepth` 是 gate-local authored composition envelope，不是經完整 rotation 後的 world-space AABB，也不是物理星門尺寸；如日後需要 world-space 幾何量度，應另設獨立指標，不可重用此名稱。
 - 門檻柱只係視覺尺度 cue，不宣稱真實工程結構或物理星門模型。
 
 ## Completion signal
@@ -58,5 +62,5 @@ Focused validator 會檢查：
 - `npm run check` 及 VEGA focused real-browser gate 綠燈；
 - exact PR HEAD GitHub Actions 成功；
 - 兩個手機 viewport High／Standard 證據截圖產生並由 agent 自行檢視，確認 8 條門檻柱提升星門近／遠穿透感而中央 aperture 仍清楚；
-- runtime 實測維持 4 VEGA draws／2,560 triangles，Standard／Low 回到零額外 VEGA cost；
+- runtime 實測維持 4 VEGA draws／2,560 triangles，Standard／Low 回到零額外 VEGA cost，並清楚分開 4.8-unit 單柱 authored extent 與約 10-unit aggregate envelope；
 - Draft PR 更新本切片 scope／證據，無新增 actionable P0/P1/P2。
