@@ -39,6 +39,7 @@ Make PROX feel like the player is entering an engineered orbital starport instea
 9. High → Low, departure, rebuild and revisit do not accumulate objects.
 10. Real production Chromium at **390×844** and **360×800** produces distinct Standard/High evidence while preserving the CSS viewport.
 11. Actual renderer diagnostics still confirm the combined PROX High increment is the existing shared cinematic **4 draws** plus this slice's **4 draws**, then returns to the lower-tier baseline.
+12. The production-browser gate must derive the three frame groups, `17.6 / 22.0 / 26.0` live widths, `5.6` live depth span and all **six** near↔far perspective rails from the actual `InstancedMesh` matrices. `PROFILE` values are expected design bounds only and are not accepted as rendered-geometry evidence.
 
 ## Out of Scope
 
@@ -66,6 +67,7 @@ Make PROX feel like the player is entering an engineered orbital starport instea
 - Source/static validation for the three gate frames, six longitudinal perspective rails, bounded **5.6 / 1.48×** geometry, unchanged triangle/draw budget, inherited lane parallax, lifecycle, offline-shell integration and absence of persistence/network/render-loop authority.
 - Production Chromium screenshots at both phone viewports through the existing PROX browser gate; High must show the new gate cascade while Standard remains free of the High-only extension.
 - Actual renderer `DRAW` delta measurement; profile constants alone are not accepted as performance evidence.
+- Live rendered-geometry proof must read the built gantry's actual instance matrices and reconstruct frame depths, widths and rail spans; authored constants or pre-build segment arrays alone are insufficient.
 - Direct Photo Capture probe at PNG extraction to prove the enhanced High lattice is active after the backing-canvas quality change.
 - Downgrade, rebuild, departure and revisit lifecycle checks remain green.
 

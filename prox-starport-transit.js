@@ -6,7 +6,8 @@ const GANTRY_PASS='docking-gate-cascade-v3';
 const SAMPLE_MS=250;
 const PROFILE={starportCenter:new THREE.Vector3(15,-6,-82),starportRadius:20,starportTube:.42,triangles:2520,drawCalls:4,beacons:36,gantryBeams:18,gantryFrames:3,gantryFrontZ:6.2,gantryMidZ:3.4,gantryFarZ:.6,gantryDepthSpan:5.6,gantryPerspectiveRatio:1.48,depthBudget:8.2,laneDepthAmplitude:1.62,laneScaleFar:.94,laneScaleNear:1.08,laneDepthBudget:3.6};
 const approx=(a,b,t=.25)=>Math.abs(a-b)<=t;
-let starport=null,objects=[],captureCount=0,lastState=null,beaconDepth={min:0,max:0,span:0},laneDepth={min:0,max:0,span:0,scaleMin:0,scaleMax:0,scaleRatio:0};
+const emptyGantryMatrixMetrics=()=>({frames:0,frameDepths:[],frameWidths:[],depthSpan:0,nearWidth:0,farWidth:0,perspectiveRatio:0,rails:0,railDepthMin:0,railDepthMax:0});
+let starport=null,objects=[],captureCount=0,lastState=null,beaconDepth={min:0,max:0,span:0},laneDepth={min:0,max:0,span:0,scaleMin:0,scaleMax:0,scaleRatio:0},gantryMatrixMetrics=emptyGantryMatrixMetrics();
 const previousAdd=THREE.Object3D.prototype.add;
 
 function measureTriangles(list=objects){
@@ -20,6 +21,7 @@ function measureTriangles(list=objects){
   return Math.round(triangles);
 }
 function clearLaneDepth(){laneDepth={min:0,max:0,span:0,scaleMin:0,scaleMax:0,scaleRatio:0}}
+function clearGantryMatrixMetrics(){gantryMatrixMetrics=emptyGantryMatrixMetrics()}
 function disposeOwn(){
   for(const object of objects){
     object.removeFromParent();
@@ -27,7 +29,7 @@ function disposeOwn(){
     const materials=Array.isArray(object.material)?object.material:[object.material];
     for(const material of materials)material?.dispose?.();
   }
-  objects=[];clearLaneDepth();
+  objects=[];clearLaneDepth();clearGantryMatrixMetrics();
 }
 function candidate(object){
   if(!object?.isMesh||object.geometry?.type!=='TorusGeometry')return false;
@@ -104,6 +106,28 @@ function gantrySegments(){
   edge(new THREE.Vector3(0,-10,PROFILE.gantryFrontZ),new THREE.Vector3(0,-9.3,PROFILE.gantryFarZ));
   return segments;
 }
+function measureGantryMatrices(gantry){
+  const matrix=new THREE.Matrix4(),center=new THREE.Vector3(),axis=new THREE.Vector3();
+  const frames=[],rails=[];
+  for(let i=0;i<gantry.count;i++){
+    gantry.getMatrixAt(i,matrix);
+    const e=matrix.elements;
+    center.set(e[12],e[13],e[14]);axis.set(e[4],e[5],e[6]);
+    const length=axis.length();if(!Number.isFinite(length)||length<=0)continue;
+    const direction=axis.clone().multiplyScalar(1/length),half=direction.clone().multiplyScalar(length*.5);
+    const a=center.clone().sub(half),b=center.clone().add(half),depth=Math.abs(a.z-b.z);
+    if(depth>.5){rails.push(depth);continue}
+    const z=(a.z+b.z)*.5;
+    let frame=frames.find(entry=>Math.abs(entry.z-z)<.05);
+    if(!frame){frame={z,endpoints:[]};frames.push(frame)}
+    frame.endpoints.push(a,b);
+  }
+  frames.sort((a,b)=>a.z-b.z);
+  const frameDepths=frames.map(frame=>frame.z),frameWidths=frames.map(frame=>Math.max(...frame.endpoints.map(point=>point.x))-Math.min(...frame.endpoints.map(point=>point.x)));
+  const depthSpan=frameDepths.length?Math.max(...frameDepths)-Math.min(...frameDepths):0;
+  const farWidth=frameWidths[0]||0,nearWidth=frameWidths[frameWidths.length-1]||0;
+  return{frames:frames.length,frameDepths,frameWidths,depthSpan,nearWidth,farWidth,perspectiveRatio:farWidth?nearWidth/farWidth:0,rails:rails.length,railDepthMin:rails.length?Math.min(...rails):0,railDepthMax:rails.length?Math.max(...rails):0};
+}
 function gantryMesh(){
   const beamGeometry=new THREE.BoxGeometry(1,1,1);
   const beamMaterial=new THREE.MeshBasicMaterial({color:'#c8f5ff',transparent:true,opacity:.68,depthWrite:false,blending:THREE.AdditiveBlending});
@@ -133,7 +157,7 @@ function build(){
   laneDepth.span=laneDepth.max-laneDepth.min;laneDepth.scaleRatio=laneDepth.scaleMax/laneDepth.scaleMin;
   const beacons=new THREE.Points(beaconGeometry(),new THREE.PointsMaterial({size:.5,vertexColors:true,transparent:true,opacity:.86,depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true}));
   beacons.name=`${NAME}-approach-beacons`;beacons.rotation.set(.08,-.16,.2);
-  const gantry=gantryMesh();
+  const gantry=gantryMesh();gantryMatrixMetrics=measureGantryMatrices(gantry);
   starport.add(outer,crossing,beacons,gantry);objects=[outer,crossing,beacons,gantry];
 }
 function shouldRun(state){return !!state&&state.exploring&&!state.flying&&!state.contextLost&&state.qualityMode==='high'&&state.current==='PROX'}
@@ -148,7 +172,8 @@ function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{};
   const active=shouldRun(state)&&objects.length===4;
   const trafficMin=active?Math.min(beaconDepth.min,laneDepth.min):0;
-  return{visualPass:VISUAL_PASS,gantryPass:GANTRY_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,gantryBeams:active?PROFILE.gantryBeams:0,gantryFrames:active?PROFILE.gantryFrames:0,gantryDepthSpan:active?PROFILE.gantryDepthSpan:0,gantryPerspectiveRatio:active?PROFILE.gantryPerspectiveRatio:0,beaconDepthSpan:active?beaconDepth.span:0,laneDepthSpan:active?laneDepth.span:0,laneScaleRatio:active?laneDepth.scaleRatio:0,laneDepthBudget:PROFILE.laneDepthBudget,foregroundDepthLead:active?PROFILE.gantryFrontZ-trafficMin:0,depthBudget:PROFILE.depthBudget,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
+  const matrixFront=active&&gantryMatrixMetrics.frameDepths.length?Math.max(...gantryMatrixMetrics.frameDepths):0;
+  return{visualPass:VISUAL_PASS,gantryPass:GANTRY_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,gantryBeams:active?PROFILE.gantryBeams:0,gantryFrames:active?PROFILE.gantryFrames:0,gantryDepthSpan:active?PROFILE.gantryDepthSpan:0,gantryPerspectiveRatio:active?PROFILE.gantryPerspectiveRatio:0,gantryMatrixFrames:active?gantryMatrixMetrics.frames:0,gantryMatrixFrameDepths:active?[...gantryMatrixMetrics.frameDepths]:[],gantryMatrixFrameWidths:active?[...gantryMatrixMetrics.frameWidths]:[],gantryMatrixDepthSpan:active?gantryMatrixMetrics.depthSpan:0,gantryMatrixNearWidth:active?gantryMatrixMetrics.nearWidth:0,gantryMatrixFarWidth:active?gantryMatrixMetrics.farWidth:0,gantryMatrixPerspectiveRatio:active?gantryMatrixMetrics.perspectiveRatio:0,gantryMatrixRails:active?gantryMatrixMetrics.rails:0,gantryMatrixRailDepthMin:active?gantryMatrixMetrics.railDepthMin:0,gantryMatrixRailDepthMax:active?gantryMatrixMetrics.railDepthMax:0,beaconDepthSpan:active?beaconDepth.span:0,laneDepthSpan:active?laneDepth.span:0,laneScaleRatio:active?laneDepth.scaleRatio:0,laneDepthBudget:PROFILE.laneDepthBudget,foregroundDepthLead:active?matrixFront-trafficMin:0,depthBudget:PROFILE.depthBudget,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');
