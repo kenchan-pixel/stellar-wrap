@@ -1,0 +1,46 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
+const read=path=>readFileSync(resolve(root,path),'utf8');
+const failures=[];
+let passes=0;
+function ok(condition,message){if(condition){passes++;console.log(`✓ ${message}`)}else failures.push(message)}
+
+const source=read('warp-velocity-aperture.js');
+const loader=read('exploration-focus-tray.js');
+const sw=read('sw.js');
+const doc=read('docs/WARP_CORRIDOR_DEPTH.md');
+const pkg=JSON.parse(read('package.json'));
+const parsed=spawnSync(process.execPath,['--check',resolve(root,'warp-velocity-aperture.js')],{encoding:'utf8'});
+
+ok(parsed.status===0,`warp velocity aperture parses${parsed.stderr?`: ${parsed.stderr.trim()}`:''}`);
+ok(source.includes("const ARCHITECTURE='velocity-aperture-v5'"),'v5 velocity-aperture architecture is explicit');
+ok(source.includes("new Set(['warpEntry','warp','warpExit'])"),'aperture is limited to warp entry/cruise/exit phases');
+ok(source.includes('ellipse 48% 34% at 50% 50%')&&source.includes('rgba(1,3,9,.68)'),'desktop aperture has a bounded central attenuation field');
+ok(source.includes('ellipse 50% 35% at 50% 50%'),'phone aperture keeps a portrait-specific bounded attenuation field');
+ok(source.includes('ellipse 72% 56% at 50% 50%')&&source.includes('linear-gradient(90deg'),'outer rim adds a low-cost peripheral depth grade');
+ok(source.includes('#journeyAtmosphere[data-phase="warp"] #warpVelocityAperture{opacity:1}'),'warp cruise enables the full aperture grade');
+ok(source.includes('#journeyAtmosphere[data-phase="warp"] #warpVelocityAperture::before{opacity:.62}'),'warp cruise central attenuation stays explicitly bounded');
+ok(source.includes('#journeyAtmosphere[data-phase="warp"] #warpVelocityAperture::after{opacity:.65}'),'warp cruise peripheral grade stays explicitly bounded');
+ok(source.includes('#journeyAtmosphere[data-phase="decelerate"] #warpVelocityAperture')&&source.includes('#journeyAtmosphere[data-phase="observe"] #warpVelocityAperture{opacity:0}'),'aperture clears before destination approach/observation owns the frame');
+ok(source.includes("root.setAttribute('aria-hidden','true')")&&source.includes("root.id=ROOT_ID"),'aperture is presentation-only and non-semantic');
+ok(source.includes("elements:root?.children?.length||0"),'runtime snapshot exposes zero-child pseudo-element budget');
+ok(source.includes("window.WarpWarpVelocityAperture={snapshot}"),'runtime exposes focused diagnostics for acceptance');
+ok(!/setInterval|requestAnimationFrame/.test(source),'aperture adds no timer or render loop');
+ok(!/\bfetch\s*\(|localStorage|sessionStorage|indexedDB/.test(source),'aperture adds no network or persistence authority');
+ok(!/THREE\.|three@|new\s+WebGLRenderer/.test(source),'aperture adds no Three.js renderer, geometry or dependency');
+ok(!/backdrop-filter|\bfilter\s*:/.test(source),'aperture avoids filter/backdrop-filter fill-rate work');
+ok(loader.includes("import('./warp-velocity-aperture.js').catch(()=>{})"),'production focus-tray loader mounts the aperture module');
+ok(sw.includes("'./warp-velocity-aperture.js'"),'prepared offline shell contains the aperture module');
+ok(doc.includes('Velocity Aperture')&&doc.includes('velocity-aperture-v5'),'Warp Corridor SOT records the v5 aperture contract');
+ok(pkg.scripts?.check?.includes('node scripts/validate-warp-velocity-aperture.mjs'),'npm run check includes focused aperture validation');
+
+if(failures.length){
+  console.error(`\n${failures.length} warp velocity aperture validation failure(s):`);
+  for(const failure of failures)console.error(`✗ ${failure}`);
+  process.exit(1);
+}
+console.log(`\nWarp velocity aperture: ${passes}/${passes} checks passed.`);
