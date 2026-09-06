@@ -8,7 +8,7 @@ v6 不增加任何 DOM child、Three.js geometry、draw call、triangle、partic
 
 ## Scope
 
-- 保留 v5 `warp-velocity-aperture.js`、v4 Peripheral Starflow、Corridor horizon／rails／rungs、Warp Exit Shockfront 及三層 Approach Depth 架構。
+- 保留 v5 `warp-velocity-aperture.js`、v4 Peripheral Starflow、Corridor horizon／rails／rungs、Warp Exit Shockfront 及三層 Approach Depth 架構。v5 Velocity Aperture architecture token 保持 **`velocity-aperture-v5`**；aperture presentation layer 保持 **z-index 4**，而 corridor/transit 保持 **z-index 5**，確保航道提示永遠位於速度遮罩之上。
 - `journey-corridor-depth.js` 既有三個 Approach planes 維持 exactly 3 children；不新增 presentation node。
 - Far／Mid／Near planes 各自加入 bounded radial tangent highlight + low-opacity directional gradient，形成三層唔同尺度嘅側光切線。
 - 每個 Real Space destination 仍使用既有 `--approach-x / y / tilt / skew`，另外指定 `--approach-tangent-a / b`，左右交替分佈，避免所有目的地都以相同中央對稱構圖接近。
