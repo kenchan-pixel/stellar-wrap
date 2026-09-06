@@ -2,8 +2,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 
 const NAME='stellar-prox-starport-transit';
 const VISUAL_PASS='starport-transit-lattice-v2';
+const GANTRY_PASS='docking-gate-cascade-v3';
 const SAMPLE_MS=250;
-const PROFILE={starportCenter:new THREE.Vector3(15,-6,-82),starportRadius:20,starportTube:.42,triangles:2520,drawCalls:4,beacons:36,gantryBeams:18,gantryFrontZ:6.2,gantryBackZ:2.8,depthBudget:8.2,laneDepthAmplitude:1.62,laneScaleFar:.94,laneScaleNear:1.08,laneDepthBudget:3.6};
+const PROFILE={starportCenter:new THREE.Vector3(15,-6,-82),starportRadius:20,starportTube:.42,triangles:2520,drawCalls:4,beacons:36,gantryBeams:18,gantryFrames:3,gantryFrontZ:6.2,gantryMidZ:3.4,gantryFarZ:.6,gantryDepthSpan:5.6,gantryPerspectiveRatio:1.48,depthBudget:8.2,laneDepthAmplitude:1.62,laneScaleFar:.94,laneScaleNear:1.08,laneDepthBudget:3.6};
 const approx=(a,b,t=.25)=>Math.abs(a-b)<=t;
 let starport=null,objects=[],captureCount=0,lastState=null,beaconDepth={min:0,max:0,span:0},laneDepth={min:0,max:0,span:0,scaleMin:0,scaleMax:0,scaleRatio:0};
 const previousAdd=THREE.Object3D.prototype.add;
@@ -93,14 +94,14 @@ function deformLaneGeometry(geometry,direction=1){
 }
 function gantrySegments(){
   const near=[new THREE.Vector3(-13,-17,PROFILE.gantryFrontZ),new THREE.Vector3(13,-17,PROFILE.gantryFrontZ),new THREE.Vector3(11,-10,PROFILE.gantryFrontZ),new THREE.Vector3(-11,-10,PROFILE.gantryFrontZ)];
-  const mid=[new THREE.Vector3(-11,-16,PROFILE.gantryBackZ),new THREE.Vector3(11,-16,PROFILE.gantryBackZ),new THREE.Vector3(9,-9,PROFILE.gantryBackZ),new THREE.Vector3(-9,-9,PROFILE.gantryBackZ)];
+  const mid=[new THREE.Vector3(-11,-16,PROFILE.gantryMidZ),new THREE.Vector3(11,-16,PROFILE.gantryMidZ),new THREE.Vector3(9.1,-9.4,PROFILE.gantryMidZ),new THREE.Vector3(-9.1,-9.4,PROFILE.gantryMidZ)];
+  const far=[new THREE.Vector3(-8.8,-15,PROFILE.gantryFarZ),new THREE.Vector3(8.8,-15,PROFILE.gantryFarZ),new THREE.Vector3(7.2,-9.3,PROFILE.gantryFarZ),new THREE.Vector3(-7.2,-9.3,PROFILE.gantryFarZ)];
   const segments=[];
   const edge=(a,b)=>segments.push([a,b]);
-  for(const frame of[near,mid]){edge(frame[0],frame[1]);edge(frame[1],frame[2]);edge(frame[2],frame[3]);edge(frame[3],frame[0])}
-  for(let i=0;i<4;i++)edge(near[i],mid[i]);
-  edge(near[0],near[2]);edge(near[1],near[3]);edge(mid[0],mid[2]);edge(mid[1],mid[3]);
-  edge(new THREE.Vector3(0,-17,PROFILE.gantryFrontZ),new THREE.Vector3(0,-16,PROFILE.gantryBackZ));
-  edge(new THREE.Vector3(0,-10,PROFILE.gantryFrontZ),new THREE.Vector3(0,-9,PROFILE.gantryBackZ));
+  for(const frame of[near,mid,far]){edge(frame[0],frame[1]);edge(frame[1],frame[2]);edge(frame[2],frame[3]);edge(frame[3],frame[0])}
+  for(let i=0;i<4;i++)edge(near[i],far[i]);
+  edge(new THREE.Vector3(0,-17,PROFILE.gantryFrontZ),new THREE.Vector3(0,-15,PROFILE.gantryFarZ));
+  edge(new THREE.Vector3(0,-10,PROFILE.gantryFrontZ),new THREE.Vector3(0,-9.3,PROFILE.gantryFarZ));
   return segments;
 }
 function gantryMesh(){
@@ -108,7 +109,7 @@ function gantryMesh(){
   const beamMaterial=new THREE.MeshBasicMaterial({color:'#c8f5ff',transparent:true,opacity:.68,depthWrite:false,blending:THREE.AdditiveBlending});
   beamMaterial.forceSinglePass=true;
   const gantry=new THREE.InstancedMesh(beamGeometry,beamMaterial,PROFILE.gantryBeams);
-  gantry.name=`${NAME}-foreground-docking-gantry`;gantry.frustumCulled=false;
+  gantry.name=`${NAME}-foreground-docking-gate-cascade`;gantry.frustumCulled=false;
   const helper=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),delta=new THREE.Vector3();
   const segments=gantrySegments();
   for(let i=0;i<segments.length;i++){
@@ -147,7 +148,7 @@ function snapshot(){
   const state=lastState||window.WarpSim?.state?.()||{};
   const active=shouldRun(state)&&objects.length===4;
   const trafficMin=active?Math.min(beaconDepth.min,laneDepth.min):0;
-  return{visualPass:VISUAL_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,gantryBeams:active?PROFILE.gantryBeams:0,beaconDepthSpan:active?beaconDepth.span:0,laneDepthSpan:active?laneDepth.span:0,laneScaleRatio:active?laneDepth.scaleRatio:0,laneDepthBudget:PROFILE.laneDepthBudget,foregroundDepthLead:active?PROFILE.gantryFrontZ-trafficMin:0,depthBudget:PROFILE.depthBudget,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
+  return{visualPass:VISUAL_PASS,gantryPass:GANTRY_PASS,target:'PROX',quality:state.qualityMode||null,active,captured:!!starport,captureCount,objects:objects.length,drawCalls:active?PROFILE.drawCalls:0,triangles:active?measureTriangles():0,budgetTriangles:PROFILE.triangles,beacons:active?PROFILE.beacons:0,gantryBeams:active?PROFILE.gantryBeams:0,gantryFrames:active?PROFILE.gantryFrames:0,gantryDepthSpan:active?PROFILE.gantryDepthSpan:0,gantryPerspectiveRatio:active?PROFILE.gantryPerspectiveRatio:0,beaconDepthSpan:active?beaconDepth.span:0,laneDepthSpan:active?laneDepth.span:0,laneScaleRatio:active?laneDepth.scaleRatio:0,laneDepthBudget:PROFILE.laneDepthBudget,foregroundDepthLead:active?PROFILE.gantryFrontZ-trafficMin:0,depthBudget:PROFILE.depthBudget,singlePass:active&&objects.filter(object=>object.isMesh).every(object=>object.material?.forceSinglePass===true)};
 }
 const timer=setInterval(sync,SAMPLE_MS);
 const canvas=document.querySelector('#space');
