@@ -186,6 +186,14 @@ function assertCruise(sample,label){
   assert.equal(sample.before.animationPlayState,'running',`${label} left starflow must be running`);
   assert.equal(sample.after.animationPlayState,'running',`${label} right starflow must be running`);
 }
+async function waitForCruiseMotion(cdp,initial,viewport){
+  return waitUntil(async()=>{
+    const sample=await evalJs(cdp,STARFLOW_EXPRESSION);
+    if(!sample||sample.state?.phase!=='warp')return false;
+    assertCruise(sample,`${viewport} moving cruise`);
+    return sample.before.transform!==initial.before.transform&&sample.after.transform!==initial.after.transform?sample:false;
+  },`${viewport} starflow transform advance`,2000);
+}
 
 async function inspect(chrome,base,width,height){
   const viewport=`${width}x${height}`,profile=mkdtempSync(join(tmpdir(),`stellar-starflow-${width}-`));
@@ -223,11 +231,7 @@ async function inspect(chrome,base,width,height){
     const cruiseA=await evalJs(cdp,STARFLOW_EXPRESSION);
     assertCruise(cruiseA,`${viewport} cruise`);
     assert.ok(cruiseA.root.left>=-1&&cruiseA.root.right<=width+1&&cruiseA.root.top>=-1&&cruiseA.root.bottom<=height+1,`${viewport} corridor root must stay inside viewport`);
-    await sleep(180);
-    const cruiseB=await evalJs(cdp,STARFLOW_EXPRESSION);
-    assertCruise(cruiseB,`${viewport} moving cruise`);
-    assert.notEqual(cruiseA.before.transform,cruiseB.before.transform,`${viewport} left starflow transform must visibly advance`);
-    assert.notEqual(cruiseA.after.transform,cruiseB.after.transform,`${viewport} right starflow transform must visibly advance`);
+    await waitForCruiseMotion(cdp,cruiseA,viewport);
     const warpBytes=await screenshot(cdp,`warp-starflow-${viewport}.png`);
     assert.ok(warpBytes>9000,`${viewport} starflow screenshot must contain rendered runtime evidence`);
 
