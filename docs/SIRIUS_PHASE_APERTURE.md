@@ -65,7 +65,7 @@ No second renderer, camera controller, `requestAnimationFrame`, new network requ
 
 ## Validation evidence contract
 
-`scripts/validate-sirius-phase-aperture.mjs` locks the unchanged renderer/geometry budget, eight-pair depth-station construction, monotonic far→near scale/radial convergence, lifecycle and authority boundaries. The existing production `scripts/validate-sirius-phase-aperture-browser.mjs` continues to prove live 390×844 / 360×800 WebGL, exact draw restoration, full 10.8-unit depth span, 3.0–5.2 pylon major scale, direct Photo Capture, downgrade/rebuild/departure/revisit and exact-run Standard/High screenshots. Screenshot inspection is the visual acceptance evidence for the stronger relay-throat read.
+`scripts/validate-sirius-phase-aperture.mjs` locks the unchanged renderer/geometry budget, eight-pair depth-station construction, monotonic far→near scale/radial convergence, lifecycle and authority boundaries. The production `scripts/validate-sirius-phase-aperture-browser.mjs` explicitly asserts `perspectiveTreatment === 'depth-convergent-pylon-cage-v1'` plus live **0.84→1.12 / 1.33×** radial convergence through 390×844 and 360×800 High, direct Photo Capture, Standard/Low cleanup, rebuild and SIRIUS revisit. It also proves exact draw restoration, the full 10.8-unit depth span, 3.0–5.2 pylon major scale and exact-run Standard/High screenshots. Screenshot inspection remains the visual acceptance evidence for whether the engineered throat reads clearly around the central relay opening.
 
 ## Risks / manual checks
 
